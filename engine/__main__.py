@@ -94,6 +94,9 @@ def main(argv):
         sys.exit(0 if check(cfg, s) else 1)
     if cmd == "demo":
         return demo(cfg)
+    if s.missing() and "--dry" not in argv:
+        print("Einrichtung noch nicht fertig – es fehlt: " + ", ".join(s.missing()) + ". Takt übersprungen.")
+        return
     from .tick import Engine
     errors = Engine(cfg, s, dry="--dry" in argv).tick()
     print("takt fertig" + (f" mit {len(errors)} fehlern: " + " | ".join(errors) if errors else ""))
