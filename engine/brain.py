@@ -1,0 +1,195 @@
+"""Redaktion: sichten (triage), schreiben (write), prüfen (review). Drei getrennte Rollen,
+damit der Text nicht von dem geprüft wird, der ihn geschrieben hat."""
+from __future__ import annotations
+
+import json
+
+VOICE = """Du bist die Redaktion von @stadtwuppertal: ein unabhängiger Instagram-Account von und für Leute aus
+Wuppertal (nicht die Stadtverwaltung). Zielgruppe 20–45. Wir wollen der Kanal sein, den man in Wuppertal
+einfach folgt: schnell bei Nachrichten, schlau eingeordnet, witzig, mit Haltung, ohne Politik- und Positivwashing.
+Vielfalt ist Normalfall, nicht Sonderthema: freie Szene, Tanz, migrantische Communities, Viertel, Uni.
+
+STIMME
+- Direkt, knapp, menschlich. Wie eine gut informierte Freundin aus dem Tal, nicht wie eine Pressestelle.
+- Selbstironie über Wuppertal ja (Regen, Treppen, Schwebebahn-Ausfälle), Herablassung über Menschen oder Viertel nie.
+- Kritik an Stadt, Politik, Unternehmen darf hart sein – aber immer an Fakten und Zahlen, nie an Personen.
+- Keine KI-Floskeln: kein „spannend“, „tauche ein“, „mehr als nur“, „in einer Welt“, keine Dreierketten,
+  keine Gedankenstriche-Kaskaden, keine Emojis-Ketten (höchstens eins, wenn es wirklich sitzt).
+
+WITZ (wenn ein Gag passt)
+- Ein Gag pro Einheit. Das komische Wort steht ganz am Ende.
+- Nicht erklären. Lieber trocken untertreiben als laut sein.
+- Callback: Ein früh gesetztes Wort zahlt sich am Ende aus.
+- Kein Witz auf Kosten von Opfern, Betroffenen, Minderheiten.
+
+HOOK (große Headline auf der Kachel)
+- 1–3 Zeilen, klein geschrieben, je Zeile höchstens ~11 Zeichen, endet meist mit Punkt oder Fragezeichen.
+- Muss im Feed in 1 Sekunde wirken: konkret, überraschend, ein Bild im Kopf. Kein Clickbait, das nicht hält.
+- Schild: optional, max. 16 Zeichen (Datum, Ort, Zahl, Pointe).
+
+HARTE REGELN
+- Fakten NUR aus dem mitgelieferten Material. Nichts erfinden, keine erfundenen Zitate, keine Zahlen raten.
+- Keine Namen, Fotos oder erkennbaren Details von Verdächtigen, Opfern, Minderjährigen.
+- Absolut keine diskriminierenden Inhalte (Rassismus, Antisemitismus, Queer-, Ausländer-, Behindertenfeindlichkeit).
+- Fremde Texte nie übernehmen: komplett neu formulieren. Quelle immer nennen.
+Antworte ausschließlich mit dem verlangten JSON."""
+
+PACKAGE = """{
+ "rubric": "news|history|events|poll|warum|fact|platt|quiz",
+ "hook": ["zeile 1", "zeile 2"],
+ "schild": "kurz oder leer",
+ "options": ["a", "b"]   // nur bei poll/warum/quiz: zwei Antworten statt Schild, sonst []
+ "slides": [{"head": "kurze unterzeile (eine Frage oder ein Versprechen)", "body": "2–5 Sätze, die genau das einlösen: konkret, mit Mehrwert, normale Groß-/Kleinschreibung"}],  // 0–5
+ "reel": [{"head": "unter-hook klein", "lines": ["kurzer Satz", "kurzer Satz"], "gag": "Pointe oder leer"}], // 3–4 Züge, nur wenn als Reel geeignet, sonst []
+ "caption": "Caption: erste Zeile = Hook-Satz, dann 2–5 kurze Zeilen Inhalt, am Ende EINE Frage, die man in einem Wort beantworten kann",
+ "hashtags": ["3–4 ohne #"],
+ "sources": [{"name": "…", "url": "…"}],
+ "photo_query": "Suchbegriff für ein freies Wikimedia-Foto (z. B. 'Schwebebahn Vohwinkel') oder leer",
+ "visual": "foto|damals_heute|typo",   // was fürs Auge: Foto, damals/heute-Vergleich oder reine Typo
+ "damals_query": "nur bei damals/heute", "heute_query": "nur bei damals/heute",
+ "public_interest": true,   // informiert über eine Angelegenheit von öffentlichem Interesse (Nachrichten, Politik, Verkehr, Sicherheit)?
+ "risk": "gruen|gelb|rot",  // rot = Personen erkennbar/Vorwürfe/Minderjährige/unbestätigt
+ "risk_reason": "kurz"
+}"""
+
+
+class Brain:
+    def __init__(self, llm, cfg, rules: str = ""):
+        self.llm = llm
+        self.cfg = cfg
+        self.rules = rules
+
+    @property
+    def system(self):
+        return VOICE + ("\n\nREDAKTIONSREGELN (verbindlich)\n" + self.rules if self.rules else "")
+
+    # ── 1. Sichten ──────────────────────────────────────────
+    def triage(self, items: list[dict], stories: dict, radar: list[dict], recent_hooks: list[str]) -> list[dict]:
+        if not items:
+            return []
+        open_st = [{"story": k, "title": v["title"]} for k, v in list(stories.items())[-60:]]
+        mat = [{"id": i["id"], "source": i["source"], "title": i["title"], "text": i.get("summary", "")[:500],
+                "published": i.get("published"), "likes": i.get("likes"), "comments": i.get("comments")}
+               for i in items[:60]]
+        prompt = f"""Sichte neue Meldungen für @stadtwuppertal.
+Bekannte Geschichten (gleiche Geschichte → gleichen story-Schlüssel wiederverwenden):
+{json.dumps(open_st, ensure_ascii=False)}
+Was gerade bei großen Kanälen gut läuft (Orientierung, nicht kopieren):
+{json.dumps(radar[:8], ensure_ascii=False)}
+Neue Meldungen:
+{json.dumps(mat, ensure_ascii=False)}
+
+Bewerte jede Meldung. score 0–10 = Wie sehr interessiert das Leute zwischen 20 und 45 in Wuppertal JETZT
+(Betroffenheit, Gesprächswert, Neuigkeit, Kommentarpotenzial)? breaking = muss sofort raus (Sperrung, Unwetter,
+Ausfall Schwebebahn, Großeinsatz mit Folgen, große Stadt-News). Unwichtiges, Werbung, Doppeltes: score ≤ 3.
+JSON: {{"items": [{{"id": "…", "story": "kurzer-slug", "title": "neutraler Titel der Geschichte",
+"score": 0-10, "breaking": bool, "rubric": "news|events|history|fact|warum", "risk": "gruen|gelb|rot"}}]}}"""
+        res = self.llm.ask("triage", VOICE, prompt, tier="triage")
+        return res.get("items", []) if isinstance(res, dict) else res
+
+    # ── 2. Schreiben ────────────────────────────────────────
+    def write(self, mode: str, material: list[dict] | dict, note: str = "", recent_hooks=()) -> dict:
+        modes = {
+            "meldung": "Schnelle Meldung: Was ist passiert, was bedeutet es für mich, was kann ich tun? Kachel plus so viele "
+                       "Folgeslides, wie es braucht, um wirklich zu informieren (meist 1–3) – keine, wenn es selbsterklärend ist. "
+                       "Gag nur, wenn die Lage es erlaubt (nie bei Unglücken).",
+            "nachdreh": "Nachdreh zu einer Geschichte, die schon gemeldet wurde: Einordnung, Hintergrund, Zahlen, "
+                        "offene Frage oder Quiz (rubric quiz, options = 2 plausible Antworten, Auflösung auf der letzten Slide). "
+                        "Ziel: Kommentare. Karussell mit 3–5 Slides. Gern auch als Reel.",
+            "warum": "Rubrik „warum so, wuppertal?“: eine Meinungs-/Streitfrage, die Wuppertal spaltet, mit zwei "
+                     "Antwortoptionen (options). Kurz anteasern, Fakten aus dem Material, dann die Frage. Ziel: Kommentare.",
+            "rubrik": "Rubrik-Post aus der Ideen-Bank (history, fact, platt, poll). Material ist geprüft. "
+                      "Mach daraus etwas, das man teilen will. history und fact: Karussell + Reel-Züge.",
+            "damals": "„was war, wuppertal?“ als damals/heute: ein Ort, wie er früher aussah und heute aussieht. "
+                      "damals_query = Suchbegriff für ein historisches Foto (Ort + Jahrzehnt, z. B. 'Elberfeld Neumarkt 1910'), "
+                      "heute_query = derselbe Ort heute. schild = Jahr des alten Fotos. Caption: was hat sich verändert, "
+                      "eine überraschende Geschichte zum Ort, Frage („Wer kennt das noch?“).",
+            "events": "„was geht, wuppertal?“: die 3–5 besten Termine fürs Wochenende aus dem Material. Mainstream genug "
+                      "für viele, aber nicht altbacken; freie Szene, Tanz, Konzerte, Märkte. Je Termin eine Slide "
+                      "(head = Name klein, body = wann, wo, warum hingehen). Nur Termine aus dem Material!",
+        }
+        prompt = f"""Auftrag: {modes[mode]}
+{('Hinweis: ' + note) if note else ''}
+Letzte Hooks (nicht wiederholen): {json.dumps(list(recent_hooks)[-12:], ensure_ascii=False)}
+Material:
+{json.dumps(material, ensure_ascii=False)[:9000]}
+
+Liefere genau ein Paket als JSON:
+{PACKAGE}"""
+        return self.llm.ask(mode, self.system, prompt, tier="write")
+
+    # ── 3. Prüfen ───────────────────────────────────────────
+    def review(self, pkg: dict, material) -> dict:
+        system = self.system + """
+
+Du bist jetzt NICHT die Autorin, sondern die strenge Schlussredaktion. Du prüfst jeden Punkt der
+Redaktionsregeln und reparierst selbst, statt nur zu meckern."""
+        prompt = f"""Prüfe dieses Paket gegen Material und Redaktionsregeln. Gehe jeden Test durch:
+1. FAKTEN: Stimmt jede Tatsache mit dem Material? Erfundenes streichen.
+2. RECHT: Personen erkennbar, Vorwürfe gegen Einzelne, Minderjährige, Unbestätigtes, Diskriminierung? → risk.
+3. MEHRWERT: Löst jede Folgeslide ihre Überschrift konkret ein (was, seit wann, warum, wer, was heißt das für mich)?
+   Fehlt Kontext, der im Material steht? Telegrammstil? Füll-Slides bei Selbsterklärendem? → umschreiben/streichen.
+4. LÜCKEN: Wird Unklares offen benannt statt geraten? Witz in Lücken nur erkennbar absurd, nie bei Unglücken.
+5. SPRACHE: Zeitform und Logik korrekt? Tragen Vergleiche die Aussage? Wiederholungen?
+6. GAG: Hat er eine echte Wendung oder ist er offensichtlich? Offensichtliches streichen oder durch Besseres ersetzen.
+7. FUTTER (bei warum/poll/quiz): Gibt es erst Fakten, konkret Betroffene, beide Seiten, dann eine persönliche Frage?
+8. AUGE: Gibt es etwas fürs Auge (visual, photo_query, starke Zahl)? Hook in 1 Sekunde verständlich, Zeilen ≤ ~11 Zeichen?
+Material: {json.dumps(material, ensure_ascii=False)[:7000]}
+Paket: {json.dumps(pkg, ensure_ascii=False)}
+JSON: {{"ok": bool (false NUR bei rechtlichen Problemen oder wenn das Material nichts hergibt), "fixes": {{geänderte Paket-Felder}},
+"risk": "gruen|gelb|rot", "public_interest": bool, "tests": {{"mehrwert": 1-5, "sprache": 1-5, "gag": 1-5, "futter": 1-5, "auge": 1-5}},
+"note": "ein Satz, was du geändert hast"}}"""
+        return self.llm.ask("review", system, prompt, tier="write")
+
+
+    # ── 4. Bildredaktion ────────────────────────────────────
+    def rate_photo(self, jpeg: bytes, meta: dict, purpose: str) -> dict:
+        """purpose: news (Bild zu einer Meldung) | community (Foto für den Feed)."""
+        system = VOICE + "\n\nDu bist jetzt die Bildredaktion. Streng: Nur wirklich starke Bilder kommen bei uns rein."
+        prompt = f"""Bewerte dieses Foto für @stadtwuppertal. Zweck: {purpose}.
+Account: @{meta.get('handle', '?')} · Follower: {meta.get('followers', 'unbekannt')} · Name/Bio: {meta.get('bio', '')[:200]}
+Caption: «{(meta.get('caption') or '')[:600]}»
+Kriterien:
+- Qualität: Schärfe, Licht, Bildaufbau. Wow: Würde man beim Scrollen anhalten? (Handy-Schnappschuss ≠ stark)
+- Bei news: Zeigt es das Ereignis klar und ist es vertretbar (keine Verletzten, keine Opfer, keine Kennzeichen/Gesichter im Fokus)?
+- Bei community: Wuppertal erkennbar oder fühlbar? Erkennbare Personen im Vordergrund → nicht nehmen.
+- Werbung/Anzeige/Produkt, Screenshot, Wasserzeichen, Text-Overlay, Meme → nicht nehmen.
+- Lohnt eine Anfrage bei diesem Account? Sinnvoll: Privatperson, Hobby-/Profifotograf, Verein, Initiative.
+  Nicht sinnvoll: Medium/Nachrichtenseite, Unternehmen/Werbeaccount, Behörde (die haben eigene Pressebilder),
+  Accounts, die erkennbar nur Fremdes reposten.
+JSON: {{"score": 0-10, "wow": 0-10, "wuppertal": bool, "ad": bool, "watermark": bool, "people": bool,
+"account_type": "person|fotograf|verein|initiative|medium|unternehmen|behoerde|repost|unklar",
+"ask": bool, "why": "ein Satz"}}"""
+        return self.llm.ask_image("rate", system, prompt, jpeg, tier="write")
+
+
+# ── Testmodus: feste, plausible Antworten ───────────────────
+def stub(task: str, prompt: str):
+    if task == "triage":
+        ids = []
+        for line in prompt.splitlines():
+            if line.startswith("[") and '"id"' in line:
+                try:
+                    ids = [x["id"] for x in json.loads(line)]
+                except Exception:
+                    pass
+        return {"items": [{"id": i, "story": f"story-{n % 3}", "title": f"Geschichte {n % 3}",
+                           "score": 8.5 if n == 0 else 5, "breaking": n == 0, "rubric": "news",
+                           "risk": "gruen"} for n, i in enumerate(ids)]}
+    if task == "rate":
+        hi = "TOP" in prompt or "semih" in prompt
+        return {"score": 8.8 if hi else 5.0, "wow": 8 if hi else 4, "wuppertal": True, "ad": False, "watermark": False,
+                "people": False, "account_type": "fotograf" if hi else "person", "ask": hi, "why": "test"}
+    if task == "review":
+        return {"ok": True, "fixes": {}, "risk": "gruen", "note": "passt"}
+    rubric = {"events": "events", "warum": "warum", "rubrik": "history", "nachdreh": "quiz", "damals": "history"}.get(task, "news")
+    return {"rubric": rubric, "hook": ["schwebe-", "bahn steht."], "schild": "bis 18 uhr",
+            "options": ["ja", "nö"] if rubric in ("warum", "quiz") else [],
+            "slides": [{"head": "was los ist", "body": "Zwischen Vohwinkel und Oberbarmen fährt heute nichts. Busse ersetzen."},
+                       {"head": "und jetzt?", "body": "Die WSW rechnen mit Betrieb ab 18 Uhr."}],
+            "reel": [{"head": "was los?", "lines": ["Heute steht die Schwebebahn.", "Busse fahren als Ersatz."],
+                      "gag": "Kennt man ja."},
+                     {"head": "wie lange?", "lines": ["Bis etwa 18 Uhr."], "gag": "Sagen sie."}],
+            "caption": "schwebebahn steht.\n\nHeute fährt zwischen Vohwinkel und Oberbarmen nichts.\n\nWie kommt ihr heute rum?",
+            "hashtags": ["wuppertal", "schwebebahn", "wsw"], "sources": [{"name": "WSW", "url": "https://wsw-online.de"}],
+            "photo_query": "", "public_interest": rubric == "news", "risk": "gruen", "risk_reason": ""}

@@ -1,0 +1,103 @@
+# ─────────────────────────────────────────────────────────────
+#  @stadtwuppertal · Engine v3 · Einstellungen
+#  Zugangsdaten stehen NICHT hier, sondern im GitHub-Secret ENGINE_SECRETS.
+# ─────────────────────────────────────────────────────────────
+account:
+  handle: stadtwuppertal
+  graph_api_version: v25.0
+claim: "Ein Tal, ein Fluss, ein Schwebebus."
+timezone: Europe/Berlin
+
+# ── Takt ────────────────────────────────────────────────────
+takt:
+  active_hours: [6, 23]          # nur in dieser Zeit wird gepostet
+  collect_every_min: 20          # so oft werden alle Quellen abgeklappert
+  slots:                         # feste Sendeplätze (wenn nichts Eiliges anliegt)
+    "07:30": morgen
+    "12:30": mittag
+    "18:30": abend
+  rotation:                      # was im Slot läuft, wenn keine starke Nachricht da ist
+    morgen: news
+    mittag: {mo: warum, di: fact, mi: damals, do: poll, fr: warum, sa: platt, so: history}
+    abend:  {mo: history, di: warum, mi: fact, do: events, fr: events, sa: damals, so: warum}
+  reel_slot: "19:45"             # einmal am Tag: Reel aus dem besten Karussell
+  report_at: "21:30"             # Tagesbericht per Telegram
+  max_feed_per_day: 5            # Eilmeldungen zählen mit, dürfen die Grenze aber reißen
+  min_gap_min: 90                # Mindestabstand zwischen zwei Feed-Posts (außer Eilmeldung)
+  breaking_score: 8              # ab dieser Bewertung geht eine Meldung sofort raus
+  followup_after_h: 4            # Nachdreh (Einordnung, Quiz, Frage) so viele Stunden nach der Meldung
+  approval_timeout_min: 60       # Nachrichten ohne deinen Tipp gehen danach mit KI-Hinweis raus
+  learn_after_days: 42           # erst nach der Testphase passt die Engine sich an die Zahlen an
+
+wagnis_rate: 0.12
+
+# ── Bildredaktion & Bild-Anfragen ──────────────────────────
+photos:
+  hashtags: [meinwuppertal, wuppertal, schwebebahn, elberfeld]   # max. 30 verschiedene pro Woche (Meta)
+  hashtag_every_min: 120
+  rate_per_run: 4              # so viele Top-Kandidaten pro Lauf schaut sich die Bildredaktion an
+  community_min: 8.0           # ab dieser Note lohnt eine Anfrage bzw. ein Community-Post
+  autopost_min: null           # fremde Fotos nie ohne dein „passt“ (z. B. 9.0 = sehr starke gehen nach 3 h allein raus)
+  news_min: 6.5                # Bild zu einer Meldung: klar und vertretbar reicht
+  max_requests_per_day: 3      # mehr Anfragen pro Tag mutet dir die Engine nicht zu
+  ask_again_days: 60                # Anteil gestalterischer Ausreißer (andere Farbpaare)
+
+llm:
+  triage: haiku                  # sichten: schnell und sparsam
+  write: sonnet                  # schreiben und prüfen
+
+voice:
+  always_hashtags: [wuppertal]
+
+# ── Nachrichten-Quellen ─────────────────────────────────────
+news:
+  lookback_hours: 14
+  relevance_keywords: [Wuppertal, Elberfeld, Barmen, Vohwinkel, Cronenberg, Ronsdorf, Langerfeld, Beyenburg,
+                       Oberbarmen, Heckinghausen, Uellendahl, Katernberg, Schwebebahn, WSW, WSV, Döppersberg,
+                       Nordbahntrasse, Ölberg, Arrenberg, Luisenviertel, Mirke, Bergisch]
+  dwd_warnings: {enabled: true, warncell_id: "105124000", min_level: 2}
+
+# type: rss (url ODER homepage mit Auto-Erkennung) | instagram (handle, offizielle Schnittstelle)
+# filter_wuppertal: false = Quelle ist per se lokal, kein Stichwortfilter
+# bilder: honorarfrei = Pressebilder dürfen mit Credit genutzt werden · bilder: freigabe = Fotograf hat zugestimmt
+#   (Freigaben, die du per Telegram-Knopf „freigabe da“ gibst, merkt sich die Engine selbst – hier nichts eintragen nötig.)
+#   Bildnetzwerk wie bei Wuppertal Aktuell: lokale Fotografen fragen, dann z. B.
+#   - {name: Fotograf X, type: instagram, handle: HANDLE, filter_wuppertal: false, bilder: freigabe}
+sources:
+  # Blaulicht, Stadt, Verkehr
+  - {name: Polizei Wuppertal, type: rss, url: "https://www.presseportal.de/rss/dienststelle_11811.rss2", title_must_contain: "POL-W: W ", filter_wuppertal: false, bilder: honorarfrei, credit: "Polizei Wuppertal / presseportal"}
+  - {name: Feuerwehr Wuppertal (Presse), type: rss, url: "https://www.presseportal.de/rss/dienststelle_115885.rss2", filter_wuppertal: false, bilder: honorarfrei, credit: "Feuerwehr Wuppertal / presseportal"}
+  - {name: Feuerwehr Wuppertal, type: instagram, handle: feuerwehr.wuppertal, filter_wuppertal: false}
+  - {name: Polizei Wuppertal (Instagram), type: instagram, handle: polizei.nrw.w, filter_wuppertal: false}
+  - {name: Stadt Wuppertal, type: rss, homepage: "https://www.wuppertal.de/presse/meldungen/", filter_wuppertal: false}
+  - {name: Stadt Wuppertal (Instagram), type: instagram, handle: stadt_wuppertal, filter_wuppertal: false}
+  - {name: WSW, type: instagram, handle: wuppertaler_stadtwerke, filter_wuppertal: false}
+  # Lokalmedien – die schnellsten zuerst
+  - {name: Wuppertal Aktuell, type: instagram, handle: wuppertal.aktuell, filter_wuppertal: false}
+  - {name: Bergische Blaulichtnews, type: instagram, handle: bergischeblaulichtnews}
+  - {name: Talzeit, type: instagram, handle: talzeit.wuppertal, filter_wuppertal: false}
+  - {name: Radio Wuppertal, type: instagram, handle: radiowuppertal, filter_wuppertal: false}
+  - {name: WZ, type: rss, homepage: "https://www.wz.de/nrw/wuppertal/"}
+  - {name: Wuppertaler Rundschau, type: rss, homepage: "https://www.wuppertaler-rundschau.de/"}
+  - {name: WDR Lokalzeit Bergisches Land, type: rss, homepage: "https://www1.wdr.de/studio/wuppertal/"}
+  - {name: Talzeit (Web), type: rss, homepage: "https://www.talzeit.de/lokales/wuppertal/"}
+  - {name: Wuppertal Total, type: rss, homepage: "https://wuppertal-total.de/"}
+  # Kultur, Stadtgesellschaft, Communities
+  - {name: Pina Bausch Foundation, type: instagram, handle: pinabauschfoundation, filter_wuppertal: false}
+  - {name: Tanztheater Wuppertal, type: instagram, handle: tanztheaterwuppertal, filter_wuppertal: false}
+  - {name: Pina Bausch Zentrum, type: rss, homepage: "https://pinabauschzentrum.de/", filter_wuppertal: false}
+  - {name: Community & Solidarity, type: instagram, handle: com_and_sol, filter_wuppertal: false}
+  - {name: BIPoC-Referat Uni Wuppertal, type: instagram, handle: bipocreferat_buw, filter_wuppertal: false}
+  - {name: Queering the City, type: instagram, handle: queeringthecity_wuppertal, filter_wuppertal: false}
+  - {name: Utopiastadt, type: rss, homepage: "https://www.utopiastadt.eu/", filter_wuppertal: false}
+  - {name: Uni Wuppertal, type: instagram, handle: uni.wuppertal, filter_wuppertal: false}
+  # Geschichte: Themen und Fakten neu erzählen, Bilder NIE übernehmen (eigene über Commons/Public Domain)
+  - {name: Alte Fotos aus'm Tal, type: instagram, handle: wuppertal_his, filter_wuppertal: false, lookback_hours: 168}
+
+event_sources:
+  - {name: Wuppertal Live, type: rss, homepage: "https://www.wuppertal-live.de/", filter_wuppertal: false}
+  - {name: Wuppertal Marketing, type: instagram, handle: wuppertal, filter_wuppertal: false}
+
+# ── Radar: Wer bekommt gerade Aufmerksamkeit? (einmal täglich, nur lesend) ──
+radar: [wuppertal.aktuell, talzeit.wuppertal, radiowuppertal, bergischeblaulichtnews, wuppertal, stadt_wuppertal,
+        1live, wdrcosmo, deutschlandfunknova]

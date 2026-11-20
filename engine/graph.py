@@ -1,0 +1,230 @@
+"""Schlanker Client für die offizielle Instagram-Schnittstelle (Graph API, Facebook-Login-Variante)."""
+from __future__ import annotations
+
+import json
+import time
+
+import requests
+
+BASE = "https://graph.facebook.com"
+MEDIA_FIELDS = "id,caption,media_type,media_url,permalink,timestamp,like_count,comments_count"
+
+
+class GraphError(RuntimeError):
+    pass
+
+
+class GraphClient:
+    def __init__(self, token: str, ig_user_id: str | None = None, version: str = "v25.0", session=None):
+        self.token = token
+        self.ig = ig_user_id
+        self.base = f"{BASE}/{version}"
+        self.http = session or requests.Session()
+
+    def _req(self, method: str, path: str, **params):
+        params["access_token"] = self.token
+        url = f"{self.base}/{path.lstrip('/')}"
+        r = self.http.request(method, url, params=params if method == "GET" else None,
+                              data=params if method != "GET" else None, timeout=90)
+        data = r.json() if r.content else {}
+        if r.status_code >= 400 or "error" in data:
+            raise GraphError(f"{method} {path}: {data.get('error', r.text)}")
+        return data
+
+    # ── Einrichtung ─────────────────────────────────────────
+    def discover_ig_user(self) -> tuple[str, str]:
+        """Findet den Instagram-Business-Account hinter dem Token (über die verknüpfte Facebook-Seite)."""
+        pages = self._req("GET", "me/accounts",
+                          fields="id,name,access_token,instagram_business_account{id,username}").get("data", [])
+        for p in pages:
+            ig = p.get("instagram_business_account")
+            if ig:
+                self.ig = ig["id"]
+                self.page_id, self.page_token = p["id"], p.get("access_token")
+                return ig["id"], ig.get("username", "")
+        raise GraphError("Kein Instagram-Business-Account an einer Facebook-Seite gefunden. "
+                         "Ist @stadtwuppertal ein Business-Account und mit der Seite verknüpft?")
+
+    # ── Lesen ───────────────────────────────────────────────
+    def business_discovery(self, username: str, limit: int = 15) -> dict:
+        u = username.lstrip("@")
+        fields = (f"business_discovery.username({u}){{username,name,followers_count,media_count,"
+                  f"media.limit({limit}){{id,caption,like_count,comments_count,timestamp,permalink,media_type,media_url}}}}")
+        return self._req("GET", self.ig, fields=fields).get("business_discovery", {})
+
+    def hashtag_media(self, tag: str, edge: str = "top_media", limit: int = 30) -> list[dict]:
+        """Öffentliche Beiträge zu einem Hashtag (braucht Metas Freigabe „Instagram Public Content Access“).
+        Meta liefert keinen Nutzernamen, aber den Link zum Post. Max. 30 verschiedene Hashtags pro 7 Tage."""
+        hid = self._req("GET", "ig_hashtag_search", user_id=self.ig, q=tag.lstrip("#"))["data"][0]["id"]
+        return self._req("GET", f"{hid}/{edge}", user_id=self.ig, limit=limit,
+                         fields="id,caption,media_type,media_url,permalink,like_count,comments_count,timestamp").get("data", [])
+
+    def tagged_media(self, limit: int = 25) -> list[dict]:
+        return self._req("GET", f"{self.ig}/tags", fields=MEDIA_FIELDS + ",username", limit=limit).get("data", [])
+
+    def own_media(self, limit: int = 30) -> list[dict]:
+        return self._req("GET", f"{self.ig}/media", fields=MEDIA_FIELDS + ",media_product_type",
+                         limit=limit).get("data", [])
+
+    def insights(self, media_id: str, product: str = "FEED") -> dict:
+        metrics = "reach,likes,comments,saved,shares,total_interactions"
+        if product == "REELS":
+            metrics = "reach,likes,comments,saved,shares,total_interactions,views"
+        try:
+            data = self._req("GET", f"{media_id}/insights", metric=metrics).get("data", [])
+        except GraphError:
+            data = self._req("GET", f"{media_id}/insights", metric="reach,total_interactions").get("data", [])
+        return {d["name"]: (d.get("values") or [{}])[0].get("value", d.get("total_value", {}).get("value"))
+                for d in data}
+
+    def account_stats(self) -> dict:
+        return self._req("GET", self.ig, fields="followers_count,media_count,username")
+
+    def comments(self, media_id: str) -> list[dict]:
+        return self._req("GET", f"{media_id}/comments", fields="id,text,username,hidden,timestamp",
+                         limit=50).get("data", [])
+
+    def hide_comment(self, comment_id: str):
+        self._req("POST", comment_id, hide="true")
+
+    def quota(self) -> dict:
+        data = self._req("GET", f"{self.ig}/content_publishing_limit", fields="quota_usage,config")
+        return (data.get("data") or [{}])[0]
+
+    # ── Postfach (nur Antworten – die erste Nachricht schickt ein Mensch, so will es Meta) ──
+    def _page(self):
+        if not getattr(self, "page_token", None):
+            self.discover_ig_user()
+        return self.page_id, self.page_token
+
+    def conversations(self, limit=25) -> list[dict]:
+        pid, ptok = self._page()
+        r = self.http.get(f"{self.base}/{pid}/conversations", timeout=60, params={
+            "platform": "instagram", "access_token": ptok, "limit": limit,
+            "fields": "updated_time,participants,messages.limit(6){id,from,message,created_time,attachments}"})
+        data = r.json()
+        if "error" in data:
+            raise GraphError(f"conversations: {data['error']}")
+        return data.get("data", [])
+
+    def reply(self, igsid: str, text: str):
+        pid, ptok = self._page()
+        r = self.http.post(f"{self.base}/{pid}/messages", timeout=60, data={
+            "recipient": json.dumps({"id": igsid}), "message": json.dumps({"text": text[:900]}),
+            "messaging_type": "RESPONSE", "access_token": ptok})
+        if "error" in (r.json() if r.content else {}):
+            raise GraphError(f"reply: {r.text[:200]}")
+
+    # ── Veröffentlichen ─────────────────────────────────────
+    def _wait(self, container: str, max_wait=600, step=6):
+        waited = 0
+        while waited <= max_wait:
+            st = self._req("GET", container, fields="status_code,status").get("status_code")
+            if st == "FINISHED":
+                return
+            if st in ("ERROR", "EXPIRED"):
+                raise GraphError(f"Container {container}: {st}")
+            time.sleep(step)
+            waited += step
+        raise GraphError(f"Container {container}: Zeitüberschreitung")
+
+    def _publish(self, container: str) -> str:
+        self._wait(container)
+        return self._req("POST", f"{self.ig}/media_publish", creation_id=container)["id"]
+
+    def image(self, url: str, caption: str, alt: str = "") -> str:
+        p = {"image_url": url, "caption": caption}
+        if alt:
+            p["alt_text"] = alt[:1000]
+        return self._publish(self._req("POST", f"{self.ig}/media", **p)["id"])
+
+    def carousel(self, urls: list[str], caption: str) -> str:
+        kids = [self._req("POST", f"{self.ig}/media", image_url=u, is_carousel_item="true")["id"] for u in urls[:10]]
+        for k in kids:
+            self._wait(k)
+        c = self._req("POST", f"{self.ig}/media", media_type="CAROUSEL", children=",".join(kids), caption=caption)
+        return self._publish(c["id"])
+
+    def reel(self, video_url: str, caption: str, cover_url: str | None = None) -> str:
+        p = {"media_type": "REELS", "video_url": video_url, "caption": caption, "share_to_feed": "true"}
+        if cover_url:
+            p["cover_url"] = cover_url
+        return self._publish(self._req("POST", f"{self.ig}/media", **p)["id"])
+
+    def story(self, image_url: str | None = None, video_url: str | None = None) -> str:
+        p = {"media_type": "STORIES"}
+        p.update({"image_url": image_url} if image_url else {"video_url": video_url})
+        return self._publish(self._req("POST", f"{self.ig}/media", **p)["id"])
+
+    def permalink(self, media_id: str) -> str:
+        return self._req("GET", media_id, fields="permalink").get("permalink", "")
+
+
+class FakeGraph:
+    """Für Tests und Trockenläufe: postet nichts, merkt sich nur, was es tun würde."""
+
+    def __init__(self, discovery: dict | None = None):
+        self.ig = "1784-test"
+        self.done = []
+        self.discovery = discovery or {}
+        self.inbox, self.replies = [], []
+
+    def discover_ig_user(self):
+        return self.ig, "stadtwuppertal"
+
+    def business_discovery(self, username, limit=15):
+        return self.discovery.get(username, {"username": username, "followers_count": 1000, "media": {"data": []}})
+
+    def tagged_media(self, limit=25):
+        return getattr(self, "tags", [])
+
+    def hashtag_media(self, tag, edge="top_media", limit=30):
+        return getattr(self, "hashtag", {}).get(tag, []) if edge == "top_media" else []
+
+    def own_media(self, limit=30):
+        return [{"id": x[1], "timestamp": "2026-11-20T10:00:00+0000", "media_product_type": "FEED"} for x in self.done]
+
+    def insights(self, media_id, product="FEED"):
+        return {"reach": 1200, "likes": 80, "comments": 12, "saved": 9, "shares": 14, "total_interactions": 115}
+
+    def account_stats(self):
+        return {"followers_count": 1234, "media_count": len(self.done)}
+
+    def comments(self, media_id):
+        return []
+
+    def conversations(self, limit=25):
+        return self.inbox
+
+    def reply(self, igsid, text):
+        self.replies.append((igsid, text))
+
+    def hide_comment(self, cid):
+        self.done.append(("hide", cid))
+
+    def quota(self):
+        return {"quota_usage": len(self.done)}
+
+    def _rec(self, kind, *a):
+        mid = f"ig-{len(self.done) + 1}"
+        self.done.append((kind, mid, a))
+        return mid
+
+    def image(self, url, caption, alt=""):
+        return self._rec("image", url, caption)
+
+    def carousel(self, urls, caption):
+        return self._rec("carousel", urls, caption)
+
+    def reel(self, video_url, caption, cover_url=None):
+        return self._rec("reel", video_url, caption)
+
+    def story(self, image_url=None, video_url=None):
+        return self._rec("story", image_url or video_url)
+
+    def permalink(self, media_id):
+        return f"https://instagram.com/p/{media_id}"
+
+
+def dumps(o):
+    return json.dumps(o, ensure_ascii=False)

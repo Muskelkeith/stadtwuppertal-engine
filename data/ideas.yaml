@@ -1,0 +1,275 @@
+ideas:
+- id: poll-duel-01
+  type: poll
+  text: 'Weihnachtsmarkt: Elberfeld oder Barmen?'
+  options:
+  - Elberfeld
+  - Barmen
+  status: geprueft
+- id: poll-duel-02
+  type: poll
+  text: Tal-Kind oder Höhen-Kind?
+  options:
+  - Tal
+  - Höhen
+  status: geprueft
+- id: poll-duel-03
+  type: poll
+  text: Nordbahntrasse oder Sambatrasse?
+  options:
+  - Nordbahntrasse
+  - Sambatrasse
+  status: geprueft
+- id: poll-duel-04
+  type: poll
+  text: 'Schwebebahn: ganz vorne oder ganz hinten?'
+  options:
+  - Vorne
+  - Hinten
+  status: geprueft
+- id: poll-duel-05
+  type: poll
+  text: Zoo oder Skulpturenpark Waldfrieden?
+  options:
+  - Zoo
+  - Skulpturenpark
+  status: geprueft
+- id: poll-duel-06
+  type: poll
+  text: Elisenturm oder Toelleturm?
+  options:
+  - Elisenturm
+  - Toelleturm
+  status: geprueft
+- id: poll-duel-07
+  type: poll
+  text: 103 Stufen oder 15 Minuten auf den Bus warten?
+  options:
+  - Treppe
+  - Bus
+  status: geprueft
+- id: poll-duel-08
+  type: poll
+  text: Schirm oder Kapuze?
+  options:
+  - Schirm
+  - Kapuze
+  status: geprueft
+- id: poll-duel-09
+  type: poll
+  text: 'Bergische Waffel: heiße Kirschen oder Milchreis?'
+  options:
+  - Kirschen
+  - Milchreis
+  status: geprueft
+- id: poll-duel-10
+  type: poll
+  text: 'Ein Abend: Luisenviertel oder Ölberg?'
+  options:
+  - Luisenviertel
+  - Ölberg
+  status: geprueft
+- id: poll-duel-11
+  type: poll
+  text: 'Bessere Endstation: Vohwinkel oder Oberbarmen?'
+  options:
+  - Vohwinkel
+  - Oberbarmen
+  status: geprueft
+- id: poll-duel-12
+  type: poll
+  text: 'Samstag: Flohmarkt Vohwinkel oder Ausschlafen?'
+  options:
+  - Flohmarkt
+  - Ausschlafen
+  status: geprueft
+- id: poll-open-01
+  type: poll
+  text: 'Schwebebahnstationen von naja bis ikonisch: euer Ranking?'
+  status: geprueft
+- id: poll-open-02
+  type: poll
+  text: Die steilste Straße, die ihr je zu Fuß hoch seid?
+  status: geprueft
+- id: poll-open-03
+  type: poll
+  text: Top 5 Aussichtspunkte aufs Tal?
+  status: geprueft
+- id: poll-open-04
+  type: poll
+  text: Welcher Kiosk hat Kultstatus?
+  status: geprueft
+- id: poll-open-05
+  type: poll
+  text: Welche Treppe hat den höchsten Fluch-Faktor?
+  status: geprueft
+- id: poll-open-06
+  type: poll
+  text: Welcher Weihnachtsmarkt im Tal ist der beste?
+  status: geprueft
+- id: poll-open-07
+  type: poll
+  text: Bester Döner im Tal? Nur Nominierungen.
+  status: geprueft
+- id: poll-open-08
+  type: poll
+  text: In welchem Stadtteil wart ihr noch nie, und warum eigentlich nicht?
+  status: geprueft
+- id: poll-open-09
+  type: poll
+  text: Was sind eure Red Flags an der Schwebebahn?
+  status: geprueft
+- id: poll-open-10
+  type: poll
+  text: Green Flags an Wuppertal, nur ein Wort.
+  status: geprueft
+- id: poll-open-11
+  type: poll
+  text: Welcher Satz verrät sofort, dass jemand nicht von hier ist?
+  status: geprueft
+- id: poll-open-12
+  type: poll
+  text: Was würdet ihr in den leeren Kaufhof machen?
+  status: geprueft
+- id: poll-open-13
+  type: poll
+  text: 'Wenn die Schwebebahn eine Person wäre: wer?'
+  status: geprueft
+- id: poll-open-14
+  type: poll
+  text: Das Wuppertalerigste, was euch je passiert ist?
+  status: geprueft
+- id: poll-open-15
+  type: poll
+  text: Erklärt Wuppertal mit drei Emojis.
+  status: geprueft
+- id: poll-open-16
+  type: poll
+  text: Welcher Ort ist komplett unterschätzt?
+  status: geprueft
+- id: poll-open-17
+  type: poll
+  text: Welcher Laden fehlt dieser Stadt?
+  status: geprueft
+- id: poll-open-18
+  type: poll
+  text: Euer peinlichster Schwebebahn-Moment?
+  status: geprueft
+- id: poll-open-19
+  type: poll
+  text: Welche Viertel-Legende muss man kennen?
+  status: geprueft
+- id: poll-open-20
+  type: poll
+  text: Was hat euer Viertel, was kein anderes hat?
+  status: geprueft
+- id: poll-open-21
+  type: poll
+  text: Mit welchem Spruch begrüßt man Zugezogene?
+  status: geprueft
+- id: poll-open-22
+  type: poll
+  text: Welche Buslinie hat euch schon mal den Tag ruiniert?
+  status: geprueft
+- id: poll-open-23
+  type: poll
+  text: Eure Unpopular Opinion über Wuppertal?
+  status: geprueft
+- id: poll-open-24
+  type: poll
+  text: Welche Schule überlebt die Zombie-Apokalypse am längsten, und warum?
+  status: geprueft
+- id: fact-01
+  type: fact
+  big: '517'
+  text: Treppen gibt es im Wuppertaler Stadtgebiet, 352 davon gehören zum städtischen Wegenetz.
+  source: https://de.statista.com/infografik/22711/staedte-in-zahlen-wuppertal
+  status: geprueft
+- id: fact-02
+  type: fact
+  big: '103'
+  text: Stufen hat das Tippen-Tappen-Tönchen vom Luisenviertel hoch zum Ölberg, 16 Meter Höhenunterschied.
+  source: https://www.ich-geh-wandern.de/luisenviertel-wuppertal
+  status: geprueft
+- id: fact-03
+  type: fact
+  big: 198 m
+  text: hoch ist der Kamin des Heizkraftwerks Elberfeld, das höchste Bauwerk der Stadt.
+  source: https://schwebebahn.de/cms/uploads/wsw_von_station_zu_station_50f90f2919.pdf
+  status: geprueft
+- id: fact-04
+  type: fact
+  big: '85.000'
+  text: Fahrgäste nutzen die Schwebebahn an einem normalen Tag.
+  source: https://de.statista.com/infografik/amp/22711/staedte-in-zahlen-wuppertal/
+  status: geprueft
+- id: fact-05
+  type: fact
+  big: 1.600 m²
+  text: groß ist der Tiefbunker unter dem Döppersberg, den die Stadt verkauft hat.
+  source: https://www.wuppertal.de/microsite/doeppersberg/medien/bindata/Journal02_2016_web.pdf
+  status: geprueft
+- id: fact-06
+  type: fact
+  big: 50 %
+  text: der Stadtfläche sind Wald und Parks, sogar etwas mehr.
+  source: https://www.wuppertal.de/microsite/CCC/Mediathek/Mediathek-Start.php.media/455146/Wirtschaftsstandort-Wuppertal-_web.pdf
+  status: geprueft
+- id: fact-07
+  type: fact
+  big: '1'
+  text: 'weitere Bahn nach dem Schwebebahn-System Langen wurde je gebaut: die Bergschwebebahn in Dresden.'
+  source: https://www.zfk.de/mobilitaet/oepnv/wuppertaler-schwebebahn-der-kaiserwagen-kehrt-zurueck
+  status: geprueft
+- id: fact-08
+  type: fact
+  big: '1975'
+  text: kamen Dönberg, Dornap und Schöller zu Wuppertal.
+  source: https://schwebebahn.de/cms/uploads/wsw_stadtrundgaenge_f5512fafd0.pdf
+  status: geprueft
+- id: platt-01
+  type: platt
+  word: kallen
+  meaning: reden, sprechen
+  source: https://e-pflicht.ub.uni-duesseldorf.de/download/pdf/299780
+  status: geprueft
+- id: platt-02
+  type: platt
+  word: Dröppelminna
+  meaning: bergische Kaffeekanne mit Zapfhahn
+  source: ''
+  status: pruefen
+- id: platt-03
+  type: platt
+  word: plästern
+  meaning: stark regnen
+  source: ''
+  status: pruefen
+
+# ── Nischige Kuriositäten (Fast Food, aber nicht dumm) ─────
+# Regel für Rätsel: Die Antwort steckt nie im Bild oder im Hinweis, kommt nie im selben Post,
+# und mindestens die Hälfte der Wuppertaler muss überlegen.
+- id: fact-09
+  type: fact
+  big: 24.10.1900
+  text: fuhr Kaiser Wilhelm II. mit der Schwebebahn von Döppersberg nach Vohwinkel, Monate vor der offiziellen Eröffnung.
+  source: https://schwebebahn.de/cms/uploads/WSW_Schwebebahn_Flyer_Die_Geschichte_der_Wuppertaler_Schwebebahn_62a3bedfac.pdf
+  status: geprueft
+- id: fact-10
+  type: fact
+  big: 5.12.1898
+  text: war die erste Probefahrt der Schwebebahn, über zwei Jahre vor dem Start.
+  source: https://schwebebahn.de/cms/uploads/WSW_Schwebebahn_Flyer_Die_Geschichte_der_Wuppertaler_Schwebebahn_62a3bedfac.pdf
+  status: geprueft
+- id: fact-11
+  type: fact
+  big: Öl
+  text: Der Ölberg heißt so, weil dort in den 1920ern noch Öllampen brannten, als die Viertel drumherum schon Strom hatten.
+  source: https://de.wikipedia.org/wiki/Ölberg_(Wuppertal)
+  status: pruefen
+- id: fact-12
+  type: fact
+  big: '4.500'
+  text: Baudenkmäler zählt Wuppertal.
+  source: https://www.germany.travel/en/cities-culture/wuppertal.html
+  status: pruefen

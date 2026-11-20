@@ -1,0 +1,128 @@
+history:
+- date: 01-16
+  year: 1931
+  title: Johannes Rau kommt in Wuppertal zur Welt
+  text: Der spätere Bundespräsident wurde in Wuppertal geboren.
+  tone: Stolz
+  status: tag_pruefen
+  source: https://www.revierpassagen.de/134164/dies-und-das-in-wuppertal/20240727_1128?print=pdf
+- date: 01-25
+  year: 1930
+  title: Aus Barmen-Elberfeld wird Wuppertal
+  text: Die 1929 vereinigte Stadt hieß zuerst Barmen-Elberfeld und bekam 1930 den Namen Wuppertal.
+  tone: Kurios
+  status: tag_pruefen
+  source: https://en.wikipedia.org/wiki/Wuppertal
+- date: 02-11
+  year: 1869
+  title: Else Lasker-Schüler wird in Elberfeld geboren
+  text: Die Dichterin kam 1869 in Elberfeld zur Welt.
+  tone: Kultur
+  status: tag_pruefen
+  source: https://www.revierpassagen.de/134164/dies-und-das-in-wuppertal/20240727_1128?print=pdf
+- date: 03-01
+  year: 1901
+  title: Die Schwebebahn geht in Betrieb
+  text: Am 1. März 1901 nahm die Wuppertaler Schwebebahn den Betrieb auf.
+  tone: Ikone
+  status: geprueft
+  source: https://schwebebahn.de/cms/uploads/WSW_Schwebebahn_Flyer_Die_Geschichte_der_Wuppertaler_Schwebebahn_62a3bedfac.pdf
+- date: 03-06
+  year: 1899
+  title: Aspirin wird als Marke eingetragen
+  text: Das in Wuppertal entwickelte Aspirin wurde als Marke eingetragen.
+  tone: Kurios
+  status: tag_pruefen
+  source: https://en.wikipedia.org/wiki/Wuppertal
+- date: 05-18
+  year: 1891
+  title: Rudolf Carnap wird in Ronsdorf geboren
+  text: Der Philosoph Rudolf Carnap stammt aus Ronsdorf.
+  tone: Kultur
+  status: tag_pruefen
+  source: https://en.wikipedia.org/wiki/Ronsdorf
+- date: 05-23
+  year: 1965
+  title: Tom Tykwer wird in Wuppertal geboren
+  text: Der Regisseur stammt aus Wuppertal.
+  tone: Popkultur
+  status: tag_pruefen
+  source: ''
+- date: 05-26
+  year: 1923
+  title: Horst Tappert wird in Wuppertal geboren
+  text: Der Derrick-Darsteller wurde in Wuppertal geboren.
+  tone: Popkultur
+  status: tag_pruefen
+  source: https://www.revierpassagen.de/134164/dies-und-das-in-wuppertal/20240727_1128?print=pdf
+- date: 05-30
+  year: 1943
+  title: Luftangriff zerstört Barmen-Gemarke
+  text: In der Nacht vom 29. auf den 30. Mai 1943 wurde das Zentrum von Barmen weitgehend zerstört.
+  tone: Gedenken
+  status: geprueft
+  source: https://e-pflicht.ub.uni-duesseldorf.de/download/pdf/336255
+- date: 06-30
+  year: 2009
+  title: Pina Bausch stirbt in Wuppertal
+  text: Die Choreografin, Gründerin des Tanztheaters Wuppertal, starb 2009 in Wuppertal.
+  tone: Gedenken
+  status: tag_pruefen
+  source: https://pinabauschzentrum.de/en/project
+- date: 07-21
+  year: 1950
+  title: Tuffi springt aus der Schwebebahn
+  text: Die vierjährige Zirkuselefantin sprang bei einer Werbefahrt des Zirkus Althoff nahe der Station Adlerbrücke in die
+    Wupper und kam mit einer Schramme davon.
+  tone: Kult
+  status: geprueft
+  source: https://schwebebahn.de/en/neuigkeiten/75-years-of-the-tuffi-jump
+- date: 08-01
+  year: 1863
+  title: Bayer wird in Barmen gegründet
+  text: Die Firma Friedr. Bayer & Co. wurde 1863 in Barmen gegründet.
+  tone: Kurios
+  status: tag_pruefen
+  source: https://www.bayer.com/en/node/5571
+- date: 08-01
+  year: 1929
+  title: Fünf Städte werden eine
+  text: Elberfeld, Barmen, Ronsdorf, Cronenberg und Vohwinkel wurden 1929 zusammengelegt.
+  tone: Identität
+  status: tag_pruefen
+  source: https://en.wikipedia.org/wiki/Wuppertal
+- date: 08-10
+  year: 1897
+  title: Felix Hoffmann und die Acetylsalicylsäure
+  text: Bayer-Chemiker Felix Hoffmann stellte in Elberfeld den Wirkstoff von Aspirin her.
+  tone: Kurios
+  status: tag_pruefen
+  source: https://www.bayer.com/de/unternehmensgeschichte/biografien
+- date: 10-24
+  year: 1900
+  title: Der Kaiser fährt Probe
+  text: Kaiser Wilhelm II. fuhr vor der Eröffnung mit der Schwebebahn.
+  tone: Kurios
+  status: tag_pruefen
+  source: ''
+- date: 10-27
+  year: 2026
+  title: Schwebebahn bleibt stecken
+  text: Nach einem Kurzschluss blieb ein Zug stehen; die Feuerwehr holte die Fahrgäste per Drehleiter heraus.
+  tone: Kurios
+  status: geprueft
+  source: https://newstime.joyn.de/themen/panorama/wuppertal-stromausfall-legt-schwebebahn-lahm-207850
+- date: 11-22
+  year: 1960
+  title: Der Brausenwerther Platz verschwindet
+  text: Bis zum 22. November 1960 hieß der Platz Brausenwerther Platz, dann wurde er Teil der Bundesallee.
+  tone: Kurios
+  status: geprueft
+  source: https://www.wuppertal.de/microsite/buergerbeteiligung/medien/bindata/Namensvorschlaege_Bahnhofsvorplatz__Stand__20.11.2017.pdf
+- date: 11-28
+  year: 1820
+  title: Friedrich Engels wird in Barmen geboren
+  text: Friedrich Engels kam 1820 in Barmen zur Welt.
+  tone: Weltgeschichte
+  status: tag_pruefen
+  source: https://bundestagwahlumfrage.de/bundeslaender/nrw/staedte/wuppertal/
