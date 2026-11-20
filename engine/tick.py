@@ -60,7 +60,11 @@ class Engine:
         if graph is not None:
             self.graph = graph
         elif secrets.IG_TOKEN:
-            self.graph = GraphClient(secrets.IG_TOKEN, self.st.get("ig_user_id"), cfg["account"]["graph_api_version"])
+            # verlängerter Token aus dem Gedächtnis hat Vorrang, solange er zum Secret gehört
+            tok = secrets.IG_TOKEN
+            if self.st.get("ig_token") and self.st.get("ig_token_from") == secrets.IG_TOKEN[:24]:
+                tok = self.st["ig_token"]
+            self.graph = GraphClient(tok, self.st.get("ig_user_id"), cfg["account"]["graph_api_version"])
         else:
             self.graph = None
         live_llm = secrets.CLAUDE_CODE_OAUTH_TOKEN or secrets.ANTHROPIC_API_KEY
@@ -191,6 +195,8 @@ class Engine:
             return
         self.st["done"]["collect_ts"] = self.ts()
         srcs = self.cfg["sources"] + self.cfg.get("event_sources", [])
+        if self.graph is not None and getattr(self.graph, "ig_login", False):
+            srcs = [x for x in srcs if x["type"] != "instagram"]   # Account-Beobachtung erst mit Facebook-Weg
         items, errs = sources.collect(srcs, self.cfg["news"], self.graph, self.http, now=self.now())
         if errs:
             self.st["done"]["source_errors"] = errs[-20:]
@@ -472,7 +478,11 @@ class Engine:
         if self.graph is None:
             return
         p = self.cfg["photos"]
-        for t in self.graph.tagged_media(limit=10):
+        try:
+            tagged = self.graph.tagged_media(limit=10)
+        except Exception:      # noqa: BLE001 – beim Instagram-Login-Weg gibt es diese Liste ggf. nicht
+            return
+        for t in tagged:
             key, h = f"tag:{t['id']}", (t.get("username") or "")
             if key in self.st["seen"] or not h or t.get("media_type") not in ("IMAGE", "CAROUSEL_ALBUM") \
                     or not t.get("media_url") or AD.search(t.get("caption") or ""):
@@ -829,7 +839,13 @@ class Engine:
     # ── 5. Tagesaufgaben ────────────────────────────────────
     def daily(self):
         now = self.now()
-        if self.graph is not None and now.hour >= 6 and self.once("radar"):
+        if self.graph is not None and getattr(self.graph, "ig_login", False) and \
+                self.ts() - self.st["done"].get("token_refreshed", 0) > 7 * 86400:
+            got = self.graph.refresh_token()
+            if got:
+                self.st["ig_token"], self.st["ig_token_from"] = got[0], self.s.IG_TOKEN[:24]
+                self.st["done"]["token_refreshed"] = self.ts()
+        if self.graph is not None and not getattr(self.graph, "ig_login", False) and now.hour >= 6 and self.once("radar"):
             hits, accounts, errs = radar.scan(self.graph, self.cfg["radar"])
             self.st["radar"], self.st["accounts"] = hits, accounts
         if self.graph is not None and now.hour >= 22 and self.once("insights"):

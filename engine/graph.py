@@ -7,6 +7,7 @@ import time
 import requests
 
 BASE = "https://graph.facebook.com"
+IG_BASE = "https://graph.instagram.com"
 MEDIA_FIELDS = "id,caption,media_type,media_url,permalink,timestamp,like_count,comments_count"
 
 
@@ -18,7 +19,10 @@ class GraphClient:
     def __init__(self, token: str, ig_user_id: str | None = None, version: str = "v25.0", session=None):
         self.token = token
         self.ig = ig_user_id
-        self.base = f"{BASE}/{version}"
+        # Zwei Wege bei Meta: Instagram-Login (Token beginnt mit „IG“, keine Facebook-Seite nötig)
+        # oder Facebook-Login (Token „EAA…“, mit Seite – dann gehen auch Account-Beobachtung und Hashtag-Suche).
+        self.ig_login = token.startswith("IG")
+        self.base = f"{IG_BASE if self.ig_login else BASE}/{version}"
         self.http = session or requests.Session()
 
     def _req(self, method: str, path: str, **params):
@@ -33,7 +37,11 @@ class GraphClient:
 
     # ── Einrichtung ─────────────────────────────────────────
     def discover_ig_user(self) -> tuple[str, str]:
-        """Findet den Instagram-Business-Account hinter dem Token (über die verknüpfte Facebook-Seite)."""
+        """Findet den Instagram-Account hinter dem Token."""
+        if self.ig_login:
+            me = self._req("GET", "me", fields="user_id,username")
+            self.ig = me.get("user_id") or me.get("id")
+            return self.ig, me.get("username", "")
         pages = self._req("GET", "me/accounts",
                           fields="id,name,access_token,instagram_business_account{id,username}").get("data", [])
         for p in pages:
@@ -47,6 +55,8 @@ class GraphClient:
 
     # ── Lesen ───────────────────────────────────────────────
     def business_discovery(self, username: str, limit: int = 15) -> dict:
+        if self.ig_login:
+            raise GraphError("Account-Beobachtung braucht den Facebook-Login-Weg")
         u = username.lstrip("@")
         fields = (f"business_discovery.username({u}){{username,name,followers_count,media_count,"
                   f"media.limit({limit}){{id,caption,like_count,comments_count,timestamp,permalink,media_type,media_url}}}}")
@@ -55,6 +65,8 @@ class GraphClient:
     def hashtag_media(self, tag: str, edge: str = "top_media", limit: int = 30) -> list[dict]:
         """Öffentliche Beiträge zu einem Hashtag (braucht Metas Freigabe „Instagram Public Content Access“).
         Meta liefert keinen Nutzernamen, aber den Link zum Post. Max. 30 verschiedene Hashtags pro 7 Tage."""
+        if self.ig_login:
+            raise GraphError("(#10) Hashtag-Suche braucht den Facebook-Login-Weg")
         hid = self._req("GET", "ig_hashtag_search", user_id=self.ig, q=tag.lstrip("#"))["data"][0]["id"]
         return self._req("GET", f"{hid}/{edge}", user_id=self.ig, limit=limit,
                          fields="id,caption,media_type,media_url,permalink,like_count,comments_count,timestamp").get("data", [])
@@ -93,9 +105,22 @@ class GraphClient:
 
     # ── Postfach (nur Antworten – die erste Nachricht schickt ein Mensch, so will es Meta) ──
     def _page(self):
+        if self.ig_login:                      # Instagram-Login: Postfach hängt direkt am Instagram-Account
+            return self.ig, self.token
         if not getattr(self, "page_token", None):
             self.discover_ig_user()
         return self.page_id, self.page_token
+
+    def refresh_token(self) -> tuple[str, int] | None:
+        """Instagram-Login-Tokens laufen nach 60 Tagen ab – die Engine verlängert sie selbst."""
+        if not self.ig_login:
+            return None
+        r = self.http.get(f"{IG_BASE}/refresh_access_token", timeout=60,
+                          params={"grant_type": "ig_refresh_token", "access_token": self.token}).json()
+        if r.get("access_token"):
+            self.token = r["access_token"]
+            return self.token, int(r.get("expires_in", 0))
+        return None
 
     def conversations(self, limit=25) -> list[dict]:
         pid, ptok = self._page()
