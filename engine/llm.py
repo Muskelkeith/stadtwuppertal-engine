@@ -65,7 +65,7 @@ def small_jpeg(img_bytes: bytes, side=1024) -> bytes:
     return buf.getvalue()
 
 
-def _ask_image(self, task: str, system: str, prompt: str, jpeg: bytes, tier="triage"):
+def _ask_image(self, task: str, system: str, prompt: str, jpeg: bytes, tier="triage", side=1024):
     """Wie ask(), aber Claude sieht dazu ein Bild (Bildredaktion)."""
     import base64
     self.calls += 1
@@ -75,7 +75,7 @@ def _ask_image(self, task: str, system: str, prompt: str, jpeg: bytes, tier="tri
         return self.stub(task, prompt)
     msg = {"type": "user", "message": {"role": "user", "content": [
         {"type": "image", "source": {"type": "base64", "media_type": "image/jpeg",
-                                     "data": base64.b64encode(small_jpeg(jpeg)).decode()}},
+                                     "data": base64.b64encode(small_jpeg(jpeg, side)).decode()}},
         {"type": "text", "text": prompt}]}}
     exe = shutil.which("claude") or "claude"
     cmd = [exe, "-p", "--input-format", "stream-json", "--output-format", "stream-json", "--verbose",

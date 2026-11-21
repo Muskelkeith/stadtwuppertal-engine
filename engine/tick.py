@@ -29,6 +29,7 @@ from .telegram import Telegram
 STATE = "_engine/state.json"
 AD = re.compile(r"#(ad|anzeige|werbung|sponsored|gifted|kooperation)\b|\b(anzeige|werbung|rabattcode|gutscheincode)\b", re.I)
 RULES = "_engine/regeln.md"
+LESSONS = "_engine/gelernt.md"     # selbst gelernte Regeln (Bildkontrolle + deine Kritik)
 
 
 def _fp(token) -> str:
@@ -79,7 +80,9 @@ class Engine:
         self.llm = llm or LLM(secrets, cfg["llm"], stub=None if (live_llm and not dry) else stub)
         rules = (self.root / "data/redaktion.md").read_text(encoding="utf-8")
         learned = (self.store.get(RULES) or b"").decode("utf-8")
-        self.brain = Brain(self.llm, cfg, rules + ("\n" + learned if learned else ""))
+        lessons = (self.store.get(LESSONS) or b"").decode("utf-8")
+        self.brain = Brain(self.llm, cfg, rules + ("\n" + learned if learned else "")
+                           + ("\n\nSELBST GELERNT (aus Bildkontrolle und Kritik, verbindlich)\n" + lessons if lessons else ""))
         self.tg = telegram or Telegram(secrets.TELEGRAM_TOKEN, self.st, http=http, dry=dry)
         self.errors: list[str] = []
         self.k = cfg["takt"]
@@ -211,6 +214,9 @@ class Engine:
         if ev.get("file_id"):
             from .voice import transcribe
             text = transcribe(self.tg.download(ev["file_id"]))
+        if text.strip():
+            self.st.setdefault("kritik", []).append(text.strip()[:500])
+            self.st["kritik"] = self.st["kritik"][-60:]
         q = next((x for x in self.st["queue"] if str(x.get("tg")) == ev["msg"]), None)
         if not q or q["status"] not in ("waiting", "ready") or not q.get("pkg"):
             self.add_idea(f"Post neu machen. Kritik: {ev.get('text', '')}")
@@ -555,8 +561,9 @@ class Engine:
 
     def produce(self):
         for q in [x for x in self.st["queue"] if x["status"] == "new"][:2]:   # max 2 pro Takt, damit es flott bleibt
+            self._redo = False
             self.step(f"produktion {q['id']}", self.produce_one, q)
-            if q["status"] == "new":
+            if q["status"] == "new" and not self._redo:
                 q["status"] = "dropped"
 
     def produce_one(self, q):
@@ -576,7 +583,8 @@ class Engine:
             return
         text_mat = {k: v for k, v in mat.items() if not k.startswith("_")} if isinstance(mat, dict) else mat
         recent = [" ".join(p.get("hook", [])) for p in self.st["posted"][-15:]]
-        pkg = self.brain.write(q["mode"], text_mat, note=self.learned_note(), recent_hooks=recent)
+        note = "\n".join(x for x in (self.learned_note(), q.get("qa_note")) if x)
+        pkg = self.brain.write(q["mode"], text_mat, note=note, recent_hooks=recent)
         rev = self.brain.review(pkg, text_mat)
         pkg.update(rev.get("fixes") or {})
         pkg["risk"] = max(pkg.get("risk", "gruen"), rev.get("risk", "gruen"), key=["gruen", "gelb", "rot"].index)
@@ -597,6 +605,8 @@ class Engine:
             q["caption"] = self.caption(pkg, credit)
             return self.render_reel(q, photo)
         imgs = render.carousel(pkg, photo, wagnis=wagnis, seed=seed)
+        if not self.qa_gate(q, imgs, pkg):
+            return
         q["media"] = [self.store.media(f"{int(self.ts())}-{q['id']}-{n}.jpg", render.jpeg(im)) for n, im in enumerate(imgs)]
         q["cover_jpeg"] = None
         self._cover = getattr(self, "_cover", {})
@@ -604,6 +614,94 @@ class Engine:
         self._slides = getattr(self, "_slides", {})
         self._slides[q["id"]] = [render.jpeg(im, 80) for im in imgs[1:]]
         self.decide(q, pkg, credit)
+
+    # ── Qualitätskontrolle ──────────────────────────────────
+    @staticmethod
+    def contact_sheet(imgs, tile=420, cols=3):
+        import io
+        imgs = [im.convert("RGB") for im in imgs[:9]]
+        th = [int(tile * im.height / im.width) for im in imgs]
+        rows = [th[i:i + cols] for i in range(0, len(th), cols)]
+        H = sum(max(r) for r in rows) + 12 * (len(rows) + 1)
+        sheet = Image.new("RGB", (cols * tile + 12 * (cols + 1), H), (255, 255, 255))
+        y = 12
+        for ri, r in enumerate(rows):
+            for ci in range(len(r)):
+                im = imgs[ri * cols + ci].resize((tile, r[ci]), Image.LANCZOS)
+                sheet.paste(im, (12 + ci * (tile + 12), y))
+            y += max(r) + 12
+        buf = io.BytesIO()
+        sheet.save(buf, "JPEG", quality=88)
+        return buf.getvalue()
+
+    def qa_gate(self, q, imgs, pkg, problems=None, kind=None) -> bool:
+        """Schaut sich den fertigen Post an, bevor er rausgeht. Durchgefallen → neu machen (max. 2×), sonst verwerfen.
+        Jeder Fehler wird zur Lehre, damit er nicht wieder passiert."""
+        kind = kind or q.get("kind", "feed")
+        stats = self.st.setdefault("qa", {})
+        day = self.today()
+        if problems:
+            res = {"ok": False, "probleme": problems, "technisch": True,
+                   "lehre": "Texte so kurz halten, dass sie in jeden Kasten passen; lieber auf mehrere Bilder verteilen."}
+        elif imgs:
+            try:
+                res = self.brain.visual_check(self.contact_sheet(imgs), pkg, kind)
+            except Exception as e:      # noqa: BLE001 – fällt die Kontrolle aus, blockiert sie nicht
+                self.log(f"bildkontrolle nicht möglich: {str(e)[:80]}")
+                return True
+        else:
+            return True
+        if res.get("ok", True) and not problems:
+            stats[f"{day}:ok"] = stats.get(f"{day}:ok", 0) + 1
+            return True
+        probs = "; ".join(res.get("probleme") or [])[:400]
+        self.log(f"bildkontrolle beanstandet {q['id']}: {probs}")
+        if res.get("lehre"):
+            self.learn(res["lehre"])
+        if res.get("technisch"):
+            self.st.setdefault("technik", []).append(f"{day} {kind}: {probs}")
+            self.st["technik"] = self.st["technik"][-40:]
+        q["qa_try"] = q.get("qa_try", 0) + 1
+        if q["qa_try"] <= 2 and not q.get("base"):
+            q["status"] = "new"
+            q["qa_note"] = (f"BILDKONTROLLE hat die letzte Fassung zurückgewiesen: {probs}. Mach es diesmal so, dass "
+                            f"das nicht passiert – kürzer, klarer, auf mehr Bilder verteilt, wenn nötig.")
+            stats[f"{day}:neu"] = stats.get(f"{day}:neu", 0) + 1
+            self._redo = True
+        else:
+            q["status"] = "dropped"
+            stats[f"{day}:weg"] = stats.get(f"{day}:weg", 0) + 1
+        return False
+
+    def learn(self, lesson):
+        """Neue Lehre sofort ins Regelheft – ab dem nächsten Text gültig."""
+        lesson = lesson.strip()
+        cur = (self.store.get(LESSONS) or b"").decode("utf-8")
+        if not lesson or lesson.lower() in cur.lower():
+            return
+        self.store.put(LESSONS, (cur + f"- {lesson}\n").encode("utf-8"))
+        self.brain.rules += f"\n- {lesson}"
+        self.st.setdefault("lehren", []).append(lesson)
+        self.st["lehren"] = self.st["lehren"][-80:]
+        if cur.count("\n") >= 25:
+            self.step("regelheft", self.consolidate)
+
+    def consolidate(self, announce=False):
+        """Regelheft aufräumen: Lehren der Bildkontrolle + deine Kritik → max. 15 klare Regeln."""
+        cur = (self.store.get(LESSONS) or b"").decode("utf-8")
+        lessons, crit = self.st.get("lehren", []), self.st.get("kritik", [])
+        if not lessons and not crit:
+            return
+        res = self.brain.distill(lessons, crit, cur)
+        rules = [r.strip() for r in res.get("regeln") or [] if r.strip()][:15]
+        if not rules:
+            return
+        self.store.put(LESSONS, ("\n".join(f"- {r}" for r in rules) + "\n").encode("utf-8"))
+        self.st["lehren"], self.st["kritik"] = [], []
+        neu = [n for n in res.get("neu") or [] if n][:6]
+        if announce and neu:
+            self.tg.say("🧠 Dazugelernt:\n" + "\n".join(f"• {n}" for n in neu) +
+                        "\n\nGilt ab sofort. Stimmt was nicht, schreib „regel:“ und was stattdessen gelten soll.")
 
     def pick_photo(self, q, pkg):
         """Reihenfolge: freigegebenes Bild aus der Meldung → freies Foto (Commons) → keins (Typo).
@@ -939,6 +1037,8 @@ class Engine:
         imgs = render.damals(pkg, old_img, new_img)
         imgs += [render.follow(pkg, s, more=i < len(pkg.get("slides", [])) - 1)
                  for i, s in enumerate(pkg.get("slides", [])[:4])]
+        if not self.qa_gate(q, imgs, pkg):
+            return
         q["media"] = [self.store.media(f"{int(self.ts())}-{q['id']}-{n}.jpg", render.jpeg(im)) for n, im in enumerate(imgs)]
         self._cover = getattr(self, "_cover", {})
         self._cover[q["id"]] = render.jpeg(imgs[0], 85)
@@ -973,7 +1073,12 @@ class Engine:
             tracks = sorted(x for x in mdir.iterdir() if x.suffix.lower() in (".mp3", ".m4a", ".wav", ".ogg", ".aac"))
             if tracks:
                 music = str(random.Random(q["id"]).choice(tracks))
-        path, cover_img, dur = render_reel(pkg, photos, music=music)
+        qa = {}
+        path, cover_img, dur = render_reel(pkg, photos, music=music, qa=qa)
+        if not self.qa_gate(q, qa.get("frames") or [], pkg, problems=qa.get("problems"), kind="reel"):
+            if path:
+                Path(path).unlink(missing_ok=True)
+            return
         if credits:
             extra = "\n".join(dict.fromkeys(c for c in credits if c and c not in (q.get("caption") or "")))
             if extra:
@@ -1199,6 +1304,7 @@ class Engine:
                 self.ts() - self.st["done"].get("kurs_ts", self.st["posted"][0]["ts"]) > self.k["learn_after_days"] * 86400:
             self.st["done"]["kurs_ts"] = self.ts()
             self.step("auswertung", self.evaluate)
+            self.step("regelheft", self.consolidate, True)
         if self.graph is not None and not getattr(self.graph, "ig_login", False) and now.hour >= 6 and self.once("radar"):
             extra = [h for h, _ in sorted(self.st["entdeckt"].items(), key=lambda x: -x[1].get("followers", 0))[:15]]
             hits, accounts, errs = radar.scan(self.graph, list(self.cfg["radar"]) + extra)
@@ -1237,6 +1343,10 @@ class Engine:
         if self.st["radar"]:
             lines += ["", "Darüber reden gerade andere Wuppertal-Accounts:"]
             lines += [f"· @{h['handle']} ({h['x']}×): {h['text'][:70]}" for h in self.st["radar"][:3]]
+        qa = self.st.get("qa", {})
+        ok, neu, weg = (qa.get(f"{self.today()}:{k}", 0) for k in ("ok", "neu", "weg"))
+        if ok or neu or weg:
+            lines += ["", f"Bildkontrolle: {ok} direkt gut, {neu}× neu gemacht, {weg} verworfen."]
         errs = self.st["done"].get("source_errors") or []
         if errs:
             lines += ["", f"{len(errs)} Nachrichtenquellen waren nicht erreichbar. Der Rest läuft normal."]

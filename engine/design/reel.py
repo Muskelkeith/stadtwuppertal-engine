@@ -138,6 +138,9 @@ def clean(text):
     return " ".join((text or "").replace("\u00a0", " ").replace("\u202f", " ").split(" ")).strip()
 
 
+OVERFLOW: list[str] = []      # Kästen, die selbst in kleinster Schrift nicht passen (wird von Reel ausgewertet)
+
+
 def make_box(kind, text, maxw=MAXW, max_lines=6):
     """Satz-Kasten. Wird so lange kleiner gesetzt, bis jede Zeile sicher ins Bild passt."""
     size0, ax, fg, bgc, pad, lead = STYLE[kind]
@@ -149,6 +152,8 @@ def make_box(kind, text, maxw=MAXW, max_lines=6):
         bs = [cd.Block([ln], f, fg, track=0.0 if kind in ("line", "cap") else None) for ln in lines]
         if max(b.im.width for b in bs) <= maxw - 2 * pad[1] and len(lines) <= max_lines:
             break
+    if max(b.im.width for b in bs) > maxw - 2 * pad[1] or len(lines) > max_lines:
+        OVERFLOW.append(f"Text passt nicht in den Kasten: „{text[:60]}“")
     step = int(size * lead)
     wmax = max(b.im.width for b in bs)
     hh = step * (len(bs) - 1) + bs[-1].im.height
@@ -194,7 +199,17 @@ class Reel:
         sw = cd.schild_block(self.schild, 120).width if self.schild else 0
         right = max(self.head.width - 40, self.head_last[0] + sw / 2)
         self.hook_x = CX - right / 2
+        OVERFLOW.clear()
         self.trains = self._trains(pkg.get("reel") or [])
+        self.problems = list(dict.fromkeys(OVERFLOW))
+        for tr in self.trains:          # Vermessen: steht alles im sicheren Bereich und im Bild?
+            if "bild" in tr:
+                continue
+            bottom = SAFE_TOP + tr.get("offset", 0) + cd.HANG + sum(b.height + COUPLE for b in tr["boxes"])
+            if bottom > SAFE_BOTTOM:
+                self.problems.append(f"Text ragt unten aus dem sicheren Bereich: „{tr['items'][0][1][:50]}“")
+            if max(b.width for b in tr["boxes"]) > W - 2 * 40:
+                self.problems.append(f"Text ragt seitlich aus dem Bild: „{tr['items'][0][1][:50]}“")
         self.hook_end = 4.3
         t = self.hook_end
         for i, tr in enumerate(self.trains):
@@ -399,6 +414,11 @@ class Reel:
             hanging_schild(fr, x + last[0], ry + last[1] - 4, "@stadtwuppertal", 104, tl + 0.1, drop=False)
             return fr.convert("RGB")
 
+    def qa_frames(self):
+        """Standbilder für die Bildkontrolle: Hook, jeder Zug voll aufgebaut, Abspann."""
+        ts = [2.6] + [min(tr["t_out"] - 0.3, tr["drops"][-1] + 1.2) for tr in self.trains] + [self.end_t + 1.5]
+        return [self.frame(t).convert("RGB") for t in ts]
+
     def cover_frame(self):
         """Titelbild fürs Reel: der Hook, wenn er steht."""
         return self.frame(2.6)
@@ -431,8 +451,15 @@ def ffmpeg_exe():
         return "ffmpeg"
 
 
-def render_reel(pkg, photos, out_path=None, music=None):
+def render_reel(pkg, photos, out_path=None, music=None, qa=None):
+    """qa (dict, optional) bekommt "problems" (Vermessung) und "frames" (Standbilder für die Bildkontrolle).
+    Gibt es Vermessungs-Probleme, wird gar nicht erst gerendert: Rückgabe (None, None, 0)."""
     out_path = out_path or tempfile.mktemp(suffix=".mp4")
     r = Reel(pkg, photos, ffmpeg_exe())
+    if qa is not None:
+        qa["problems"] = r.problems
+        if r.problems:
+            return None, None, 0
+        qa["frames"] = r.qa_frames()
     r.render(out_path, music)
     return out_path, r.cover_frame(), r.total

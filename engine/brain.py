@@ -181,6 +181,41 @@ JSON: {{"ok": bool (false NUR bei rechtlichen Problemen oder wenn das Material n
         return self.llm.ask("review", system, prompt, tier="write")
 
 
+    # ── 3b. Bildkontrolle (fertige Bilder ansehen) ──────────
+    def visual_check(self, sheet_jpeg: bytes, pkg: dict, kind: str) -> dict:
+        system = self.system + """
+
+Du bist jetzt die Bildkontrolle. Du siehst die FERTIGEN Bilder eines Posts als Kontaktbogen
+(Reihenfolge links→rechts, oben→unten). Nichts geht raus, was peinlich aussieht oder nicht lesbar ist."""
+        prompt = f"""Format: {kind}. Prüfe streng:
+1. LAYOUT: Ist irgendwo Text abgeschnitten, läuft aus dem Bild oder aus seinem Kasten, überlappt, ist zu klein
+   oder kontrastarm? Leere oder kaputte Bilder? Hängt Text unschön tief oder bleibt riesig viel Platz ungenutzt?
+2. INHALT: Hält jedes Bild, was es verspricht? Nischenwissen statt Allgemeinplatz, keine Nicht-Info, keine
+   Floskeln, Sprachkonzept eingehalten, keine Tipp- oder Grammatikfehler, keine Wiederholungen?
+3. WIRKUNG: Würde man beim Scrollen anhalten und es zu Ende lesen?
+Text des Pakets zum Abgleich: {json.dumps({k: pkg.get(k) for k in ("hook", "slides", "reel")}, ensure_ascii=False)[:3000]}
+JSON: {{"ok": bool (false bei JEDEM Lesbarkeits- oder Layoutfehler und bei klaren Inhaltsfehlern),
+"score": 1-10, "probleme": ["kurz und konkret"], "technisch": bool (true, wenn es am Layout liegt, nicht am Text),
+"lehre": "EINE allgemeine Regel für künftige Posts, die diesen Fehler verhindert – oder leer"}}"""
+        return self.llm.ask_image("bildkontrolle", system, prompt, sheet_jpeg, tier="write", side=1600)
+
+    def distill(self, lessons: list[str], critiques: list[str], current: str) -> dict:
+        system = self.system + "\n\nDu pflegst jetzt das Regelheft der Redaktion. Knapp, konkret, ohne Doppelungen."
+        prompt = f"""Bisher gelernte Regeln:
+{current or '(noch keine)'}
+
+Neue Beobachtungen der Bildkontrolle:
+{chr(10).join('- ' + x for x in lessons[-40:]) or '(keine)'}
+
+Kritik vom Chef an einzelnen Posts:
+{chr(10).join('- ' + x for x in critiques[-30:]) or '(keine)'}
+
+Mach daraus ein aktualisiertes Regelheft mit höchstens 15 allgemeinen Regeln (je ein Satz, umsetzbar).
+Kritik des Chefs hat Vorrang. Nur was für künftige Posts gilt – Einzelfall-Korrekturen weglassen.
+Nichts übernehmen, was dem Sprachkonzept widerspricht.
+JSON: {{"regeln": ["…"], "neu": ["die Regeln, die wirklich neu dazugekommen sind, in Kurzform"]}}"""
+        return self.llm.ask("lernen", system, prompt, tier="write")
+
     # ── 4. Bildredaktion ────────────────────────────────────
     def rate_photo(self, jpeg: bytes, meta: dict, purpose: str) -> dict:
         """purpose: news (Bild zu einer Meldung) | community (Foto für den Feed)."""

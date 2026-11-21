@@ -371,3 +371,41 @@ def test_widerspruch_per_kommentar(env):
                                    {"username": "wupperlicht", "text": "Bitte löschen, will ich nicht"}]}
     e.check_repost_comments()
     assert ("delete", "ig-88") in graph.done
+
+
+def test_vermessung_erkennt_ueberlauf_und_rendert_nicht():
+    from PIL import Image
+    from engine.design.reel import render_reel
+    wurst = "Donaudampfschifffahrtsgesellschaftskapitänsmützenabzeichenhersteller" * 3
+    qa = {}
+    path, cover, dur = render_reel({"rubric": "fact", "hook": ["test."], "reel": [{"head": "x", "lines": [wurst]}]},
+                                   [Image.new("RGB", (1080, 1920))], qa=qa)
+    assert path is None and qa["problems"]
+
+
+def test_bildkontrolle_macht_neu_lernt_und_verwirft(env):
+    from PIL import Image
+    run, graph, store, feed = env
+    feed.pop("items", None)
+    e, errs = run(datetime(2026, 11, 23, 11, 0, tzinfo=TZ))
+    e.brain.visual_check = lambda *a, **k: {"ok": False, "probleme": ["Text läuft rechts raus"], "technisch": True,
+                                            "lehre": "Keine überlangen Wörter in Reel-Kästen."}
+    q = {"id": "t1", "mode": "fact", "kind": "feed", "status": "new"}
+    img = [Image.new("RGB", (1080, 1350))]
+    assert e.qa_gate(q, img, {}) is False and q["status"] == "new" and "rechts raus" in q["qa_note"]
+    assert "überlangen Wörter" in e.store.get("_engine/gelernt.md").decode()
+    assert "überlangen Wörter" in e.brain.rules
+    e.qa_gate(q, img, {})
+    e.qa_gate(q, img, {})
+    assert q["status"] == "dropped"
+
+
+def test_regelheft_wird_aufgeraeumt(env):
+    run, graph, store, feed = env
+    feed.pop("items", None)
+    e, errs = run(datetime(2026, 11, 23, 11, 0, tzinfo=TZ))
+    e.st["lehren"], e.st["kritik"] = ["a"], ["Datum raus aus dem Untertitel"]
+    e.brain.distill = lambda *a, **k: {"regeln": ["Kein Datum als Untertitel."], "neu": ["Kein Datum als Untertitel."]}
+    e.consolidate(True)
+    assert e.store.get("_engine/gelernt.md").decode().strip() == "- Kein Datum als Untertitel."
+    assert any("Dazugelernt" in x[1] for x in e.tg.outbox if x[0] == "text")
