@@ -289,3 +289,26 @@ def test_uebergabe_ohne_instagram(tmp_path, monkeypatch):
     assert not any("ki erstellt" in x[3] for x in sent)
     assert any(x[1] == "story" for x in sent)
     assert Secrets({"TELEGRAM_TOKEN": "t", "CLAUDE_CODE_OAUTH_TOKEN": "c"}).missing() == []
+
+
+def test_nutzer_token_wird_zum_seiten_token():
+    """Graph-Explorer-Token (läuft ab) → Engine findet Tuffi + @stadtwuppertal und nimmt den Seiten-Token."""
+    from engine.graph import GraphClient
+
+    class R:
+        def __init__(self, d, code=200):
+            self.d, self.status_code, self.content = d, code, b"x"
+
+        def json(self):
+            return self.d
+
+    class S:
+        def request(self, method, url, params=None, data=None, timeout=None):
+            if url.endswith("/me/accounts"):
+                return R({"data": [{"id": "p1", "name": "Tuffi", "access_token": "EAAseite",
+                                    "instagram_business_account": {"id": "ig1", "username": "stadtwuppertal"}}]})
+            return R({"error": {"message": "nope"}}, 400)
+
+    g = GraphClient("EAAnutzer", session=S())
+    assert g.discover_ig_user() == ("ig1", "stadtwuppertal")
+    assert g.page_token == "EAAseite" and not g.ig_login

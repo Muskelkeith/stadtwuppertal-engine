@@ -142,10 +142,17 @@ class Engine:
             ig, name = self.graph.discover_ig_user()
             self.st["ig_user_id"] = ig
             self.st["ig_direct"] = bool(getattr(self.graph, "ig_login", False))
+            if getattr(self.graph, "page_token", None) and not self.st["ig_direct"]:
+                # Nutzer-Token läuft nach 60 Tagen ab, der Seiten-Token daraus nie → ab jetzt den nehmen
+                self.st["page_id"] = self.graph.page_id
+                self.st["ig_token"], self.st["ig_token_from"] = self.graph.page_token, (self.s.IG_TOKEN or "")[:24]
+                self.graph.token = self.graph.page_token
             self.log(f"Instagram verbunden: @{name} ({ig})")
             self.tg.say(f"instagram verbunden: @{name}")
         if self.graph is not None:
             self.graph.ig = self.st["ig_user_id"]
+            if self.st.get("page_id") and not getattr(self.graph, "page_token", None):
+                self.graph.page_id, self.graph.page_token = self.st["page_id"], self.graph.token
             if self.st.get("ig_direct") and not getattr(self.graph, "ig_login", True):
                 self.graph.ig_login = True        # Portfolio-Schlüssel: direkt über graph.instagram.com
                 self.graph.base = "https://graph.instagram.com/" + self.graph.base.rsplit("/", 1)[1]

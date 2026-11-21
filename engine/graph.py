@@ -60,6 +60,14 @@ class GraphClient:
                 self.base = f"{IG_BASE}/{self.base.rsplit('/', 1)[1]}"
                 self.ig = me.get("user_id") or me.get("id")
                 return self.ig, me["username"]
+        if not pages:
+            # Seiten-Token (läuft nie ab, wenn aus einem verlängerten Nutzer-Token abgeleitet)
+            try:
+                me = self._req("GET", "me", fields="id,instagram_business_account{id,username}")
+                if me.get("instagram_business_account"):
+                    pages = [{**me, "access_token": self.token}]
+            except GraphError:
+                pass
         for p in pages:
             ig = p.get("instagram_business_account")
             if ig:
