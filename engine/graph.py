@@ -42,8 +42,24 @@ class GraphClient:
             me = self._req("GET", "me", fields="user_id,username")
             self.ig = me.get("user_id") or me.get("id")
             return self.ig, me.get("username", "")
-        pages = self._req("GET", "me/accounts",
-                          fields="id,name,access_token,instagram_business_account{id,username}").get("data", [])
+        try:
+            pages = self._req("GET", "me/accounts",
+                              fields="id,name,access_token,instagram_business_account{id,username}").get("data", [])
+        except GraphError:
+            pages = []
+        if not any(p.get("instagram_business_account") for p in pages):
+            # Unified Login (Systemnutzer-Token aus dem Business-Portfolio): kein Facebook-Seiten-Umweg,
+            # der Token spricht direkt mit graph.instagram.com
+            try:
+                me = self.http.get(f"{IG_BASE}/{self.base.rsplit('/', 1)[1]}/me", timeout=60,
+                                   params={"fields": "user_id,username", "access_token": self.token}).json()
+            except Exception:       # noqa: BLE001
+                me = {}
+            if me.get("username"):
+                self.ig_login = True
+                self.base = f"{IG_BASE}/{self.base.rsplit('/', 1)[1]}"
+                self.ig = me.get("user_id") or me.get("id")
+                return self.ig, me["username"]
         for p in pages:
             ig = p.get("instagram_business_account")
             if ig:
