@@ -141,10 +141,14 @@ class Engine:
         if self.graph is not None and not self.st.get("ig_user_id"):
             ig, name = self.graph.discover_ig_user()
             self.st["ig_user_id"] = ig
+            self.st["ig_direct"] = bool(getattr(self.graph, "ig_login", False))
             self.log(f"Instagram verbunden: @{name} ({ig})")
             self.tg.say(f"instagram verbunden: @{name}")
         if self.graph is not None:
             self.graph.ig = self.st["ig_user_id"]
+            if self.st.get("ig_direct") and not getattr(self.graph, "ig_login", True):
+                self.graph.ig_login = True        # Portfolio-Schlüssel: direkt über graph.instagram.com
+                self.graph.base = "https://graph.instagram.com/" + self.graph.base.rsplit("/", 1)[1]
         if hasattr(self.store, "ensure_pages") and self.once("pages"):
             if not self.store.ensure_pages():
                 self.log("GitHub Pages ist aus – bitte in Settings → Pages einschalten (Branch gh-pages)")
