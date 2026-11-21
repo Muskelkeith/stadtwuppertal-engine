@@ -1,14 +1,16 @@
 name: takt
 
-# Alle 10 Minuten (Zeiten in UTC; die Engine rechnet selbst in Berliner Zeit und postet nur 6–23 Uhr).
+# Ein Dienst läuft knapp 6 Stunden und macht darin alle 10 Minuten einen Takt.
+# Der Zeitplan startet stündlich einen neuen; läuft noch einer, wartet der neue (concurrency) und übernimmt danach.
+# Die Engine rechnet selbst in Berliner Zeit und postet nur 6–23 Uhr.
 on:
   schedule:
-    - cron: "*/10 4-22 * * *"
+    - cron: "7 * * * *"
   workflow_dispatch:
     inputs:
       befehl:
-        description: "tick | check"
-        default: tick
+        description: "dienst | tick | check"
+        default: dienst
 
 permissions:
   contents: write
@@ -21,7 +23,7 @@ concurrency:
 jobs:
   takt:
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 355
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -35,7 +37,7 @@ jobs:
           ENGINE_SECRETS: ${{ secrets.ENGINE_SECRETS }}
           GITHUB_TOKEN: ${{ github.token }}
           PYTHONUNBUFFERED: "1"
-        run: python -m engine ${{ inputs.befehl || 'tick' }}
+        run: python -m engine ${{ inputs.befehl || 'dienst' }}
       - name: Wochenbericht sichern (hält den Zeitplan am Leben)
         if: always()
         run: |

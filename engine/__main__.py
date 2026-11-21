@@ -106,8 +106,29 @@ def main(argv):
         print("Einrichtung noch nicht fertig – es fehlt: " + ", ".join(s.missing()) + ". Takt übersprungen.")
         return
     from .tick import Engine
+    if cmd == "dienst":
+        return dienst(cfg, s, Engine)
     errors = Engine(cfg, s, dry="--dry" in argv).tick()
     print("takt fertig" + (f" mit {len(errors)} fehlern: " + " | ".join(errors) if errors else ""))
+
+
+def dienst(cfg, s, Engine, minutes=345, every=10):
+    """Läuft knapp 6 Stunden am Stück und macht alle 10 Minuten einen Takt.
+    GitHubs eigener Zeitplan ist bei 10-Minuten-Abständen unzuverlässig – so bleibt die Engine pünktlich."""
+    import time
+    import traceback
+    end = time.time() + minutes * 60
+    while True:
+        start = time.time()
+        try:
+            errors = Engine(cfg, s).tick()
+            print(time.strftime("%H:%M"), "takt fertig" + (f" mit {len(errors)} fehlern: " + " | ".join(errors) if errors else ""), flush=True)
+        except Exception:       # noqa: BLE001
+            traceback.print_exc()
+        wait = every * 60 - (time.time() - start)
+        if time.time() + max(wait, 0) > end:
+            break
+        time.sleep(max(wait, 5))
 
 
 if __name__ == "__main__":
