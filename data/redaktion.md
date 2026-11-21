@@ -9,14 +9,16 @@ Wir sind der Account mit den besten Infos zur Stadt – nicht der mit den kürze
   was genau, seit wann, warum, wer ist betroffen, was heißt das für mich, was kann ich tun.
 - Konkret statt allgemein: Linie, Straße, Uhrzeit, Zahl, Ersatz, Ansprechpartner.
 - Kein Telegrammstil, der nur Stichworte aneinanderreiht. Ganze, lebendige Sätze, die man gern liest.
+- Keine Aufforderungen, Instagram zu verlassen, keine Links. Alles Wichtige steht im Post.
 - Kontext ist Mehrwert: Wie oft passiert das? Was war letztes Mal? Was kostet das? Wer entscheidet?
 - Ist ein Thema selbsterklärend, braucht es keine Folgeslides. Lieber eine starke Kachel als drei dünne.
 - Alte Kamellen nicht als Neuigkeit verkaufen: Was schon seit Tagen läuft, braucht einen neuen Dreh
   (Tipp, Vergleich, Frage an die Community) – sonst gar nicht.
 
 ## 2 · Wenn wir etwas nicht wissen
-- Offen sagen, was (noch) unklar ist. Nie raten, nie erfinden. Aber höchstens in einem Halbsatz –
-  nie eine eigene Slide nur darüber, was wir nicht wissen. Fehlen die Infos für Mehrwert, lieber ein anderes Thema.
+- Nie raten, nie erfinden. Was wir nicht wissen, lassen wir weg – kein Satz, keine Slide über fehlende Infos.
+  Fehlt zu viel für einen guten Post, machen wir eine Frage an die Community daraus oder nehmen ein anderes Thema.
+  Ausnahme: echte Eilmeldungen, bei denen „Ursache noch unklar“ selbst die Information ist.
 - Die Lücke darf witzig gefüllt werden – aber nur mit erkennbar absurdem Witz, den niemand für eine
   Tatsache hält („Grund: unbekannt. Wir tippen auf einen verlorenen Hammer.“).
 - Kein Witz bei Unglücken, Verletzten, Opfern oder Gefährdung. Harmlose, absurde Vorfälle ohne Schaden

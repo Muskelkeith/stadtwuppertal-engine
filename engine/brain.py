@@ -51,7 +51,7 @@ PACKAGE = """{
  "options": ["a", "b"]   // nur bei poll/warum/quiz: zwei Antworten statt Schild, sonst []
  "slides": [{"head": "kurze unterzeile (eine Frage oder ein Versprechen)", "body": "2–5 Sätze, die genau das einlösen: konkret, mit Mehrwert, normale Groß-/Kleinschreibung"}],  // 0–5
  "reel": [{"head": "unter-hook klein", "lines": ["kurzer Satz", "kurzer Satz"], "gag": "Pointe oder leer"}], // 3–4 Züge, nur wenn als Reel geeignet, sonst []
- "caption": "Caption: erste Zeile = Hook-Satz, dann 2–5 kurze Zeilen Inhalt, am Ende EINE Frage, die man in einem Wort beantworten kann",
+ "caption": "Caption: erste Zeile = Gefühl des Hooks, dann 2–4 kurze Zeilen, am Ende EINE Frage zum Mitmachen. KEINE Links, keine URLs",
  "hashtags": ["3–4 ohne #"],
  "sources": [{"name": "…", "url": "…"}],
  "photo_query": "Suchbegriff für ein freies Wikimedia-Foto (z. B. 'Schwebebahn Vohwinkel') oder leer",
@@ -59,7 +59,8 @@ PACKAGE = """{
  "damals_query": "nur bei damals/heute", "heute_query": "nur bei damals/heute",
  "public_interest": true,   // informiert über eine Angelegenheit von öffentlichem Interesse (Nachrichten, Politik, Verkehr, Sicherheit)?
  "risk": "gruen|gelb|rot",  // rot = Personen erkennbar/Vorwürfe/Minderjährige/unbestätigt
- "risk_reason": "kurz"
+ "risk_reason": "kurz",
+ "ton": 1   // Stufe der Tonleiter aus dem Sprachkonzept (1 ernst … 4 Spaß) – bestimmt Witz, Dialekt, Wärme
 }"""
 
 
@@ -71,7 +72,11 @@ class Brain:
 
     @property
     def system(self):
-        return VOICE + ("\n\nREDAKTIONSREGELN (verbindlich)\n" + self.rules if self.rules else "")
+        from pathlib import Path
+        lang = Path(__file__).resolve().parent.parent / "data" / "sprache.md"
+        sprache = lang.read_text(encoding="utf-8") if lang.exists() else ""
+        return (VOICE + ("\n\nSPRACHKONZEPT (verbindlich, wichtiger als alles andere zum Ton)\n" + sprache if sprache else "")
+                + ("\n\nREDAKTIONSREGELN (verbindlich)\n" + self.rules if self.rules else ""))
 
     # ── 1. Sichten ──────────────────────────────────────────
     def triage(self, items: list[dict], stories: dict, radar: list[dict], recent_hooks: list[str]) -> list[dict]:
@@ -120,6 +125,7 @@ JSON: {{"items": [{{"id": "…", "story": "kurzer-slug", "title": "neutraler Tit
             "frag": "„sach ma, wuppertal?“: eine Frage zum Mitmachen, die Reaktionen auslöst – Ranking, Ortsfrage, Streitfrage "
                     "(z. B. „Wo liegt bei euch am meisten illegal abgeladener Müll?“). Darf zuspitzen und triggern, wertet aber "
                     "nie Menschen oder Gruppen ab. Keine Zahlen erfinden. Nicht wiederholen, was in letzte_fragen steht. "
+                    "Gern an ein Thema aus zuletzt_gepostet anknüpfen (zweite Frage zur selben Geschichte, anderer Winkel). "
                     "Kachel + höchstens 1 Slide, Caption mit klarer Aufforderung zu kommentieren. rubric poll.",
             "spotlight": "„wer macht wat, wuppertal?“: Stell einen Account oder ein Projekt aus der Stadt vor, das gerade "
                          "Interessantes macht – nur mit dem, was im Material steht. Account mit @ in Caption und Slide nennen, "
@@ -155,7 +161,8 @@ bei Nachrichten). Tests, die nicht passen, bekommen in tests den Wert null. Gehe
 3. MEHRWERT: Löst jede Folgeslide ihre Überschrift konkret ein (was, seit wann, warum, wer, was heißt das für mich)?
    Fehlt Kontext, der im Material steht? Telegrammstil? Füll-Slides bei Selbsterklärendem? → umschreiben/streichen.
 4. LÜCKEN: Wird Unklares offen benannt statt geraten? Witz in Lücken nur erkennbar absurd, nie bei Unglücken.
-5. SPRACHE: Zeitform und Logik korrekt? Tragen Vergleiche die Aussage? Wiederholungen?
+5. SPRACHE: Zeitform und Logik korrekt? Klingt es nach Sprachkonzept (wie man redet, warm, Tonstufe passend)?
+   Behördendeutsch, KI-Floskeln, Sätze über fehlende Infos, Aufforderungen Instagram zu verlassen, Links → raus.
 6. TON/GAG: Klingt es locker und nach Wuppertal statt nach Pressestelle? Ist ein Witz erzwungen oder offensichtlich?
    Dann streichen oder lockerer formulieren. Dialekt nur, wo er nicht missverständlich ist; bei ernsten Meldungen Hochdeutsch.
 7. FUTTER (bei warum/poll/quiz): Gibt es erst Fakten, konkret Betroffene, beide Seiten, dann eine persönliche Frage?

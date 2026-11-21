@@ -422,7 +422,9 @@ class Engine:
                 return
             rubric = "fact"
         if rubric == "frag":
-            self.enqueue("frag", idea={"aktuelle_themen": [self.st["stories"][k]["title"] for _, k in cands[:10]],
+            self.enqueue("frag", idea={"zuletzt_gepostet": [" ".join(p.get("hook", [])) for p in self.st["posted"]
+                                                           if now - p["ts"] < 3 * 86400 and p.get("kind") == "feed"][-6:],
+                                       "aktuelle_themen": [self.st["stories"][k]["title"] for _, k in cands[:10]],
                                        "letzte_fragen": [" ".join(p.get("hook", [])) for p in self.st["posted"][-30:]
                                                          if p.get("mode") == "frag"]})
             return
@@ -955,8 +957,10 @@ class Engine:
             except Exception:
                 pass
 
+    URL = re.compile(r"(https?://\S+|www\.\S+|\b[\w-]+\.(?:de|com|net|org)/\S*)", re.I)
+
     def caption(self, pkg, credit, label=False):
-        parts = [pkg.get("caption", "").strip()]
+        parts = [re.sub(r"[ \t]+\n", "\n", self.URL.sub("", pkg.get("caption", ""))).strip()]
         via = [s["name"] for s in pkg.get("sources", []) if s.get("name")]
         if via:
             parts.append("quelle: " + ", ".join(dict.fromkeys(via)))
