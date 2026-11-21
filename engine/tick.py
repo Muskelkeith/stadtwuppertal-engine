@@ -30,6 +30,12 @@ AD = re.compile(r"#(ad|anzeige|werbung|sponsored|gifted|kooperation)\b|\b(anzeig
 RULES = "_engine/regeln.md"
 
 
+def _fp(token) -> str:
+    """Fingerabdruck des ganzen Schlüssels (die ersten Zeichen sind bei Meta-Schlüsseln oft gleich)."""
+    import hashlib
+    return "h" + hashlib.sha256((token or "").encode()).hexdigest()[:16]
+
+
 def make_store(secrets, root):
     """Auf GitHub: alles in GitHub (Pages + verschlüsseltes Gedächtnis). Lokal: Ordner local_store/."""
     import os
@@ -62,7 +68,7 @@ class Engine:
         elif secrets.IG_TOKEN:
             # verlängerter Token aus dem Gedächtnis hat Vorrang, solange er zum Secret gehört
             tok = secrets.IG_TOKEN
-            if self.st.get("ig_token") and self.st.get("ig_token_from") == secrets.IG_TOKEN[:24]:
+            if self.st.get("ig_token") and self.st.get("ig_token_from") == _fp(secrets.IG_TOKEN):
                 tok = self.st["ig_token"]
             self.graph = GraphClient(tok, self.st.get("ig_user_id"), cfg["account"]["graph_api_version"])
         else:
@@ -138,7 +144,7 @@ class Engine:
         return self.errors
 
     def setup(self):
-        new_secret = (self.s.IG_TOKEN or "")[:24] != self.st.get("ig_token_from") and not self.st.get("ig_direct")
+        new_secret = _fp(self.s.IG_TOKEN) != self.st.get("ig_token_from") and not self.st.get("ig_direct")
         if self.graph is not None and (not self.st.get("ig_user_id") or new_secret):
             if new_secret:                    # neuer Schlüssel im Secret → frisch verbinden, alten Seiten-Token vergessen
                 self.graph.token, self.st["page_id"] = self.s.IG_TOKEN, None
@@ -148,11 +154,11 @@ class Engine:
             ig, name = self.graph.discover_ig_user()
             self.st["ig_user_id"] = ig
             self.st["ig_direct"] = bool(getattr(self.graph, "ig_login", False))
-            self.st["ig_token"], self.st["ig_token_from"] = None, (self.s.IG_TOKEN or "")[:24]
+            self.st["ig_token"], self.st["ig_token_from"] = None, _fp(self.s.IG_TOKEN)
             if getattr(self.graph, "page_token", None) and not self.st["ig_direct"]:
                 # Nutzer-Token läuft nach 60 Tagen ab, der Seiten-Token daraus nie → ab jetzt den nehmen
                 self.st["page_id"] = self.graph.page_id
-                self.st["ig_token"], self.st["ig_token_from"] = self.graph.page_token, (self.s.IG_TOKEN or "")[:24]
+                self.st["ig_token"], self.st["ig_token_from"] = self.graph.page_token, _fp(self.s.IG_TOKEN)
                 self.graph.token = self.graph.page_token
             self.log(f"Instagram verbunden: @{name} ({ig})")
             self.tg.say(f"instagram verbunden: @{name}")
@@ -867,7 +873,7 @@ class Engine:
                 self.ts() - self.st["done"].get("token_refreshed", 0) > 7 * 86400:
             got = self.graph.refresh_token()
             if got:
-                self.st["ig_token"], self.st["ig_token_from"] = got[0], self.s.IG_TOKEN[:24]
+                self.st["ig_token"], self.st["ig_token_from"] = got[0], _fp(self.s.IG_TOKEN)
                 self.st["done"]["token_refreshed"] = self.ts()
         if self.graph is not None and not getattr(self.graph, "ig_login", False) and now.hour >= 6 and self.once("radar"):
             hits, accounts, errs = radar.scan(self.graph, self.cfg["radar"])
