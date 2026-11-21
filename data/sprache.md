@@ -39,15 +39,31 @@ watt · dat · getz · ne? · wa? · hömma · sach ma · hasse / hasste · biss
   den nächsten Tagen.
 - Caption: erste Zeile = Gefühl des Hooks, 2–4 kurze Zeilen, die Frage, dann „quelle: …“, Fotocredit, Hashtags.
 
+## Unnützes Wissen (feste Linie)
+- Unsere Leute kennen ihre Stadt. Dass Aspirin aus Wuppertal kommt, dass die Schwebebahn alt ist, dass Pina Bausch
+  hier gearbeitet hat, weiß jeder Schüler. Das ist nie die Pointe, höchstens der Einstieg in einem Halbsatz.
+- Wir fangen da an, wo das Allgemeinwissen aufhört: unnützes Wissen, Nischenwissen, Kuriositäten, Hintergründe,
+  Sachen, die man nicht auf dem Schirm hat und am Abend weitererzählt.
+- Kein Fakt ohne „Und dann?“: Jede Info braucht ihren Grund und ihre Folge. „Hoffmann stellt eine Säure her“ ist
+  inhaltsfrei. Warum hat er das gemacht? Wonach hat er gesucht? Was ist daraus geworden? Wer wurde vergessen?
+- Beispiel Aspirin, so tief soll es gehen: Salicylsäure aus Weidenrinde half gegen Schmerzen, schlug aber übel auf den
+  Magen – gesucht wurde eine verträglichere Form. Am 10. August 1897 gelang im Bayer-Labor in Elberfeld reine
+  Acetylsalicylsäure. Elf Tage später acetylierte derselbe Chemiker Morphin – heraus kam Heroin, und Bayer fand das
+  zunächst vielversprechender. Der Name: A für Acetyl, „spir“ von der Spierstaude. Verkauft wurde es erst als Pulver
+  im Glasfläschchen. Und Arthur Eichengrün, sein jüdischer Vorgesetzter, beanspruchte die Erfindung später in einem
+  Brief aus dem KZ Theresienstadt – heute halten viele Forscher ihn für den eigentlichen Kopf dahinter.
+- Solche Fakten immer gegen eine Quelle prüfen. Legenden als Legenden kennzeichnen.
+
 ## Reels
-- Jeder Zug erzählt EINEN konkreten, überraschenden Fakt: Namen, Jahreszahlen, Orte, Zahlen, Firmen. Nischenwissen
-  schlägt Allgemeinplatz („1897, im Bayer-Labor an der Wupper in Elberfeld“ statt „hier in der Stadt“).
-- Die Akteure beim Namen nennen (bei Aspirin: Bayer, Felix Hoffmann, das Werk in Elberfeld).
+- Die Züge erzählen eine Geschichte mit Spannungsbogen, nicht eine Liste: Ausgangslage → Suche → Durchbruch →
+  Wendung, die keiner kennt → heute.
+- Ruhig doppelt so viel Text wie früher: 2–3 Sätze pro Zug, zusammen ~150–250 Zeichen. Der Text steht oben unter der
+  Schiene und nutzt die Höhe, statt tief herunterzuhängen.
+- Die Akteure beim Namen nennen (bei Aspirin: Bayer, Felix Hoffmann, Arthur Eichengrün, das Labor in Elberfeld).
 - Sachlich richtig formulieren, so, wie es jemand sagen würde, der das Thema kennt: „Aspirin liegt bis heute in fast
   jeder Hausapotheke“ – nicht „liegt noch rum“ oder „bis heute im Schrank“, das klingt nach alten Resten.
 - Dialekt nur dort, wo er nicht die Bedeutung verdreht.
-- Bei Geschichte mindestens ein Bild-Zug: ein großes historisches Foto statt Text (Person, Gebäude, Ort damals).
-- Kurz: 1–2 Sätze pro Zug, je höchstens ~70 Zeichen. Lieber ein Zug mehr als ein voller.
+- Bei Geschichte mindestens ein Bild-Zug: ein großes historisches Foto, die Bildunterschrift trägt selbst eine Info.
 
 ## Haltung
 - Wir stehen auf der Seite der Leute, die hier wohnen. Lebensqualität vor Einnahmen, Mieter vor Vermietern.

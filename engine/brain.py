@@ -50,9 +50,10 @@ PACKAGE = """{
  "schild": "kurz oder leer",
  "options": ["a", "b"]   // nur bei poll/warum/quiz: zwei Antworten statt Schild, sonst []
  "slides": [{"head": "kurze unterzeile (eine Frage oder ein Versprechen)", "body": "2–5 Sätze, die genau das einlösen: konkret, mit Mehrwert, normale Groß-/Kleinschreibung"}],  // 0–5
- "reel": [{"head": "unter-hook klein", "lines": ["kurzer Satz", "kurzer Satz"], "gag": "Pointe oder leer"},
-          {"bild": "Commons-Suchbegriff für ein großes Foto, z. B. 'Felix Hoffmann' oder 'Bayer Elberfeld 1900'", "text": "Bildunterschrift, max. 8 Wörter"}],
-          // 4–6 Züge, nur wenn als Reel geeignet, sonst []. Text-Zug: head + 1–2 Sätze (je max. ~70 Zeichen) + optional gag.
+ "reel": [{"head": "unter-hook klein", "lines": ["Satz mit Fakt", "Satz, der erklärt warum / was daraus wurde"], "gag": "Pointe oder leer"},
+          {"bild": "Commons-Suchbegriff für ein großes Foto, z. B. 'Felix Hoffmann' oder 'Bayer Elberfeld 1900'", "text": "Bildunterschrift mit Info, 8–20 Wörter"}],
+          // 4–6 Züge, nur wenn als Reel geeignet, sonst []. Text-Zug: head + 2–3 Sätze, zusammen ~150–250 Zeichen, + optional gag.
+          // Die Züge erzählen eine Geschichte: Warum? Wonach wurde gesucht? Was passierte dann? Was weiß kaum jemand?
           // Bild-Zug: großes Foto statt Text – bei Geschichte mindestens einer, gern zwei. Jeder Zug = ein konkreter,
           // überraschender Fakt (Name, Jahr, Ort, Zahl, Firma). Nischenwissen schlägt Allgemeinplatz.
  "caption": "Caption: erste Zeile = Gefühl des Hooks, dann 2–4 kurze Zeilen, am Ende EINE Frage zum Mitmachen. KEINE Links, keine URLs",
@@ -119,7 +120,8 @@ JSON: {{"items": [{{"id": "…", "story": "kurzer-slug", "title": "neutraler Tit
             "warum": "Rubrik „warum so, wuppertal?“: eine Meinungs-/Streitfrage, die Wuppertal spaltet, mit zwei "
                      "Antwortoptionen (options). Kurz anteasern, Fakten aus dem Material, dann die Frage. Ziel: Kommentare.",
             "rubrik": "Rubrik-Post aus der Ideen-Bank (history, fact, platt, poll). Material ist geprüft. "
-                      "Mach daraus etwas, das man teilen will. history und fact: Karussell + Reel-Züge.",
+                      "Mach daraus etwas, das man teilen will. history und fact: Karussell + Reel-Züge. "
+                      "fact = unnützes Wissen: Nischenwissen, Kuriositäten, Hintergründe, die man nicht auf dem Schirm hat.",
             "damals": "„was war, wuppertal?“ als damals/heute: ein Ort, wie er früher aussah und heute aussieht. "
                       "damals_query = Suchbegriff für ein historisches Foto (Ort + Jahrzehnt, z. B. 'Elberfeld Neumarkt 1910'), "
                       "heute_query = derselbe Ort heute. schild = Jahr des alten Fotos. Caption: was hat sich verändert, "

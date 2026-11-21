@@ -126,10 +126,10 @@ def headline_c(lines, size, color, hcolor, extra=0):
     return lay, (lay.width / 2, 0), (xs[-1] + last[0], hang + lead * (len(lines) - 1) + last[1])
 
 
-STYLE = {"head": (120, (800, 75, 96), CREME, INK, (24, 36), 0.92),
-         "line": (104, (700, 90, 48), INK, CREME, (26, 38), 1.14),
+STYLE = {"head": (100, (800, 75, 96), CREME, INK, (24, 36), 0.92),
+         "line": (72, (700, 90, 48), INK, CREME, (26, 38), 1.14),
          "pop": (140, (800, 75, 96), INK, ZITRONE, (28, 40), 0.92),
-         "cap": (60, (700, 90, 48), INK, CREME, (18, 28), 1.12)}
+         "cap": (56, (700, 90, 48), INK, CREME, (18, 28), 1.12)}
 SAFE_TOP, SAFE_BOTTOM = RY0 + cd.RAIL_H, 1580       # darunter liegt bei Reels die Instagram-Oberfläche
 MID = (SAFE_TOP + SAFE_BOTTOM) // 2
 
@@ -138,7 +138,7 @@ def clean(text):
     return " ".join((text or "").replace("\u00a0", " ").replace("\u202f", " ").split(" ")).strip()
 
 
-def make_box(kind, text, maxw=MAXW, max_lines=4):
+def make_box(kind, text, maxw=MAXW, max_lines=6):
     """Satz-Kasten. Wird so lange kleiner gesetzt, bis jede Zeile sicher ins Bild passt."""
     size0, ax, fg, bgc, pad, lead = STYLE[kind]
     text = "\n".join(clean(t) for t in text.split("\n"))
@@ -158,7 +158,7 @@ def make_box(kind, text, maxw=MAXW, max_lines=4):
     return box
 
 
-def split_long(text, limit=80):
+def split_long(text, limit=150):
     """Zu lange Sätze an Komma oder Gedankenstrich teilen, damit jeder Kasten groß bleibt."""
     if len(text) <= limit:
         return [text]
@@ -233,13 +233,13 @@ class Reel:
                 img = ImageOps.fit(tr["_img"].convert("RGB"), (1296, 2304), Image.LANCZOS)
                 cap = clean(tr.get("text") or tr.get("head") or "")
                 out.append({"bild": img, "items": [("cap", cap, "")] if cap else [],
-                            "boxes": [make_box("cap", cap, maxw=W - 2 * 120, max_lines=3)] if cap else [],
+                            "boxes": [make_box("cap", cap, maxw=W - 2 * 120, max_lines=5)] if cap else [],
                             "credit": tr.get("_credit") or ""})
                 continue
             items = []
             if tr.get("head"):
                 items.append(("head", tr["head"].lower(), ""))
-            for l in [x for x in tr.get("lines", []) if x][:3]:
+            for l in [x for x in tr.get("lines", []) if x][:4]:
                 items += [("line", part, "") for part in split_long(clean(l))]
             if tr.get("gag"):
                 last = i == len(spec[:6]) - 1
@@ -260,7 +260,8 @@ class Reel:
             for g in groups:
                 boxes = [make_box(k, s_) for k, s_, _ in g]
                 stack = cd.HANG + sum(b.height + COUPLE for b in boxes)
-                out.append({"items": g, "boxes": boxes, "offset": max(0, int(MID - stack / 2 - SAFE_TOP)),
+                out.append({"items": g, "boxes": boxes, "offset": 40,   # oben anhängen, nicht in die Mitte hängen lassen
+                           
                             "tilts": [0.0] + [(-1.3 if j % 2 else 1.1) for j in range(1, len(boxes))]})
         return out
 
