@@ -26,6 +26,10 @@ def check(cfg, s):
         lines.append(f"{'✓' if good else '✗'} {name} {info}".strip())
 
     miss = s.missing()
+    lens = {k: len(v) for k, v in s.values.items() if k.isupper() and isinstance(v, str)}
+    lines.append("· notiz: " + ", ".join(f"{k} {n} zeichen" for k, n in lens.items()) +
+                 (f" · {len(s.values.get('_IGNORED', []))} zeile(n) ohne „=“ ignoriert "
+                  f"({', '.join(map(str, s.values.get('_IGNORED', [])))} zeichen)" if s.values.get("_IGNORED") else ""))
     row("zugangsdaten", not miss, ("fehlt: " + ", ".join(miss)) if miss else "")
     g = None
     if s.IG_TOKEN:

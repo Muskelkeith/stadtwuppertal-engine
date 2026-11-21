@@ -33,21 +33,30 @@ class Secrets:
         return [k for k in needed if not self.values.get(k)] + ([] if llm else ["CLAUDE_CODE_OAUTH_TOKEN"])
 
 
+def _complete(key: str, value: str) -> bool:
+    """Ist der Schlüssel schon vollständig? Dann wird eine Folgezeile nicht mehr angehängt."""
+    if key == "TELEGRAM_TOKEN":
+        return bool(re.fullmatch(r"\d+:[\w-]{30,}", value))
+    if key == "CLAUDE_CODE_OAUTH_TOKEN":
+        return len(value) >= 100
+    return len(value) >= 150
+
+
 def load_secrets(env=os.environ) -> Secrets:
-    vals, last = {}, None
+    vals, last, ignored = {}, None, []
     for line in (env.get("ENGINE_SECRETS") or "").splitlines():
         line = line.strip()
         if not line or line.startswith("#"):
             continue
         k = line.split("=", 1)[0].strip().upper() if "=" in line else ""
         if k and re.fullmatch(r"[A-Z][A-Z0-9_]*", k):
-            v = line.split("=", 1)[1]
+            vals[k] = re.sub(r"\s+", "", line.split("=", 1)[1]).strip('"').strip("'")
             last = k
-        elif last:                      # umgebrochener Schlüssel: Rest gehört zur Zeile davor
-            k, v = last, vals[last] + line
+        elif last and re.fullmatch(r"[A-Za-z0-9_\-]+", line) and not _complete(last, vals[last]):
+            vals[last] += line          # vom Terminal umgebrochener Schlüssel: Rest gehört zur Zeile davor
         else:
-            continue
-        vals[k] = re.sub(r"\s+", "", v).strip('"').strip("'")
+            ignored.append(len(line))
+    vals["_IGNORED"] = ignored
     for k in KEYS:
         if env.get(k):
             vals[k] = env[k]
