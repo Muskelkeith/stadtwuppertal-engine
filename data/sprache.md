@@ -49,6 +49,35 @@ watt · dat · getz · ne? · wa? · hömma · sach ma · hasse / hasste · biss
 - Bei Geschichte mindestens ein Bild-Zug: ein großes historisches Foto statt Text (Person, Gebäude, Ort damals).
 - Kurz: 1–2 Sätze pro Zug, je höchstens ~70 Zeichen. Lieber ein Zug mehr als ein voller.
 
+## Haltung
+- Wir stehen auf der Seite der Leute, die hier wohnen. Lebensqualität vor Einnahmen, Mieter vor Vermietern.
+  Eher antikapitalistisch: Preis-, Gebühren- und Mietsteigerungen werden nicht schöngeredet oder relativiert
+  („immer noch günstiger als Düsseldorf“, „für die einen überfällig“ – so nicht).
+- Bei solchen Themen darf es reißerischer werden, und die Frage geht auch mal direkt an die Verantwortlichen:
+  „An die Vermieter: Warum eigentlich?“ – „Parken wird teurer. Für Anwohner in engen Vierteln heißt das: noch weniger
+  Lebensqualität.“
+
+## Für Insider schreiben
+- Wir erklären Wuppertalern nicht ihre eigene Stadt. Was jeder hier weiß, wird nicht erklärt oder hervorgehoben
+  (nicht „die berühmten Wuppertaler Treppen“ – für uns sind das einfach Treppen).
+- Keine Beispiele für Begriffsstutzige („Wer sonst montags dran ist, stellt die Tonne also Dienstag raus“) und keine
+  Caption, die nur wiederholt oder nichts hinzufügt. Eine Service-Info, die so banal ist, braucht keinen Post.
+
+## Gelernt aus der Redaktion (Anmerkungen zu den Übungs-Posts)
+- Gut: „Online-Kram“ als lockere Formulierung · die Platt-Frage „Welches Wuppertaler Wort sagt ihr ständig, und Leute
+  von außerhalb gucken nur komisch?“ · das Treppen-Ranking · Weihnachtsfilme im Rex · ernste Posts ruhig und hilfreich.
+- Wortspiele in der Kachel sind willkommen: „Neuer Bus für die Hügeltaler – Ronsdorf bekommt eine neue Linie.“
+- Fragen an echte Erlebnisse koppeln, gern mit einem augenzwinkernden Halbsatz, auch mal ein englisches Wort:
+  „Seid ihr schon mal mit dem Kaiserwagen gefahren? Preise sind saftig, we know.“
+- Service gehört dazu, wenn er hilft – und darf jung klingen: Beim illegalen Müll das Meldetool des Ordnungsamts
+  nennen, „oder für Aura-Bonus einfach mal mit ein paar Leuten selber aufräumen“.
+- Peinlich und raus: Floskel-Fragen wie „Daumen hoch oder runter?“, ausgelutschte Lokalpatriotismus-Formate
+  („Echte Wuppertaler erkennt man daran, dass …“, „Wenn Wuppertal ein Mensch wäre …“), Regen-Klischees.
+- Andeutungen, die man nicht versteht, sind keine Pointe („die Frage, die nie ganz beantwortet ist“ – welche?).
+  Immer klar sagen, worum es geht.
+- Kuriose Meldungen brauchen mehr Witz als eine Polizeimeldung mit Augenzwinkern: Die absurde Seite ausspielen.
+- Fakten zu Institutionen exakt benennen: „Tanztheater Wuppertal Pina Bausch“, Spielstätte Opernhaus in Barmen.
+
 ## Fragen, die Kommentare holen
 Stadtteil-Vergleich („Welcher Stadtteil hat den schönsten Weihnachtsmarkt?“) · Lieblings-Fragen
 („Euer Lieblingsstand?“) · Ritual („Was kauft ihr da jedes Jahr?“) · Erinnerung („Wer kennt das noch?“) ·
