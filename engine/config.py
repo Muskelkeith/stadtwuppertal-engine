@@ -17,7 +17,7 @@ from pathlib import Path
 import yaml
 
 ROOT = Path(__file__).resolve().parents[1]
-KEYS = ["IG_TOKEN", "TELEGRAM_TOKEN", "CLAUDE_CODE_OAUTH_TOKEN", "ANTHROPIC_API_KEY", "STATE_KEY",
+KEYS = ["IG_TOKEN", "APP_SECRET", "TELEGRAM_TOKEN", "CLAUDE_CODE_OAUTH_TOKEN", "ANTHROPIC_API_KEY", "STATE_KEY",
         "FTP_HOST", "FTP_USER", "FTP_PASS", "FTP_DIR", "PUBLIC_URL"]
 
 

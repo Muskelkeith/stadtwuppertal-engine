@@ -5,6 +5,7 @@
 account:
   handle: stadtwuppertal
   graph_api_version: v25.0
+  meta_app_id: "2581690732299634"   # App „stadtwuppertal engine“
 claim: "Ein Tal, ein Fluss, ein Schwebebus."
 timezone: Europe/Berlin
 

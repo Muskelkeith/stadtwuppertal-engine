@@ -143,6 +143,8 @@ class Engine:
             if new_secret:                    # neuer Schlüssel im Secret → frisch verbinden, alten Seiten-Token vergessen
                 self.graph.token, self.st["page_id"] = self.s.IG_TOKEN, None
                 self.graph.page_token = None
+            if self.s.APP_SECRET and not getattr(self.graph, "ig_login", False):
+                self.graph.exchange_long_lived(str(self.cfg["account"].get("meta_app_id", "")), self.s.APP_SECRET)
             ig, name = self.graph.discover_ig_user()
             self.st["ig_user_id"] = ig
             self.st["ig_direct"] = bool(getattr(self.graph, "ig_login", False))

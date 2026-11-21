@@ -135,6 +135,16 @@ class GraphClient:
             self.discover_ig_user()
         return self.page_id, self.page_token
 
+    def exchange_long_lived(self, app_id: str, app_secret: str) -> bool:
+        """Kurzer Explorer-Schlüssel (1–2 h) → 60-Tage-Schlüssel. Der Seiten-Schlüssel daraus läuft nie ab."""
+        r = self.http.request("GET", f"{BASE}/{self.base.rsplit('/', 1)[1]}/oauth/access_token", timeout=60, data=None,
+                              params={"grant_type": "fb_exchange_token", "client_id": app_id,
+                                      "client_secret": app_secret, "fb_exchange_token": self.token}).json()
+        if r.get("access_token"):
+            self.token = r["access_token"]
+            return True
+        raise GraphError(f"Schlüssel verlängern ging nicht: {r.get('error', {}).get('message', r)}")
+
     def refresh_token(self) -> tuple[str, int] | None:
         """Instagram-Login-Tokens laufen nach 60 Tagen ab – die Engine verlängert sie selbst."""
         if not self.ig_login:
