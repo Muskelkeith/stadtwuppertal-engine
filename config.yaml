@@ -77,7 +77,7 @@ sources:
   # Lokalmedien – die schnellsten zuerst
   - {name: Wuppertal Aktuell, type: instagram, handle: wuppertal.aktuell, filter_wuppertal: false}
   - {name: Bergische Blaulichtnews, type: instagram, handle: bergischeblaulichtnews}
-  - {name: Talzeit, type: instagram, handle: talzeit.wuppertal, filter_wuppertal: false}
+  - {name: Talzeit, type: instagram, handle: talzeit.wuppertal, filter_wuppertal: false, limit: 15}
   - {name: Radio Wuppertal, type: instagram, handle: radiowuppertal, filter_wuppertal: false}
   - {name: WZ, type: rss, homepage: "https://www.wz.de/nrw/wuppertal/"}
   - {name: Wuppertaler Rundschau, type: rss, homepage: "https://www.wuppertaler-rundschau.de/"}
@@ -101,5 +101,8 @@ event_sources:
   - {name: Wuppertal Marketing, type: instagram, handle: wuppertal, filter_wuppertal: false}
 
 # ── Radar: Wer bekommt gerade Aufmerksamkeit? (einmal täglich, nur lesend) ──
+# Vorbilder: werden alle 3 Tage genau studiert (was läuft, Ton, Themen, Formate) – Muster übernehmen, nie Texte.
+vorbilder: [talzeit.wuppertal]
+
 radar: [wuppertal.aktuell, talzeit.wuppertal, radiowuppertal, bergischeblaulichtnews, wuppertal, stadt_wuppertal,
         1live, wdrcosmo, deutschlandfunknova]

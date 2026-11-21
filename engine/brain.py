@@ -98,6 +98,8 @@ Was gerade bei großen Kanälen gut läuft (Orientierung, nicht kopieren):
 {json.dumps(radar[:8], ensure_ascii=False)}
 Neue Meldungen:
 {json.dumps(mat, ensure_ascii=False)}
+Talzeit ist unser Vorbild: Themen von Talzeit, die dort gut laufen (viele likes/comments), besonders ernst nehmen
+und höher bewerten – wir erzählen sie dann eigenständig.
 
 Bewerte jede Meldung. score 0–10 = Wie sehr interessiert das möglichst viele Leute in Wuppertal JETZT
 (Betroffenheit, Gesprächswert, Neuigkeit, Kommentarpotenzial)? breaking = muss sofort raus (Sperrung, Unwetter,
@@ -230,6 +232,18 @@ Die Antwort: kurz (max. 1–2 Sätze), schlagfertig, warm, Wuppertal-Ton, gern D
 deinen Kommentar“, keine Links. Eine Rückfrage nur, wenn sie wirklich schlau ist – keine Allerwelts-Frage.
 JSON: {{"antworten": [{{"id": "Kommentar-ID", "text": "Antwort"}}]}}"""
         return self.llm.ask("kommentare", system, prompt, tier="write")
+
+    def study(self, handle: str, top: list[dict], flop: list[dict]) -> dict:
+        system = self.system + "\n\nDu analysierst jetzt einen Vorbild-Account, um von ihm zu lernen."
+        prompt = f"""Vorbild-Account @{handle}. Seine zuletzt am besten laufenden Posts (Caption, Likes, Kommentare):
+{json.dumps(top, ensure_ascii=False)[:6000]}
+Und die schwächsten:
+{json.dumps(flop, ensure_ascii=False)[:2500]}
+Was macht dieser Account richtig, und was können wir übernehmen? Beschreibe MUSTER in eigenen Worten,
+zitiere keine ganzen Sätze (höchstens Formulierungs-Bausteine von 2–4 Wörtern).
+JSON: {{"ton": ["…"], "themen": ["Themenfelder, die dort gut laufen"], "formate": ["…"],
+"hooks": ["Muster für Einstiege"], "fragen": ["wie sie Kommentare holen"], "lieber_nicht": ["was dort schwach läuft"]}}"""
+        return self.llm.ask("vorbild", system, prompt, tier="write")
 
     def distill(self, lessons: list[str], critiques: list[str], current: str) -> dict:
         system = self.system + "\n\nDu pflegst jetzt das Regelheft der Redaktion. Knapp, konkret, ohne Doppelungen."

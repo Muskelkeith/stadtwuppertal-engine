@@ -465,3 +465,20 @@ def test_werkstatt_wache_springt_zurueck(env):
         assert any("alten Stand" in x[1] for x in e.tg.outbox if x[0] == "text")
     finally:
         flag.unlink(missing_ok=True)
+
+
+def test_vorbild_talzeit_wird_studiert(env):
+    run, graph, store, feed = env
+    feed.pop("items", None)
+    graph.discovery = {"talzeit.wuppertal": {"username": "talzeit.wuppertal", "media": {"data": [
+        {"id": str(i), "caption": f"Post {i}", "like_count": i * 10, "comments_count": i} for i in range(12)]}}}
+    e, errs = run(datetime(2026, 11, 23, 11, 0, tzinfo=TZ))
+    seen = {}
+    def study(h, top, flop):
+        seen["top"] = top[0]["caption"]
+        return {"ton": ["nah, jung, warm"], "themen": ["Essen & Ausgehen"]}
+    e.brain.study = study
+    e.st["done"]["vorbild_ts"] = 0
+    e.study_models()
+    assert seen["top"] == "Post 11"
+    assert "Essen & Ausgehen" in e.st["vorbild"] and "VORBILD-STUDIE" in e.brain.rules

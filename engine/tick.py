@@ -81,8 +81,11 @@ class Engine:
         rules = (self.root / "data/redaktion.md").read_text(encoding="utf-8")
         learned = (self.store.get(RULES) or b"").decode("utf-8")
         lessons = (self.store.get(LESSONS) or b"").decode("utf-8")
+        vb = self.st.get("vorbild") or ""
         self.brain = Brain(self.llm, cfg, rules + ("\n" + learned if learned else "")
-                           + ("\n\nSELBST GELERNT (aus Bildkontrolle und Kritik, verbindlich)\n" + lessons if lessons else ""))
+                           + ("\n\nSELBST GELERNT (aus Bildkontrolle und Kritik, verbindlich)\n" + lessons if lessons else "")
+                           + ("\n\nVORBILD-STUDIE (was bei unseren Vorbildern gut läuft – Muster übernehmen, nie Texte)\n" + vb
+                              if vb else ""))
         self.tg = telegram or Telegram(secrets.TELEGRAM_TOKEN, self.st, http=http, dry=dry)
         self.errors: list[str] = []
         self.k = cfg["takt"]
@@ -140,6 +143,7 @@ class Engine:
             self.step("postfach", self.check_dms)
             self.step("repost-kommentare", self.check_repost_comments)
             self.step("kommentare", self.check_comments)
+            self.step("vorbild", self.study_models)
             self.step("hashtags", self.scout_hashtags)
             self.step("produzieren", self.produce)
             self.step("posten", self.publish_due)
@@ -1025,6 +1029,38 @@ class Engine:
 
     RAUS = re.compile(r"\b(raus|rausnehmen|lösch\w*|entfern\w*|nicht einverstanden|möchte (ich )?nicht|will (ich )?nicht|"
                       r"bitte nicht|nein|nicht ok|nicht okay|ohne (meine )?erlaubnis)\b", re.I)
+
+    def study_models(self):
+        """Alle 3 Tage: Vorbild-Accounts (Talzeit) genau ansehen – was läuft, welcher Ton, welche Themen."""
+        if self.graph is None or getattr(self.graph, "ig_login", False):
+            return
+        if self.ts() - self.st["done"].get("vorbild_ts", 0) < 3 * 86400:
+            return
+        self.st["done"]["vorbild_ts"] = self.ts()
+        notes = []
+        for h in self.cfg.get("vorbilder", []):
+            d = self.graph.business_discovery(h, limit=40)
+            media = [m for m in (d.get("media") or {}).get("data", []) if m.get("caption")]
+            if len(media) < 6:
+                continue
+            score = lambda m: (m.get("like_count") or 0) + 3 * (m.get("comments_count") or 0)   # noqa: E731
+            media.sort(key=score, reverse=True)
+            slim = lambda m: {"caption": m["caption"][:700], "likes": m.get("like_count"),     # noqa: E731
+                              "comments": m.get("comments_count"), "typ": m.get("media_type")}
+            r = self.brain.study(h, [slim(m) for m in media[:10]], [slim(m) for m in media[-5:]])
+            parts = [f"@{h}:"]
+            for k, label in (("ton", "Ton"), ("themen", "Themen, die laufen"), ("formate", "Formate"),
+                             ("hooks", "Einstiege"), ("fragen", "Fragen"), ("lieber_nicht", "Läuft schwach")):
+                if r.get(k):
+                    parts.append(f"- {label}: " + "; ".join(str(x) for x in r[k][:6]))
+            notes.append("\n".join(parts))
+        if notes:
+            first = not self.st.get("vorbild")
+            self.st["vorbild"] = "\n\n".join(notes)[:3000]
+            self.brain.rules += "\n\nVORBILD-STUDIE\n" + self.st["vorbild"]
+            if first:
+                self.tg.say("👀 Ich habe Talzeit genau studiert und übernehme ab jetzt, was dort gut läuft: Themen, Formate, "
+                            "Ton. Das mache ich alle 3 Tage neu.")
 
     def check_repost_comments(self):
         """Schreibt die Person unter unseren Post „bitte raus“, kommt er raus – auch ohne DM-Zugriff."""

@@ -115,6 +115,13 @@ Geständnis · Ranking · kleine Streitfrage („Elberfeld oder Barmen?“) · O
   Informationen vor“, „Veranstalter“, „Besucherinnen und Besucher werden gebeten“.
 - KI-Klang: „spannend“, „tauche ein“, „mehr als nur“, „Highlights“, Dreierketten, Ausrufezeichen-Ketten.
 
+## Vorbild Talzeit (@talzeit.wuppertal)
+- Talzeit ist unser wichtigstes Vorbild für Ton, Sprache und Themen: jung, warm, nah dran, gut geschrieben.
+  Die Engine studiert den Account regelmäßig (siehe „VORBILD-STUDIE“ unten in den Regeln) und übernimmt, was
+  dort gut läuft: Themen, Formate, Hook-Muster, Tonfall.
+- Übernommen werden Muster, nie Texte. Keine Sätze abschreiben. Greifen wir eine Talzeit-Geschichte auf,
+  erzählen wir sie eigenständig und nennen die Quelle: „quelle: Talzeit“.
+
 ## Vorbilder aus der Redaktion (Original-Formulierungen, Ton übernehmen, nicht kopieren)
 - „Die Weihnachtsmärkte in Elberfeld und Barmen laufen ja bereits. Wir wissen alle, unsere Weihnachtsmärkte sind
   nicht unbedingt die schönsten, aber wenn man mit den richtigen Leuten unterwegs ist, kann es schon auch
