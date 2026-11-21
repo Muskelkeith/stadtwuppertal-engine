@@ -259,7 +259,7 @@ class FakeGraph:
         return {"followers_count": 1234, "media_count": len(self.done)}
 
     def comments(self, media_id):
-        return []
+        return getattr(self, "comment_box", {}).get(media_id, [])
 
     def conversations(self, limit=25):
         return self.inbox

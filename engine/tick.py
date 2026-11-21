@@ -135,6 +135,7 @@ class Engine:
             self.step("sammeln", self.collect)
             self.step("planen", self.plan)
             self.step("postfach", self.check_dms)
+            self.step("repost-kommentare", self.check_repost_comments)
             self.step("hashtags", self.scout_hashtags)
             self.step("produzieren", self.produce)
             self.step("posten", self.publish_due)
@@ -669,7 +670,9 @@ class Engine:
                 and today < p["max_requests_per_day"])
 
     def ask(self, handle, req, item, title):
+        """Abgeschaltet: Foto-Anfragen zum Abtippen sind dir zu umständlich. Wird nur noch gemerkt, nicht verschickt."""
         self.st["angefragt"][handle] = self.ts()
+        return
         self.st["anfragen"][handle] = {**req, "ts": self.ts()}
         k = f"{self.today()}:anfragen"
         self.st["done"][k] = int(self.st["done"].get(k, 0)) + 1
@@ -856,6 +859,19 @@ class Engine:
     RAUS = re.compile(r"\b(raus|rausnehmen|lösch\w*|entfern\w*|nicht einverstanden|möchte (ich )?nicht|will (ich )?nicht|"
                       r"bitte nicht|nein|nicht ok|nicht okay|ohne (meine )?erlaubnis)\b", re.I)
 
+    def check_repost_comments(self):
+        """Schreibt die Person unter unseren Post „bitte raus“, kommt er raus – auch ohne DM-Zugriff."""
+        if self.graph is None:
+            return
+        for h, rep in list(self.st.get("reposts", {}).items()):
+            if self.ts() - rep["ts"] > 30 * 86400:
+                self.st["reposts"].pop(h, None)
+                continue
+            for c in self.graph.comments(rep["ig"]):
+                if (c.get("username") or "").lower() == h and self.RAUS.search(c.get("text") or ""):
+                    self.take_down(None, h, rep)
+                    break
+
     def take_down(self, frm, handle, rep):
         """Jemand will sein #meinwuppertal-Foto nicht bei uns: sofort raus, freundlich antworten, merken."""
         link = ""
@@ -870,12 +886,13 @@ class Engine:
             done = False
         self.st["reposts"].pop(handle, None)
         self.st["abgelehnt"][handle] = self.today()
-        try:
-            self.graph.reply(frm["id"], "Alles klar, sorry! Wir nehmen dein Foto raus und nutzen es nicht mehr.")
-        except Exception:      # noqa: BLE001
-            pass
+        if frm:
+            try:
+                self.graph.reply(frm["id"], "Alles klar, sorry! Wir nehmen dein Foto raus und nutzen es nicht mehr.")
+            except Exception:      # noqa: BLE001
+                pass
         if done:
-            self.tg.say(f"@{handle} wollte sein Foto nicht bei uns. Ich habe den Post gelöscht und mich entschuldigt.")
+            self.tg.say(f"@{handle} wollte sein Foto nicht bei uns. Ich habe den Post gelöscht.")
         else:
             self.tg.say(f"@{handle} möchte sein Foto nicht bei uns. Ich darf den Post nicht selbst löschen, "
                         f"bitte nimm ihn raus (Post öffnen → ··· → Löschen):\n{link}")
@@ -1006,9 +1023,7 @@ class Engine:
         self._cover[q["id"]] = render.jpeg(img, 85)
         tag = q["idea"].get("tag") or {}
         if tag.get("direkt") and handle:
-            credit += (" – danke für dein Foto! Falls du nicht möchtest, dass wir es zeigen, "
-                       "schreib uns kurz, dann nehmen wir es sofort raus.")
-            q["tag_user"] = handle
+            q["tag_user"] = handle          # @-Nennung in der Caption + Markierung im Bild → Instagram benachrichtigt
         q["caption"] = self.caption(pkg, credit)
         rating = (q["idea"].get("tag") or {}).get("rating") or {}
         auto = self.cfg["photos"].get("autopost_min")

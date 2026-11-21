@@ -131,6 +131,7 @@ def test_regel_per_telegram_wird_gemerkt(env):
     assert "Mehrwert vor Kürze" in e.brain.system, "Redaktionsregeln stecken im Prompt"
 
 
+@pytest.mark.skip(reason="Foto-Anfragen per Telegram abgeschaltet")
 def test_bildanfrage_bis_zum_update(env, monkeypatch):
     """Wuppertal Aktuell meldet etwas mit „Bildquelle: @semih.m4“ → Engine fragt an (du: 1 Tipp + Einfügen),
     liest die Antwort, dankt, holt das Bild und schiebt eine Story mit Credit nach."""
@@ -193,6 +194,7 @@ def _img_get(monkeypatch):
     monkeypatch.setattr(requests, "get", lambda *a, **k: R())
 
 
+@pytest.mark.skip(reason="Foto-Anfragen per Telegram abgeschaltet")
 def test_markierungen_werden_kuratiert(env, monkeypatch):
     run, graph, store, feed = env
     _img_get(monkeypatch)
@@ -358,3 +360,14 @@ def test_meinwuppertal_widerspruch_nimmt_post_raus(env):
     assert ("delete", "ig-77") in graph.done
     assert "wupperlicht" in e.st["abgelehnt"] and "wupperlicht" not in e.st["reposts"]
     assert any("gelöscht" in x[1] for x in e.tg.outbox if x[0] == "text")
+
+
+def test_widerspruch_per_kommentar(env):
+    run, graph, store, feed = env
+    feed.pop("items", None)
+    e, errs = run(datetime(2026, 11, 23, 11, 0, tzinfo=TZ))
+    e.st.setdefault("reposts", {})["wupperlicht"] = {"ig": "ig-88", "ts": e.ts()}
+    graph.comment_box = {"ig-88": [{"username": "fremd", "text": "nein wie schön"},
+                                   {"username": "wupperlicht", "text": "Bitte löschen, will ich nicht"}]}
+    e.check_repost_comments()
+    assert ("delete", "ig-88") in graph.done
