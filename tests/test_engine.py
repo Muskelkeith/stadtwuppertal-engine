@@ -345,3 +345,16 @@ def test_kritik_per_antwort_schreibt_neu(env):
     assert not errs, errs
     q = next(x for x in e.st["queue"] if x["id"] == w[0]["id"])
     assert q["status"] == "waiting" and q.get("approved_feedback") == "zu dünn, mehr infos"
+
+
+def test_meinwuppertal_widerspruch_nimmt_post_raus(env):
+    run, graph, store, feed = env
+    feed.pop("items", None)
+    e, errs = run(datetime(2026, 11, 23, 11, 0, tzinfo=TZ))
+    e.st.setdefault("reposts", {})["wupperlicht"] = {"ig": "ig-77", "ts": e.ts()}
+    graph.inbox = [{"messages": {"data": [{"id": "m1", "from": {"id": "u1", "username": "wupperlicht"},
+                                           "message": "Bitte nimm mein Foto raus"}]}}]
+    e.check_dms()
+    assert ("delete", "ig-77") in graph.done
+    assert "wupperlicht" in e.st["abgelehnt"] and "wupperlicht" not in e.st["reposts"]
+    assert any("gelöscht" in x[1] for x in e.tg.outbox if x[0] == "text")

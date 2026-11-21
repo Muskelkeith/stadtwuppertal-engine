@@ -738,6 +738,7 @@ class Engine:
             direkt = m.get("_tag") == "meinwuppertal"     # Regel: #meinwuppertal-Fotos werden übernommen, mit Credit
             if (h and h in self.st["bildfreigaben"]) or direkt:
                 self.enqueue("foto", idea={"tag": {"user": h or "", "via": "#meinwuppertal" if not h else "",
+                                                   "direkt": direkt and not (h and h in self.st["bildfreigaben"]),
                                                    "image": m["media_url"], "text": (m.get("caption") or "")[:300],
                                                    "rating": r}})
             elif self.worth_asking(h or f"post:{m['id']}", r, p["community_min"]):
@@ -810,6 +811,10 @@ class Engine:
                 imgs = [a.get("image_data", {}).get("url") or a.get("file_url")
                         for a in (m.get("attachments") or {}).get("data", [])]
                 imgs = [u for u in imgs if u]
+                rep = self.st.get("reposts", {}).get(handle)
+                if rep and self.RAUS.search(text):
+                    self.take_down(frm, handle, rep)
+                    continue
                 req = next((v | {"h": k} for k, v in self.st["anfragen"].items() if k.lower() == handle), None)
                 if not req:
                     open_posts = [k for k in self.st["anfragen"] if k.startswith("post:")]
@@ -847,6 +852,33 @@ class Engine:
                     if self.tg.live and self.tg.chat:
                         self.tg._call("sendMessage", chat_id=self.tg.chat, reply_markup=_j.dumps(kb),
                                       text=f"@{h} hat geantwortet: „{text[:300]}“")
+
+    RAUS = re.compile(r"\b(raus|rausnehmen|lösch\w*|entfern\w*|nicht einverstanden|möchte (ich )?nicht|will (ich )?nicht|"
+                      r"bitte nicht|nein|nicht ok|nicht okay|ohne (meine )?erlaubnis)\b", re.I)
+
+    def take_down(self, frm, handle, rep):
+        """Jemand will sein #meinwuppertal-Foto nicht bei uns: sofort raus, freundlich antworten, merken."""
+        link = ""
+        try:
+            link = self.graph.permalink(rep["ig"])
+        except Exception:      # noqa: BLE001
+            pass
+        try:
+            self.graph.delete_media(rep["ig"])
+            done = True
+        except Exception:      # noqa: BLE001 – falls Instagram das Löschen per Schnittstelle nicht erlaubt
+            done = False
+        self.st["reposts"].pop(handle, None)
+        self.st["abgelehnt"][handle] = self.today()
+        try:
+            self.graph.reply(frm["id"], "Alles klar, sorry! Wir nehmen dein Foto raus und nutzen es nicht mehr.")
+        except Exception:      # noqa: BLE001
+            pass
+        if done:
+            self.tg.say(f"@{handle} wollte sein Foto nicht bei uns. Ich habe den Post gelöscht und mich entschuldigt.")
+        else:
+            self.tg.say(f"@{handle} möchte sein Foto nicht bei uns. Ich darf den Post nicht selbst löschen, "
+                        f"bitte nimm ihn raus (Post öffnen → ··· → Löschen):\n{link}")
 
     def dm_submission(self, frm, handle, url, text):
         """Jemand schickt uns ein Foto per DM: bewerten, bei starkem Bild nach dem Okay fragen
@@ -972,6 +1004,11 @@ class Engine:
         q["media"] = [self.store.media(f"{int(self.ts())}-{q['id']}.jpg", render.jpeg(img))]
         self._cover = getattr(self, "_cover", {})
         self._cover[q["id"]] = render.jpeg(img, 85)
+        tag = q["idea"].get("tag") or {}
+        if tag.get("direkt") and handle:
+            credit += (" – danke für dein Foto! Falls du nicht möchtest, dass wir es zeigen, "
+                       "schreib uns kurz, dann nehmen wir es sofort raus.")
+            q["tag_user"] = handle
         q["caption"] = self.caption(pkg, credit)
         rating = (q["idea"].get("tag") or {}).get("rating") or {}
         auto = self.cfg["photos"].get("autopost_min")
@@ -1099,8 +1136,11 @@ class Engine:
         elif len(q["media"]) > 1:
             ig = self.graph.carousel(q["media"], caption)
         else:
-            ig = self.graph.image(q["media"][0], caption)
+            ig = self.graph.image(q["media"][0], caption, tag_user=q.get("tag_user", "")) if q.get("tag_user") \
+                else self.graph.image(q["media"][0], caption)
         q.update(status="published", ig=ig)
+        if q.get("tag_user") and ig:
+            self.st.setdefault("reposts", {})[q["tag_user"].lower()] = {"ig": ig, "ts": self.ts()}
         pkg = q.get("pkg", {})
         self.st["posted"].append({"qid": q["id"], "ig": ig, "ts": self.ts(), "day": self.today(), "kind": q["kind"],
                                   "mode": q["mode"], "rubric": pkg.get("rubric"), "hook": pkg.get("hook", []),

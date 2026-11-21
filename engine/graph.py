@@ -191,11 +191,20 @@ class GraphClient:
         self._wait(container)
         return self._req("POST", f"{self.ig}/media_publish", creation_id=container)["id"]
 
-    def image(self, url: str, caption: str, alt: str = "") -> str:
+    def image(self, url: str, caption: str, alt: str = "", tag_user: str = "") -> str:
         p = {"image_url": url, "caption": caption}
         if alt:
             p["alt_text"] = alt[:1000]
+        if tag_user:      # im Bild markieren → Instagram benachrichtigt die Person automatisch
+            try:
+                return self._publish(self._req("POST", f"{self.ig}/media", **p, user_tags=json.dumps(
+                    [{"username": tag_user, "x": 0.5, "y": 0.92}]))["id"])
+            except GraphError:
+                pass      # z. B. privates Profil: dann ohne Markierung, die @-Nennung in der Caption bleibt
         return self._publish(self._req("POST", f"{self.ig}/media", **p)["id"])
+
+    def delete_media(self, media_id: str):
+        self._req("DELETE", media_id)
 
     def carousel(self, urls: list[str], caption: str) -> str:
         kids = [self._req("POST", f"{self.ig}/media", image_url=u, is_carousel_item="true")["id"] for u in urls[:10]]
@@ -269,8 +278,11 @@ class FakeGraph:
         self.done.append((kind, mid, a))
         return mid
 
-    def image(self, url, caption, alt=""):
-        return self._rec("image", url, caption)
+    def image(self, url, caption, alt="", tag_user=""):
+        return self._rec("image", url, caption, tag_user)
+
+    def delete_media(self, media_id):
+        self.done.append(("delete", media_id))
 
     def carousel(self, urls, caption):
         return self._rec("carousel", urls, caption)
