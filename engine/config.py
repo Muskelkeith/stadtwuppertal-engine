@@ -27,7 +27,7 @@ class Secrets:
     def __getattr__(self, k):
         return self.__dict__["values"].get(k.upper()) or None
 
-    def missing(self, needed=("IG_TOKEN", "TELEGRAM_TOKEN")):
+    def missing(self, needed=("TELEGRAM_TOKEN",)):   # ohne IG_TOKEN läuft die Übergabe per Telegram
         llm = self.values.get("CLAUDE_CODE_OAUTH_TOKEN") or self.values.get("ANTHROPIC_API_KEY")
         return [k for k in needed if not self.values.get(k)] + ([] if llm else ["CLAUDE_CODE_OAUTH_TOKEN"])
 

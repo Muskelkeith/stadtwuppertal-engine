@@ -53,6 +53,25 @@ class Telegram:
         files = {f"p{i}": (f"p{i}.jpg", j, "image/jpeg") for i, j in enumerate(jpegs[:10])}
         self._call("sendMediaGroup", chat_id=self.chat, media=json.dumps(media), files=files)
 
+    def handover(self, urls: list[str], kind: str, caption: str):
+        """Übergabe-Modus (Instagram noch nicht verbunden): fertiger Post zum selbst Hochladen.
+        Erst die Datei(en) zum Speichern, dann der Text als eigene Nachricht zum Kopieren."""
+        what = {"story": "story", "reel": "reel", "feed": "post" if len(urls) == 1 else "karussell"}.get(kind, kind)
+        if not self.live or not self.chat:
+            self.outbox.append(("handover", what, len(urls), caption))
+            return
+        head = f"📦 {what} zum posten – bilder speichern, dann auf instagram hochladen"
+        if kind == "reel":
+            self._call("sendVideo", chat_id=self.chat, video=urls[0], caption=head)
+        elif len(urls) == 1:
+            self._call("sendPhoto", chat_id=self.chat, photo=urls[0], caption=head)
+        else:
+            media = [{"type": "photo", "media": u} for u in urls[:10]]
+            media[0]["caption"] = head
+            self._call("sendMediaGroup", chat_id=self.chat, media=json.dumps(media))
+        if caption.strip():
+            self._call("sendMessage", chat_id=self.chat, text=caption[:4000], disable_web_page_preview="true")
+
     def mark(self, message_id: str, note: str):
         if self.live and self.chat and message_id and message_id != "dry":
             try:

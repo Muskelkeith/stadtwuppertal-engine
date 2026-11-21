@@ -270,3 +270,22 @@ def test_foto_per_dm(env, monkeypatch):
     e, errs = run(t + timedelta(minutes=10))
     q = next(q for q in e.st["queue"] if q["mode"] == "foto")
     assert q["status"] == "waiting", "auch per DM: nur mit deinem passt"
+
+
+def test_uebergabe_ohne_instagram(tmp_path, monkeypatch):
+    """Instagram noch nicht verbunden: fertige Posts kommen per Telegram, ohne Wartezeit und ohne KI-Hinweis."""
+    cfg = load_config()
+    store = Store(Secrets({}), tmp_path / "store")
+    feed = {"items": items()}
+    monkeypatch.setattr(sources, "collect", lambda *a, **k: (feed.pop("items", []), []))
+    monkeypatch.setattr("engine.commons.find_photo", lambda *a, **k: (None, None, None))
+    e = Engine(cfg, Secrets({}), store=store, graph=None, now=datetime(2026, 11, 23, 7, 40, tzinfo=TZ), dry=True)
+    e.tg = FakeTG(e.st)
+    assert e.graph is None
+    errs = e.tick()
+    assert not errs, errs
+    sent = [x for x in e.tg.outbox if x[0] == "handover"]
+    assert sent, e.tg.outbox
+    assert not any("ki erstellt" in x[3] for x in sent)
+    assert any(x[1] == "story" for x in sent)
+    assert Secrets({"TELEGRAM_TOKEN": "t", "CLAUDE_CODE_OAUTH_TOKEN": "c"}).missing() == []

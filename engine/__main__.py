@@ -35,6 +35,8 @@ def check(cfg, s):
             row("instagram", True, f"@{name}")
         except Exception as e:      # noqa: BLE001
             row("instagram", False, str(e)[:200])
+    else:
+        lines.append("· instagram noch nicht verbunden → fertige posts kommen per telegram zum selbst hochladen")
     if s.TELEGRAM_TOKEN:
         try:
             me = requests.get(f"https://api.telegram.org/bot{s.TELEGRAM_TOKEN}/getMe", timeout=30).json()

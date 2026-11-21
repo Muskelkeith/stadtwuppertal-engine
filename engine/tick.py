@@ -733,7 +733,7 @@ class Engine:
         """Freigabe-Logik: rot → nur mit deinem Tipp. Nachrichten → Vorschau, nach Ablauf mit KI-Hinweis.
         Alles andere → läuft allein."""
         q["caption"] = self.caption(pkg, credit)
-        news_like = pkg.get("public_interest") and q["kind"] in ("feed", "reel")
+        news_like = pkg.get("public_interest") and q["kind"] in ("feed", "reel") and self.graph is not None
         if pkg.get("risk") == "rot":
             q.update(status="waiting", on_timeout="drop", timeout=self.ts() + 3 * 3600)
             head = "⚠️ heikel – nur mit deinem ok:\n" + (pkg.get("risk_reason") or "")
@@ -802,11 +802,12 @@ class Engine:
         if q.get("label"):
             caption = caption.replace("\n\nquelle:", "\n\ntext mit ki erstellt · quelle:", 1) \
                 if "\n\nquelle:" in caption else caption + "\n\ntext mit ki erstellt"
-        if self.graph is None:
-            raise RuntimeError("Instagram nicht verbunden (IG_TOKEN fehlt)")
         if hasattr(self.store, "flush_media"):
-            self.store.flush_media()          # Dateien müssen öffentlich sein, bevor Instagram sie abholt
-        if q["kind"] == "story":
+            self.store.flush_media()          # Dateien müssen öffentlich sein, bevor Instagram/Telegram sie abholt
+        if self.graph is None:                # Übergabe-Modus: du postest selbst, also prüft ein Mensch → kein KI-Hinweis
+            self.tg.handover(q["media"], q["kind"], q["caption"])
+            ig = None
+        elif q["kind"] == "story":
             ig = self.graph.story(image_url=q["media"][0])
         elif q["kind"] == "reel":
             ig = self.graph.reel(q["media"][0], caption, q.get("cover"))
@@ -822,12 +823,17 @@ class Engine:
         if q.get("story"):
             self.st["stories"][q["story"]]["posted"] = True
         self.log(f"gepostet {q['kind']} {q['mode']}: {' '.join(pkg.get('hook', []))}")
+        if ig is None:
+            return self._story_after(q, pkg)
         link = ""
         try:
             link = self.graph.permalink(ig)
         except Exception:
             pass
         self.tg.say(f"gepostet: {' '.join(pkg.get('hook', [])) or q['mode']} {link}".strip())
+        self._story_after(q, pkg)
+
+    def _story_after(self, q, pkg):
         # Nachrichten zusätzlich als Story anschieben
         if q["kind"] == "feed" and q["mode"] in ("meldung", "nachdreh", "warum") and pkg.get("hook"):
             st_img = render.story(pkg, None, seed=q["id"])
