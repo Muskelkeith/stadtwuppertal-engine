@@ -50,7 +50,11 @@ PACKAGE = """{
  "schild": "kurz oder leer",
  "options": ["a", "b"]   // nur bei poll/warum/quiz: zwei Antworten statt Schild, sonst []
  "slides": [{"head": "kurze unterzeile (eine Frage oder ein Versprechen)", "body": "2–5 Sätze, die genau das einlösen: konkret, mit Mehrwert, normale Groß-/Kleinschreibung"}],  // 0–5
- "reel": [{"head": "unter-hook klein", "lines": ["kurzer Satz", "kurzer Satz"], "gag": "Pointe oder leer"}], // 3–4 Züge, nur wenn als Reel geeignet, sonst []
+ "reel": [{"head": "unter-hook klein", "lines": ["kurzer Satz", "kurzer Satz"], "gag": "Pointe oder leer"},
+          {"bild": "Commons-Suchbegriff für ein großes Foto, z. B. 'Felix Hoffmann' oder 'Bayer Elberfeld 1900'", "text": "Bildunterschrift, max. 8 Wörter"}],
+          // 4–6 Züge, nur wenn als Reel geeignet, sonst []. Text-Zug: head + 1–2 Sätze (je max. ~70 Zeichen) + optional gag.
+          // Bild-Zug: großes Foto statt Text – bei Geschichte mindestens einer, gern zwei. Jeder Zug = ein konkreter,
+          // überraschender Fakt (Name, Jahr, Ort, Zahl, Firma). Nischenwissen schlägt Allgemeinplatz.
  "caption": "Caption: erste Zeile = Gefühl des Hooks, dann 2–4 kurze Zeilen, am Ende EINE Frage zum Mitmachen. KEINE Links, keine URLs",
  "hashtags": ["3–4 ohne #"],
  "sources": [{"name": "…", "url": "…"}],

@@ -1,0 +1,3 @@
+Hier liegen Musikstücke für Reels (mp3, m4a, wav, ogg).
+Nur Stücke, die ihr frei nutzen dürft: eigene Produktionen oder lizenzfreie (z. B. CC0).
+Die Engine nimmt pro Reel zufällig eins, blendet ein und aus. Leer = Reels ohne Ton.

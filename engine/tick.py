@@ -879,7 +879,29 @@ class Engine:
         if not photos and q.get("pkg", {}).get("photo_query"):
             p, _, page = commons.find_photo(q["pkg"]["photo_query"], set(), self.http)
             photos = [p] if p else []
-        path, cover_img, dur = render_reel(q["pkg"], photos)
+        pkg = dict(q["pkg"])
+        trains, credits = [], []
+        for tr in pkg.get("reel") or []:
+            tr = dict(tr)
+            if tr.get("bild"):
+                img, cred, page = commons.find_photo(tr["bild"], set(self.st["used_photos"]), self.http)
+                if img is not None:
+                    tr["_img"], tr["_credit"] = img, cred
+                    self.st["used_photos"].append(page)
+                    credits.append(cred)
+            trains.append(tr)
+        pkg["reel"] = trains
+        music = None
+        mdir = self.root / "assets" / "music"
+        if mdir.exists():
+            tracks = sorted(x for x in mdir.iterdir() if x.suffix.lower() in (".mp3", ".m4a", ".wav", ".ogg", ".aac"))
+            if tracks:
+                music = str(random.Random(q["id"]).choice(tracks))
+        path, cover_img, dur = render_reel(pkg, photos, music=music)
+        if credits:
+            extra = "\n".join(dict.fromkeys(c for c in credits if c and c not in (q.get("caption") or "")))
+            if extra:
+                q["caption"] = (q.get("caption") or "").rstrip() + "\n\n" + extra
         stamp = int(self.ts())
         q["media"] = [self.store.media(f"{stamp}-{q['id']}.mp4", Path(path).read_bytes())]
         q["cover"] = self.store.media(f"{stamp}-{q['id']}-cover.jpg", render.jpeg(cover_img))

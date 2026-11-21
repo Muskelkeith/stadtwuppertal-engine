@@ -108,7 +108,7 @@ def test_reel_abends_aus_dem_karussell(env, monkeypatch):
     from PIL import Image
     import engine.design.reel as reelmod
     monkeypatch.setattr(reelmod, "render_reel",
-                        lambda pkg, photos, out=None: (str(store.root / "x.mp4"), Image.new("RGB", (1080, 1920)), 20.0))
+                        lambda pkg, photos, out=None, **k: (str(store.root / "x.mp4"), Image.new("RGB", (1080, 1920)), 20.0))
     (store.root).mkdir(parents=True, exist_ok=True)
     (store.root / "x.mp4").write_bytes(b"mp4")
     feed.pop("items", None)

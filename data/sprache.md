@@ -39,6 +39,16 @@ watt · dat · getz · ne? · wa? · hömma · sach ma · hasse / hasste · biss
   den nächsten Tagen.
 - Caption: erste Zeile = Gefühl des Hooks, 2–4 kurze Zeilen, die Frage, dann „quelle: …“, Fotocredit, Hashtags.
 
+## Reels
+- Jeder Zug erzählt EINEN konkreten, überraschenden Fakt: Namen, Jahreszahlen, Orte, Zahlen, Firmen. Nischenwissen
+  schlägt Allgemeinplatz („1897, im Bayer-Labor an der Wupper in Elberfeld“ statt „hier in der Stadt“).
+- Die Akteure beim Namen nennen (bei Aspirin: Bayer, Felix Hoffmann, das Werk in Elberfeld).
+- Sachlich richtig formulieren, so, wie es jemand sagen würde, der das Thema kennt: „Aspirin liegt bis heute in fast
+  jeder Hausapotheke“ – nicht „liegt noch rum“ oder „bis heute im Schrank“, das klingt nach alten Resten.
+- Dialekt nur dort, wo er nicht die Bedeutung verdreht.
+- Bei Geschichte mindestens ein Bild-Zug: ein großes historisches Foto statt Text (Person, Gebäude, Ort damals).
+- Kurz: 1–2 Sätze pro Zug, je höchstens ~70 Zeichen. Lieber ein Zug mehr als ein voller.
+
 ## Fragen, die Kommentare holen
 Stadtteil-Vergleich („Welcher Stadtteil hat den schönsten Weihnachtsmarkt?“) · Lieblings-Fragen
 („Euer Lieblingsstand?“) · Ritual („Was kauft ihr da jedes Jahr?“) · Erinnerung („Wer kennt das noch?“) ·
