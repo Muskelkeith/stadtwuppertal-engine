@@ -120,7 +120,7 @@ class Telegram:
                     out.append({"type": "command", "cmd": "regel", "text": rule.strip()})
                 continue
             hit = False
-            for cmd in ("stopp", "weiter", "status", "ideen"):
+            for cmd in ("stopp", "weiter", "status", "ideen", "vorbild"):
                 if text.lstrip("/").startswith(cmd):
                     out.append({"type": "command", "cmd": cmd})
                     hit = True

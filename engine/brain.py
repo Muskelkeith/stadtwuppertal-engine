@@ -233,16 +233,26 @@ deinen Kommentar“, keine Links. Eine Rückfrage nur, wenn sie wirklich schlau 
 JSON: {{"antworten": [{{"id": "Kommentar-ID", "text": "Antwort"}}]}}"""
         return self.llm.ask("kommentare", system, prompt, tier="write")
 
-    def study(self, handle: str, top: list[dict], flop: list[dict]) -> dict:
-        system = self.system + "\n\nDu analysierst jetzt einen Vorbild-Account, um von ihm zu lernen."
-        prompt = f"""Vorbild-Account @{handle}. Seine zuletzt am besten laufenden Posts (Caption, Likes, Kommentare):
-{json.dumps(top, ensure_ascii=False)[:6000]}
-Und die schwächsten:
-{json.dumps(flop, ensure_ascii=False)[:2500]}
-Was macht dieser Account richtig, und was können wir übernehmen? Beschreibe MUSTER in eigenen Worten,
-zitiere keine ganzen Sätze (höchstens Formulierungs-Bausteine von 2–4 Wörtern).
-JSON: {{"ton": ["…"], "themen": ["Themenfelder, die dort gut laufen"], "formate": ["…"],
-"hooks": ["Muster für Einstiege"], "fragen": ["wie sie Kommentare holen"], "lieber_nicht": ["was dort schwach läuft"]}}"""
+    def study(self, handle: str, stats: dict, posts: list[dict]) -> dict:
+        system = self.system + "\n\nDu bist jetzt Social-Media-Analyst und studierst einen Vorbild-Account gründlich."
+        prompt = f"""Vorbild-Account @{handle}.
+ZAHLEN (berechnet aus allen erreichbaren Posts; score = Likes + 3×Kommentare):
+{json.dumps(stats, ensure_ascii=False)[:4000]}
+ALLE POSTS, nach Erfolg sortiert (score, Format, Zeitpunkt, Anfang der Caption):
+{json.dumps(posts, ensure_ascii=False)[:22000]}
+
+Analysiere gründlich und konkret, mit Zahlen wo möglich:
+1. THEMEN: Bilde Themenfelder, ordne die Posts zu und ranke die Felder nach durchschnittlichem score (mit Anzahl).
+2. CAPTIONS: Wie steigen sie ein, wie lang, wie reden sie die Leute an, Humor, Emojis, wie enden sie?
+   Was unterscheidet die Top-Posts von den Flops sprachlich?
+3. FORMATE & TIMING: Was läuft als Reel/Karussell/Bild, an welchen Tagen und Uhrzeiten?
+4. FRAGEN: Wie holen sie Kommentare – was davon funktioniert nachweislich?
+5. LÜCKEN: Welche Wuppertal-Themen fehlen dort, die für uns frei sind?
+6. FÜR UNS: Was übernehmen wir als Muster? Woran merkt man Abkupfern (was wir NICHT nachmachen)?
+Beschreibe Muster in eigenen Worten, höchstens Bausteine von 2–4 Wörtern zitieren.
+JSON: {{"themen": ["Feld – Schnitt X, n=Y – kurzer Kommentar"], "captions": ["…"], "formate_timing": ["…"],
+"fragen": ["…"], "luecken": ["…"], "fuer_uns": ["…"], "nicht_nachmachen": ["…"],
+"kurzfazit": "3 Sätze für den Chef, was die wichtigsten Erkenntnisse sind"}}"""
         return self.llm.ask("vorbild", system, prompt, tier="write")
 
     def distill(self, lessons: list[str], critiques: list[str], current: str) -> dict:

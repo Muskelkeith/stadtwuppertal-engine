@@ -18,7 +18,7 @@ import requests
 import yaml
 from PIL import Image
 
-from . import commons, radar, sources
+from . import vorbild, commons, radar, sources
 from .brain import Brain, stub
 from .design import render
 from .graph import GraphClient
@@ -143,6 +143,7 @@ class Engine:
             self.step("postfach", self.check_dms)
             self.step("repost-kommentare", self.check_repost_comments)
             self.step("kommentare", self.check_comments)
+            self.step("vorbild-puls", self.snapshot_models)
             self.step("vorbild", self.study_models)
             self.step("hashtags", self.scout_hashtags)
             self.step("produzieren", self.produce)
@@ -276,6 +277,10 @@ class Engine:
                 continue
             if ev["type"] == "revise":
                 self.step("überarbeiten", self.revise, ev)
+                continue
+            if ev["type"] == "command" and ev["cmd"] == "vorbild":
+                self.tg.say(("👀 Stand der Vorbild-Analyse:\n\n" + self.st["vorbild_fazit"]) if self.st.get("vorbild_fazit")
+                            else "Die Vorbild-Analyse läuft beim nächsten Takt. Danach kannst du sie hier abrufen.")
                 continue
             if ev["type"] == "command" and ev["cmd"] == "ideen":
                 offen = [i for i in self.st["ideen"] if i["status"] == "offen"]
@@ -566,7 +571,8 @@ class Engine:
         return q.get("idea") or {}
 
     def produce(self):
-        for q in [x for x in self.st["queue"] if x["status"] == "new"][:2]:   # max 2 pro Takt, damit es flott bleibt
+        todo = [x for x in self.st["queue"] if x["status"] == "new" and x.get("hold_until", 0) <= self.ts()]
+        for q in todo[:2]:   # max 2 pro Takt, damit es flott bleibt
             self._redo = False
             self.step(f"produktion {q['id']}", self.produce_one, q)
             if q["status"] == "new" and not self._redo:
@@ -587,9 +593,27 @@ class Engine:
         if q["mode"] == "damals" and not mat:
             q["status"] = "dropped"
             return
+        # Abstand zu Vorbildern: reine Talzeit-Themen erst nach 36 h, immer eigenständig erzählt
+        models = [h.lower() for h in self.cfg.get("vorbilder", [])]
+        vb_items = []
+        if isinstance(mat, dict) and mat.get("meldungen"):
+            ms = mat["meldungen"]
+            vb_items = [m for m in ms if vorbild.is_model_source(m, models)]
+            if vb_items and len(vb_items) == len(ms):
+                youngest = min(vorbild.age_hours(m, self.ts()) for m in vb_items)
+                if youngest < 36:
+                    q["hold_until"] = self.ts() + (36 - youngest) * 3600
+                    self._redo = True
+                    self.log(f"talzeit-abstand: {q['id']} wartet noch {36 - youngest:.0f} h")
+                    return
         text_mat = {k: v for k, v in mat.items() if not k.startswith("_")} if isinstance(mat, dict) else mat
         recent = [" ".join(p.get("hook", [])) for p in self.st["posted"][-15:]]
-        note = "\n".join(x for x in (self.learned_note(), q.get("qa_note")) if x)
+        vb_note = ("ABSTAND ZUM VORBILD: Ein Teil des Materials stammt von Talzeit. Erzähl es komplett eigenständig – "
+                   "anderer Einstieg, anderer Aufbau, eigene Formulierungen, kein Satz darf ähnlich klingen. Bring "
+                   "mindestens eine zusätzliche Einordnung oder einen Hintergrund, der sicher stimmt (Ort, Geschichte, "
+                   "Zusammenhang, was es für Anwohner heißt) – nichts erfinden. Unsere Haltung darf kantiger sein.") \
+            if vb_items else ""
+        note = "\n".join(x for x in (self.learned_note(), vb_note, q.get("qa_note")) if x)
         pkg = self.brain.write(q["mode"], text_mat, note=note, recent_hooks=recent)
         rev = self.brain.review(pkg, text_mat)
         pkg.update(rev.get("fixes") or {})
@@ -599,6 +623,19 @@ class Engine:
             q["status"] = "dropped"
             self.tg.say(f"Diesen Post habe ich nicht veröffentlicht, die Endkontrolle hat ihn gestoppt: {rev.get('note', '')}")
             return
+        if vb_items:
+            theirs = [f"{m.get('title', '')} {m.get('summary', '')}" for m in vb_items]
+            ov = vorbild.overlap(vorbild.pkg_text(pkg), theirs)
+            if ov > 0.12:
+                self.log(f"talzeit-abstand: {q['id']} zu nah dran ({ov:.0%})")
+                if not q.get("vb_redo"):
+                    q.update(vb_redo=True, status="new",
+                             qa_note=f"Die letzte Fassung war zu nah an Talzeits Formulierungen ({ov:.0%} gleiche Wortfolgen). "
+                                     "Komplett neu und eigenständig formulieren.")
+                    self._redo = True
+                else:
+                    q["status"] = "dropped"
+                return
         q["pkg"] = pkg
         if q["mode"] == "damals":
             q.pop("_damals", None)
@@ -1030,37 +1067,58 @@ class Engine:
     RAUS = re.compile(r"\b(raus|rausnehmen|lösch\w*|entfern\w*|nicht einverstanden|möchte (ich )?nicht|will (ich )?nicht|"
                       r"bitte nicht|nein|nicht ok|nicht okay|ohne (meine )?erlaubnis)\b", re.I)
 
-    def study_models(self):
-        """Alle 3 Tage: Vorbild-Accounts (Talzeit) genau ansehen – was läuft, welcher Ton, welche Themen."""
+    def snapshot_models(self):
+        """Alle 6 Stunden: Likes/Kommentare der frischen Vorbild-Posts mitschreiben – daraus wird die Dynamik."""
         if self.graph is None or getattr(self.graph, "ig_login", False):
             return
-        if self.ts() - self.st["done"].get("vorbild_ts", 0) < 3 * 86400:
+        if self.ts() - self.st["done"].get("vb_snap_ts", 0) < 6 * 3600:
+            return
+        self.st["done"]["vb_snap_ts"] = self.ts()
+        hist = self.st.setdefault("vb_hist", {})
+        for h in self.cfg.get("vorbilder", []):
+            d = self.graph.business_discovery(h, limit=12)
+            for m in (d.get("media") or {}).get("data", []):
+                hist.setdefault(m["id"], []).append([int(self.ts()), vorbild.score(m)])
+        cut = self.ts() - 5 * 86400
+        self.st["vb_hist"] = {k: v[-20:] for k, v in hist.items() if v[0][0] > cut or len(v) > 1 and v[-1][0] > cut}
+
+    def study_models(self, force=False):
+        """Alle 3 Tage: Vorbild-Accounts gründlich studieren – alle erreichbaren Posts, Zahlen, Themen, Captions, Timing."""
+        if self.graph is None or getattr(self.graph, "ig_login", False):
+            return
+        if not force and self.st.get("vorbild_v") == 2 and self.ts() - self.st["done"].get("vorbild_ts", 0) < 3 * 86400:
             return
         self.st["done"]["vorbild_ts"] = self.ts()
-        notes = []
+        notes, fazit = [], []
         for h in self.cfg.get("vorbilder", []):
-            d = self.graph.business_discovery(h, limit=40)
-            media = [m for m in (d.get("media") or {}).get("data", []) if m.get("caption")]
+            if hasattr(self.graph, "_req"):
+                info, media = vorbild.fetch_all(self.graph, h, 150)
+            else:
+                d = self.graph.business_discovery(h, limit=40)
+                media = (d.get("media") or {}).get("data", [])
+            media = [m for m in media if m.get("caption")]
             if len(media) < 6:
                 continue
-            score = lambda m: (m.get("like_count") or 0) + 3 * (m.get("comments_count") or 0)   # noqa: E731
-            media.sort(key=score, reverse=True)
-            slim = lambda m: {"caption": m["caption"][:700], "likes": m.get("like_count"),     # noqa: E731
-                              "comments": m.get("comments_count"), "typ": m.get("media_type")}
-            r = self.brain.study(h, [slim(m) for m in media[:10]], [slim(m) for m in media[-5:]])
-            parts = [f"@{h}:"]
-            for k, label in (("ton", "Ton"), ("themen", "Themen, die laufen"), ("formate", "Formate"),
-                             ("hooks", "Einstiege"), ("fragen", "Fragen"), ("lieber_nicht", "Läuft schwach")):
+            st = vorbild.stats(media, self.tz, self.st.get("vb_hist"))
+            r = self.brain.study(h, st, vorbild.table(media, self.tz))
+            parts = [f"@{h} ({len(media)} Posts ausgewertet):"]
+            for k, label in (("themen", "Themen nach Erfolg"), ("captions", "Captions"), ("formate_timing", "Formate & Timing"),
+                             ("fragen", "Fragen"), ("luecken", "Freie Themen für uns"), ("fuer_uns", "Übernehmen als Muster"),
+                             ("nicht_nachmachen", "Nicht nachmachen")):
                 if r.get(k):
-                    parts.append(f"- {label}: " + "; ".join(str(x) for x in r[k][:6]))
+                    parts.append(f"- {label}: " + "; ".join(str(x) for x in r[k][:7]))
             notes.append("\n".join(parts))
+            if r.get("kurzfazit"):
+                fazit.append(f"@{h} ({len(media)} Posts): {r['kurzfazit']}")
         if notes:
-            first = not self.st.get("vorbild")
-            self.st["vorbild"] = "\n\n".join(notes)[:3000]
+            first = self.st.get("vorbild_v") != 2
+            self.st["vorbild"] = "\n\n".join(notes)[:4500]
+            self.st["vorbild_fazit"] = "\n\n".join(fazit)
+            self.st["vorbild_v"] = 2
             self.brain.rules += "\n\nVORBILD-STUDIE\n" + self.st["vorbild"]
-            if first:
-                self.tg.say("👀 Ich habe Talzeit genau studiert und übernehme ab jetzt, was dort gut läuft: Themen, Formate, "
-                            "Ton. Das mache ich alle 3 Tage neu.")
+            if first or force:
+                self.tg.say("👀 Vorbild-Analyse fertig.\n\n" + self.st["vorbild_fazit"][:1500] +
+                            "\n\nDie Details stecken jetzt im Regelheft. Alle 3 Tage neu, „vorbild“ zeigt dir den Stand.")
 
     def check_repost_comments(self):
         """Schreibt die Person unter unseren Post „bitte raus“, kommt er raus – auch ohne DM-Zugriff."""

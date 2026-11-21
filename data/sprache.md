@@ -116,11 +116,16 @@ Geständnis · Ranking · kleine Streitfrage („Elberfeld oder Barmen?“) · O
 - KI-Klang: „spannend“, „tauche ein“, „mehr als nur“, „Highlights“, Dreierketten, Ausrufezeichen-Ketten.
 
 ## Vorbild Talzeit (@talzeit.wuppertal)
-- Talzeit ist unser wichtigstes Vorbild für Ton, Sprache und Themen: jung, warm, nah dran, gut geschrieben.
-  Die Engine studiert den Account regelmäßig (siehe „VORBILD-STUDIE“ unten in den Regeln) und übernimmt, was
-  dort gut läuft: Themen, Formate, Hook-Muster, Tonfall.
-- Übernommen werden Muster, nie Texte. Keine Sätze abschreiben. Greifen wir eine Talzeit-Geschichte auf,
-  erzählen wir sie eigenständig und nennen die Quelle: „quelle: Talzeit“.
+- Talzeit ist unser wichtigstes Vorbild für Tonsprache: wie sie Captions schreiben, wie sie Themen aufbereiten,
+  wie sie mit ihrer Community reden. Die Engine analysiert den Account regelmäßig gründlich (siehe
+  „VORBILD-STUDIE“ in den Regeln).
+- Wir sind aber nicht Talzeit: Wir dürfen rougher sein, kritischer, zugespitzter – vor allem bei Themen, bei denen
+  Anwohner die Dummen sind (Parken, Mieten, Gebühren). Mit Augenzwinkern, nicht verbissen.
+- Abstand halten, damit nichts nach Abkupfern aussieht:
+  - Übernommen werden Muster, nie Sätze. Keine Talzeit-Formulierung, kein gleicher Einstieg, kein gleicher Aufbau.
+  - Ein Thema, das nur Talzeit hat, greifen wir frühestens 36 Stunden später auf – und dann mit eigenem Dreh und
+    mindestens einer zusätzlichen Einordnung. Berichten auch andere darüber, ist es ein normales Nachrichtenthema.
+  - Quelle nennen: „quelle: Talzeit“.
 
 ## Vorbilder aus der Redaktion (Original-Formulierungen, Ton übernehmen, nicht kopieren)
 - „Die Weihnachtsmärkte in Elberfeld und Barmen laufen ja bereits. Wir wissen alle, unsere Weihnachtsmärkte sind

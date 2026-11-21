@@ -471,14 +471,39 @@ def test_vorbild_talzeit_wird_studiert(env):
     run, graph, store, feed = env
     feed.pop("items", None)
     graph.discovery = {"talzeit.wuppertal": {"username": "talzeit.wuppertal", "media": {"data": [
-        {"id": str(i), "caption": f"Post {i}", "like_count": i * 10, "comments_count": i} for i in range(12)]}}}
+        {"id": str(i), "caption": f"Post {i} über Essen?", "like_count": i * 10, "comments_count": i, "media_type": "IMAGE",
+         "timestamp": f"2026-11-{10 + i:02d}T17:00:00+0000"} for i in range(12)]}}}
     e, errs = run(datetime(2026, 11, 23, 11, 0, tzinfo=TZ))
     seen = {}
-    def study(h, top, flop):
-        seen["top"] = top[0]["caption"]
-        return {"ton": ["nah, jung, warm"], "themen": ["Essen & Ausgehen"]}
+
+    def study(h, stats, posts):
+        seen.update(stats=stats, top=posts[0]["text"])
+        return {"themen": ["Essen – Schnitt 90, n=12"], "kurzfazit": "Essen läuft."}
     e.brain.study = study
-    e.st["done"]["vorbild_ts"] = 0
-    e.study_models()
-    assert seen["top"] == "Post 11"
-    assert "Essen & Ausgehen" in e.st["vorbild"] and "VORBILD-STUDIE" in e.brain.rules
+    e.study_models(force=True)
+    assert seen["top"].startswith("Post 11") and seen["stats"]["posts"] == 12 and "format" in seen["stats"]
+    assert "Essen – Schnitt" in e.st["vorbild"] and "VORBILD-STUDIE" in e.brain.rules
+    assert any("Vorbild-Analyse fertig" in x[1] for x in e.tg.outbox if x[0] == "text")
+
+
+def test_abstand_zu_talzeit():
+    from engine import vorbild
+    theirs = ["Ab Montag fährt die Schwebebahn wieder durchgehend zwischen Vohwinkel und Oberbarmen"]
+    assert vorbild.overlap("Ab Montag fährt die Schwebebahn wieder durchgehend, endlich.", theirs) > 0.3
+    assert vorbild.overlap("Endlich wieder komplett unterwegs: Die Bahn schwebt ab Montag durchs ganze Tal.", theirs) < 0.12
+    assert vorbild.is_model_source({"source": "Talzeit (Web)"}, ["talzeit.wuppertal"])
+    assert not vorbild.is_model_source({"source": "WZ"}, ["talzeit.wuppertal"])
+
+
+def test_reines_talzeit_thema_wartet_36_stunden(env):
+    run, graph, store, feed = env
+    feed.pop("items", None)
+    e, errs = run(datetime(2026, 11, 23, 11, 0, tzinfo=TZ))
+    pub = datetime.fromtimestamp(e.ts() - 2 * 3600, TZ).isoformat()
+    e.st["items"]["tz1"] = {"id": "tz1", "source": "Talzeit", "handle": "talzeit.wuppertal", "title": "Neues Café",
+                            "summary": "Im Luisenviertel eröffnet ein Café.", "published": pub}
+    e.st["stories"]["s-tz"] = {"title": "Neues Café", "items": ["tz1"], "first": e.ts()}
+    q = {"id": "q-tz", "mode": "meldung", "kind": "feed", "status": "new", "story": "s-tz"}
+    e._redo = False
+    e.produce_one(q)
+    assert q["status"] == "new" and q["hold_until"] > e.ts() + 30 * 3600 and "pkg" not in q
