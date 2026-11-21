@@ -50,6 +50,7 @@ def make_store(secrets, root):
 def default_state():
     return {"v": 3, "ig_user_id": None, "chat_id": None, "tg_offset": 0, "paused": False, "seen": {}, "items": {},
             "stories": {}, "queue": [], "posted": [], "done": {}, "radar": [], "accounts": {}, "stats": {},
+            "ideen": [], "entdeckt": {}, "kandidaten": {}, "kurs": "",
             "used": [], "used_photos": [], "log": [], "alerts": {}, "followers": {}, "bildfreigaben": {},
             "angefragt": {}, "anfragen": {}, "dm_seen": {}, "ratings": {}, "abgelehnt": {}}
 
@@ -173,9 +174,42 @@ class Engine:
             if not self.store.ensure_pages():
                 self.log("GitHub Pages ist aus – bitte in Settings → Pages einschalten (Branch gh-pages)")
 
+    # ── Ideen-Postfach ──────────────────────────────────────
+    def add_idea(self, ev):
+        text = ev.get("text", "")
+        if ev["type"] == "voice":
+            try:
+                from .voice import transcribe
+                text = transcribe(self.tg.download(ev["file_id"]))
+            except Exception as e:      # noqa: BLE001
+                self.log(f"sprachnachricht: {str(e)[:120]}")
+                self.tg.say("sprachnachricht konnte ich gerade nicht abhören – schick sie bitte nochmal oder als text.")
+                return
+        if not text.strip():
+            return
+        self.st["ideen"].append({"id": f"i{int(self.ts())}", "text": text.strip()[:2000], "ts": self.ts(), "status": "offen"})
+        n = sum(1 for i in self.st["ideen"] if i["status"] == "offen")
+        self.tg.say(f"notiert ✓ ({n} offen): „{text.strip()[:200]}“\nich baue sie in einen der nächsten slots ein.")
+
+    def next_idea(self):
+        if self.st["done"].get(f"{self.today()}:idee"):
+            return None                     # höchstens eine Idee pro Tag, damit das Programm gemischt bleibt
+        for i in self.st["ideen"]:
+            if i["status"] == "offen":
+                return i
+        return None
+
     # ── Telegram ────────────────────────────────────────────
     def read_telegram(self):
         for ev in self.tg.poll():
+            if ev["type"] in ("idea", "voice"):
+                self.add_idea(ev)
+                continue
+            if ev["type"] == "command" and ev["cmd"] == "ideen":
+                offen = [i for i in self.st["ideen"] if i["status"] == "offen"]
+                self.tg.say("offene ideen:\n" + "\n".join(f"· {i['text'][:120]}" for i in offen[-15:]) if offen
+                            else "keine offenen ideen. schick mir einfach text oder eine sprachnachricht.")
+                continue
             if ev["type"] == "command":
                 if ev["cmd"] == "stopp":
                     self.st["paused"] = True
@@ -183,6 +217,11 @@ class Engine:
                 elif ev["cmd"] == "weiter":
                     self.st["paused"] = False
                     self.tg.say("läuft wieder.")
+                elif ev["cmd"] == "regel" and re.search(r"@([A-Za-z0-9._]+)\s+ignorier", ev["text"]):
+                    h = re.search(r"@([A-Za-z0-9._]+)", ev["text"]).group(1).lower()
+                    self.st["entdeckt"].pop(h, None)
+                    self.st["abgelehnt"].append(h)
+                    self.tg.say(f"ok, @{h} ignoriere ich ab jetzt.")
                 elif ev["cmd"] == "regel":
                     old = (self.store.get(RULES) or b"").decode("utf-8")
                     self.store.put(RULES, (old + f"- {ev['text'].strip()} ({self.today()})\n").encode("utf-8"))
@@ -221,6 +260,9 @@ class Engine:
         srcs = self.cfg["sources"] + self.cfg.get("event_sources", [])
         if self.graph is not None and getattr(self.graph, "ig_login", False):
             srcs = [x for x in srcs if x["type"] != "instagram"]   # Account-Beobachtung erst mit Facebook-Weg
+        if self.graph is not None and not getattr(self.graph, "ig_login", False):
+            top = sorted(self.st["entdeckt"].items(), key=lambda x: -x[1].get("followers", 0))[:20]
+            srcs = srcs + [{"name": a.get("name") or h, "type": "instagram", "handle": h, "limit": 6} for h, a in top]
         items, errs = sources.collect(srcs, self.cfg["news"], self.graph, self.http, now=self.now())
         if errs:
             self.st["done"]["source_errors"] = errs[-20:]
@@ -307,6 +349,31 @@ class Engine:
         weekday = ["mo", "di", "mi", "do", "fr", "sa", "so"][self.now().weekday()]
         plan = self.k["rotation"].get(name, {})
         rubric = plan.get(weekday) if isinstance(plan, dict) else plan
+        idee = self.next_idea() if name != "morgen" else None
+        if idee and not (cands and cands[0][0] >= 7.5):
+            idee["status"] = "geplant"
+            self.st["done"][f"{self.today()}:idee"] = True
+            self.enqueue("idee", idea={"idee_von_jd": idee["text"],
+                                       "aktuelle_themen": [self.st["stories"][k]["title"] for _, k in cands[:8]]})
+            return
+        if rubric == "kurios":
+            fun = [k for k, s in self.st["stories"].items() if s.get("rubric") == "kurios" and not s.get("queued")
+                   and now - s.get("last", now) < 72 * 3600]
+            if fun:
+                self.enqueue("kurios", story=fun[-1])
+                return
+            rubric = "fact"
+        if rubric == "frag":
+            self.enqueue("frag", idea={"aktuelle_themen": [self.st["stories"][k]["title"] for _, k in cands[:10]],
+                                       "letzte_fragen": [" ".join(p.get("hook", [])) for p in self.st["posted"][-30:]
+                                                         if p.get("mode") == "frag"]})
+            return
+        if rubric == "spotlight":
+            pick = self.spotlight_pick()
+            if pick:
+                self.enqueue("spotlight", idea=pick)
+                return
+            rubric = "history"
         if rubric == "events":
             ev = [i for i in self.st["items"].values() if i.get("event")]
             if len(ev) >= 3:
@@ -332,6 +399,54 @@ class Engine:
             self.enqueue("rubrik", idea=idea)
         elif cands:
             self.enqueue("meldung", story=cands[0][1])
+
+    def spotlight_pick(self):
+        used = set(self.st["used"])
+        for h, a in sorted(self.st["entdeckt"].items(), key=lambda x: -x[1].get("followers", 0)):
+            if f"spot:{h}" in used or not a.get("posts"):
+                continue
+            self.st["used"].append(f"spot:{h}")
+            return {"account": "@" + h, "name": a.get("name"), "follower": a.get("followers"),
+                    "letzte_posts": a.get("posts", [])[:6]}
+        return None
+
+    # ── Neue Accounts in der Stadt entdecken ────────────────
+    MENTION = re.compile(r"@([A-Za-z0-9._]{3,30})")
+
+    def discover_accounts(self):
+        """Alle zwei Tage: Wer wird erwähnt, fotografiert, markiert? Lokale Accounts mit Leben drin kommen
+        auf die Beobachtungsliste – so bleibt die Engine nah an dem, was in der Stadt passiert."""
+        known = {x.get("handle") for x in self.cfg["sources"] if x.get("handle")} | set(self.cfg.get("radar", []))
+        known |= set(self.st["entdeckt"]) | set(self.st["abgelehnt"]) | {self.cfg["account"]["handle"]}
+        for it in list(self.st["items"].values())[-300:]:
+            for h in self.MENTION.findall((it.get("summary") or "") + " " + (it.get("title") or "")) + list(it.get("credits") or []):
+                h = h.strip(".").lower()
+                if h and h not in known:
+                    self.st["kandidaten"][h] = self.st["kandidaten"].get(h, 0) + 1
+        checked = 0
+        kw = [k.lower() for k in self.cfg["news"]["relevance_keywords"]]
+        for h, _ in sorted(self.st["kandidaten"].items(), key=lambda x: -x[1]):
+            if checked >= 12:
+                break
+            if h in known or self.st["done"].get(f"geprueft:{h}"):
+                continue
+            checked += 1
+            self.st["done"][f"geprueft:{h}"] = True
+            try:
+                d = self.graph.business_discovery(h, limit=8)
+            except Exception:           # privat oder kein Business-Konto: Meta zeigt nichts
+                continue
+            media = (d.get("media") or {}).get("data", [])
+            caps = " ".join((m.get("caption") or "") for m in media).lower()
+            fresh = any((m.get("timestamp") or "") >= (self.now() - timedelta(days=21)).strftime("%Y-%m-%d") for m in media)
+            local = any(k in caps or k in (d.get("name") or "").lower() for k in kw)
+            if (d.get("followers_count") or 0) >= 300 and fresh and local:
+                self.st["entdeckt"][h] = {"name": d.get("name"), "followers": d.get("followers_count"), "seit": self.today(),
+                                          "posts": [(m.get("caption") or "")[:300] for m in media[:6]]}
+                self.tg.say(f"🔭 neu entdeckt: @{h} ({d.get('followers_count')} follower) – {d.get('name') or ''}\n"
+                            f"beobachte ich ab jetzt mit. nicht gewollt? schreib „regel: @{h} ignorieren“.")
+        for h in list(self.st["kandidaten"])[:-500]:
+            self.st["kandidaten"].pop(h, None)
 
     def pick_idea(self, prefer="history"):
         used = set(self.st["used"])
@@ -551,6 +666,8 @@ class Engine:
                 cands.append((m.get("like_count") or 0, key, m))
         for _, key, m in sorted(cands, key=lambda x: -x[0])[:p["rate_per_run"]]:
             h = sources.username_from_permalink(m.get("permalink", ""), self.http)
+            if h:
+                self.st["kandidaten"][h] = self.st["kandidaten"].get(h, 0) + 2
             r = self.judge(key, m["media_url"], {"handle": h, "caption": m.get("caption")}, "community")
             if r.get("score", 0) < p["community_min"] or r.get("people"):
                 continue
@@ -782,10 +899,33 @@ class Engine:
         parts.append(" ".join("#" + t.lstrip("#").replace(" ", "") for t in tags))
         return "\n\n".join(p for p in parts if p)
 
+    def evaluate(self):
+        """Alle paar Tage: Was lief, was nicht – nach Format und Uhrzeit. Das Ergebnis steuert die nächsten Texte."""
+        window = self.ts() - 2 * self.k["learn_after_days"] * 86400
+        by, hours = {}, {}
+        for p in self.st["posted"]:
+            s = self.st["stats"].get(p.get("ig") or "", {})
+            if p["ts"] < window or not s:
+                continue
+            v = s.get("total_interactions") or 0
+            by.setdefault(p.get("mode") or "?", []).append(v)
+            hours.setdefault(datetime.fromtimestamp(p["ts"], self.tz).hour, []).append(v)
+        if not by:
+            return
+        avg = lambda d: sorted(((sum(v) / len(v), k) for k, v in d.items()), reverse=True)   # noqa: E731
+        fm, hr = avg(by), avg(hours)
+        self.st["kurs"] = ("Aktueller Kurs (Auswertung der letzten Tage, Interaktionen im Schnitt): stark: " +
+                           ", ".join(f"{k} {int(a)}" for a, k in fm[:3]) + "; schwach: " +
+                           ", ".join(f"{k} {int(a)}" for a, k in fm[-2:]) +
+                           ". Mehr von dem, was stark läuft – aber das Programm bleibt gemischt wie ein gutes Radio.")
+        self.tg.say("📊 auswertung der letzten tage\nstark: " + ", ".join(f"{k} ({int(a)})" for a, k in fm[:3]) +
+                    "\nschwach: " + ", ".join(f"{k} ({int(a)})" for a, k in fm[-2:]) +
+                    "\nbeste uhrzeit: " + ", ".join(f"{h} uhr ({int(a)})" for a, h in hr[:2]) +
+                    "\nich richte die nächsten tage danach aus.")
+
     def learned_note(self):
-        first = min((p["ts"] for p in self.st["posted"]), default=self.ts())
-        if self.ts() - first < self.k["learn_after_days"] * 86400:
-            return ""
+        if self.st.get("kurs"):
+            return self.st["kurs"]
         by = {}
         for p in self.st["posted"][-120:]:
             s = self.st["stats"].get(p.get("ig", ""), {})
@@ -875,8 +1015,17 @@ class Engine:
             if got:
                 self.st["ig_token"], self.st["ig_token_from"] = got[0], _fp(self.s.IG_TOKEN)
                 self.st["done"]["token_refreshed"] = self.ts()
+        if self.graph is not None and not getattr(self.graph, "ig_login", False) and now.hour >= 7 and \
+                self.ts() - self.st["done"].get("entdeckt_ts", 0) > 2 * 86400:
+            self.st["done"]["entdeckt_ts"] = self.ts()
+            self.step("entdecken", self.discover_accounts)
+        if self.k["learn_after_days"] and self.st["posted"] and \
+                self.ts() - self.st["done"].get("kurs_ts", self.st["posted"][0]["ts"]) > self.k["learn_after_days"] * 86400:
+            self.st["done"]["kurs_ts"] = self.ts()
+            self.step("auswertung", self.evaluate)
         if self.graph is not None and not getattr(self.graph, "ig_login", False) and now.hour >= 6 and self.once("radar"):
-            hits, accounts, errs = radar.scan(self.graph, self.cfg["radar"])
+            extra = [h for h, _ in sorted(self.st["entdeckt"].items(), key=lambda x: -x[1].get("followers", 0))[:15]]
+            hits, accounts, errs = radar.scan(self.graph, list(self.cfg["radar"]) + extra)
             self.st["radar"], self.st["accounts"] = hits, accounts
         if self.graph is not None and now.hour >= 22 and self.once("insights"):
             self.insights()

@@ -5,3 +5,4 @@ feedparser>=6.0
 imageio-ffmpeg>=0.5
 pytest>=8.0
 cryptography>=42
+faster-whisper

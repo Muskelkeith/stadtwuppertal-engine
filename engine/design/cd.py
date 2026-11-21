@@ -203,7 +203,8 @@ def rail(img, ink, label, bg, y0=None):
 
 LABELS = {"news": "was los, wuppertal?", "history": "was war, wuppertal?", "events": "was geht, wuppertal?",
           "poll": "sach ma, wuppertal?", "fact": "echt jetzt, wuppertal?", "platt": "wie heißt dat, wuppertal?",
-          "photo": "guck ma, wuppertal.", "warum": "warum so, wuppertal?", "quiz": "na, wuppertal?"}
+          "photo": "guck ma, wuppertal.", "warum": "warum so, wuppertal?", "quiz": "na, wuppertal?",
+          "kurios": "kurios, wuppertal.", "spotlight": "wer macht wat, wuppertal?"}
 
 
 def headline(img, lines, ink, ry, size=212, hcolor=None, x=M):

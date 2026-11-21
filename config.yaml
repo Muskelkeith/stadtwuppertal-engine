@@ -19,8 +19,8 @@ takt:
     "18:30": abend
   rotation:                      # was im Slot läuft, wenn keine starke Nachricht da ist
     morgen: news
-    mittag: {mo: warum, di: fact, mi: damals, do: poll, fr: warum, sa: platt, so: history}
-    abend:  {mo: history, di: warum, mi: fact, do: events, fr: events, sa: damals, so: warum}
+    mittag: {mo: warum, di: kurios, mi: damals, do: frag, fr: spotlight, sa: platt, so: history}
+    abend:  {mo: spotlight, di: warum, mi: fact, do: events, fr: events, sa: damals, so: frag}
   reel_slot: "19:45"             # einmal am Tag: Reel aus dem besten Karussell
   report_at: "21:30"             # Tagesbericht per Telegram
   max_feed_per_day: 5            # Eilmeldungen zählen mit, dürfen die Grenze aber reißen
@@ -28,7 +28,7 @@ takt:
   breaking_score: 8              # ab dieser Bewertung geht eine Meldung sofort raus
   followup_after_h: 4            # Nachdreh (Einordnung, Quiz, Frage) so viele Stunden nach der Meldung
   approval_timeout_min: 60       # Nachrichten ohne deinen Tipp gehen danach mit KI-Hinweis raus
-  learn_after_days: 42           # erst nach der Testphase passt die Engine sich an die Zahlen an
+  learn_after_days: 5            # alle 5 Tage Auswertung (Formate, Uhrzeiten) → Kurs für die nächsten Tage
 
 wagnis_rate: 0.12
 

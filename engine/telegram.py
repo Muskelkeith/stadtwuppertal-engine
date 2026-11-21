@@ -107,7 +107,8 @@ class Telegram:
             if not self.chat and text.startswith("/start"):
                 self.st["chat_id"] = chat
                 self.say("verbunden. ab jetzt kommen hier vorschauen, berichte und alarme.\n"
-                         "befehle: stopp · weiter · status · regel: … (neue redaktionsregel)")
+                         "befehle: stopp · weiter · status · ideen · regel: … (neue redaktionsregel)\n"
+                         "alles andere (text oder sprachnachricht) landet als content-idee.")
                 continue
             if chat != str(self.chat):
                 continue
@@ -117,7 +118,22 @@ class Telegram:
                 if rule.strip():
                     out.append({"type": "command", "cmd": "regel", "text": rule.strip()})
                 continue
-            for cmd in ("stopp", "weiter", "status"):
+            hit = False
+            for cmd in ("stopp", "weiter", "status", "ideen"):
                 if text.lstrip("/").startswith(cmd):
                     out.append({"type": "command", "cmd": cmd})
+                    hit = True
+            if hit or text.startswith("/"):
+                continue
+            voice = m.get("voice") or m.get("audio")
+            if voice:
+                out.append({"type": "voice", "file_id": voice["file_id"]})
+            elif raw:
+                out.append({"type": "idea", "text": raw.split(":", 1)[1].strip() if text.startswith("idee:") else raw})
         return out
+
+    def download(self, file_id: str) -> bytes:
+        info = self._call("getFile", file_id=file_id)
+        r = self.http.get(f"https://api.telegram.org/file/bot{self.token}/{info['file_path']}", timeout=120)
+        r.raise_for_status()
+        return r.content

@@ -312,3 +312,22 @@ def test_nutzer_token_wird_zum_seiten_token():
     g = GraphClient("EAAnutzer", session=S())
     assert g.discover_ig_user() == ("ig1", "stadtwuppertal")
     assert g.page_token == "EAAseite" and not g.ig_login
+
+
+def test_idee_per_telegram_landet_im_slot(env):
+    run, graph, store, feed = env
+    feed["items"] = []
+    t = datetime(2026, 11, 24, 12, 35, tzinfo=TZ)      # Dienstag Mittag
+    e, errs = run(t, inbox=[{"type": "idea", "text": "Wo liegt am meisten illegal abgeladener Müll?"}])
+    assert not errs, errs
+    assert any(q["mode"] == "idee" for q in e.st["queue"]), [q["mode"] for q in e.st["queue"]]
+    assert any("notiert" in x[1] for x in e.tg.outbox if x[0] == "text")
+
+
+def test_frag_slot(env):
+    run, graph, store, feed = env
+    feed["items"] = []
+    t = datetime(2026, 11, 26, 12, 35, tzinfo=TZ)      # Donnerstag Mittag → frag
+    e, errs = run(t)
+    assert not errs, errs
+    assert any(q["mode"] == "frag" for q in e.st["queue"]), [q["mode"] for q in e.st["queue"]]
