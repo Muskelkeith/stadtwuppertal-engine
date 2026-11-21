@@ -34,6 +34,7 @@ jobs:
         env:
           ENGINE_SECRETS: ${{ secrets.ENGINE_SECRETS }}
           GITHUB_TOKEN: ${{ github.token }}
+          PYTHONUNBUFFERED: "1"
         run: python -m engine ${{ inputs.befehl || 'tick' }}
       - name: Wochenbericht sichern (hält den Zeitplan am Leben)
         if: always()

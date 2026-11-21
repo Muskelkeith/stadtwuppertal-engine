@@ -66,7 +66,9 @@ def check(cfg, s):
         seen = llm.ask_image("check", "Antworte nur mit JSON.", 'Welche Farbe hat das Bild? {"farbe": "…"}', buf.getvalue())
         row("bildredaktion", "gelb" in str(seen).lower() or "yellow" in str(seen).lower(), str(seen)[:60])
     except Exception as e:      # noqa: BLE001
-        row("claude", False, str(e)[:200])
+        tok = s.CLAUDE_CODE_OAUTH_TOKEN or ""
+        hint = f" [schlüssel: {len(tok)} zeichen, beginnt {'richtig' if tok.startswith('sk-ant-oat') else 'falsch'}]"
+        row("claude", False, str(e)[:160] + hint)
     items, errs = sources.collect(cfg["sources"] + cfg.get("event_sources", []), cfg["news"], g)
     row("quellen", len(items) > 0, f"{len(items)} meldungen, {len(errs)} quellen haken")
     for e in errs[:12]:
