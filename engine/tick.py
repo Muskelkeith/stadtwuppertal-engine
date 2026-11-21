@@ -6,6 +6,7 @@ abgesichert: Wenn eine Quelle oder ein Schritt hakt, läuft der Rest weiter und 
 """
 from __future__ import annotations
 
+import json
 import random
 import re
 import traceback
@@ -203,6 +204,48 @@ class Engine:
         n = sum(1 for i in self.st["ideen"] if i["status"] == "offen")
         self.tg.say(f"notiert ✓ ({n} offen): „{text.strip()[:200]}“\nich baue sie in einen der nächsten slots ein.")
 
+    def revise(self, ev):
+        """Antwort auf eine Vorschau = Kritik. Post neu schreiben, neu prüfen, neue Vorschau schicken."""
+        text = ev.get("text") or ""
+        if ev.get("file_id"):
+            from .voice import transcribe
+            text = transcribe(self.tg.download(ev["file_id"]))
+        q = next((x for x in self.st["queue"] if str(x.get("tg")) == ev["msg"]), None)
+        if not q or q["status"] not in ("waiting", "ready") or not q.get("pkg"):
+            self.tg.say("diesen post finde ich nicht mehr in der warteschlange (schon raus oder verworfen). "
+                        "deine kritik merke ich mir trotzdem als regel, wenn du „regel: …“ davor schreibst.")
+            return
+        old = q["pkg"]
+        mat = self.material(q)
+        text_mat = {k: v for k, v in mat.items() if not k.startswith("_")} if isinstance(mat, dict) else mat
+        note = (f"ÜBERARBEITUNG. Kritik vom Chef, unbedingt umsetzen: «{text}». "
+                f"Bisherige Fassung (nicht wiederholen, besser machen): {json.dumps({k: old.get(k) for k in ('hook', 'schild', 'slides', 'caption')}, ensure_ascii=False)}")
+        pkg = self.brain.write(q["mode"] if q["mode"] in ("meldung", "nachdreh", "warum", "rubrik", "damals", "events",
+                                                          "kurios", "frag", "spotlight", "idee") else "meldung",
+                               text_mat, note=note)
+        rev = self.brain.review(pkg, text_mat)
+        pkg.update(rev.get("fixes") or {})
+        pkg["risk"] = max(pkg.get("risk", "gruen"), rev.get("risk", "gruen"), key=["gruen", "gelb", "rot"].index)
+        pkg["public_interest"] = bool(rev.get("public_interest", pkg.get("public_interest")))
+        self.tg.mark(q.get("tg"), "überarbeitet ↓")
+        q["pkg"], q["status"] = pkg, "new"
+        photo, credit = self.pick_photo(q, pkg)
+        imgs = render.carousel(pkg, photo, seed=q["id"] + "r")
+        q["media"] = [self.store.media(f"{int(self.ts())}-{q['id']}-r{n}.jpg", render.jpeg(im)) for n, im in enumerate(imgs)]
+        self._cover = getattr(self, "_cover", {})
+        self._cover[q["id"]] = render.jpeg(imgs[0], 85)
+        q["credit"] = credit
+        q["approved_feedback"] = text
+        # nach deiner Kritik immer erst wieder zeigen, nicht allein posten
+        q["caption"] = self.caption(pkg, credit)
+        q.update(status="waiting", on_timeout="drop", timeout=self.ts() + 6 * 3600)
+        q["tg"] = self.tg.preview(self._cover[q["id"]], f"neue fassung nach deiner kritik:\n\n{q['caption'][:800]}", q["id"])
+        if self.tg.live and self.tg.chat and len(imgs) > 1:
+            try:
+                self.tg.album([render.jpeg(im, 80) for im in imgs[1:]], "die weiteren slides")
+            except Exception:
+                pass
+
     def next_idea(self):
         if self.st["done"].get(f"{self.today()}:idee"):
             return None                     # höchstens eine Idee pro Tag, damit das Programm gemischt bleibt
@@ -216,6 +259,9 @@ class Engine:
         for ev in self.tg.poll():
             if ev["type"] in ("idea", "voice"):
                 self.add_idea(ev)
+                continue
+            if ev["type"] == "revise":
+                self.step("überarbeiten", self.revise, ev)
                 continue
             if ev["type"] == "command" and ev["cmd"] == "ideen":
                 offen = [i for i in self.st["ideen"] if i["status"] == "offen"]
@@ -551,6 +597,8 @@ class Engine:
         q["cover_jpeg"] = None
         self._cover = getattr(self, "_cover", {})
         self._cover[q["id"]] = render.jpeg(imgs[0], 85)
+        self._slides = getattr(self, "_slides", {})
+        self._slides[q["id"]] = [render.jpeg(im, 80) for im in imgs[1:]]
         self.decide(q, pkg, credit)
 
     def pick_photo(self, q, pkg):
@@ -898,7 +946,14 @@ class Engine:
             q["status"] = "ready"
             return
         src = "\n".join(f"· {x.get('name')}: {x.get('url', '')}" for x in pkg.get("sources", [])[:4])
-        q["tg"] = self.tg.preview(self._cover[q["id"]], f"{head}\n\n{q['caption'][:600]}\n\nquellen:\n{src}", q["id"])
+        q["tg"] = self.tg.preview(self._cover[q["id"]], f"{head}\n\n{q['caption'][:600]}\n\nquellen:\n{src}\n\n"
+                                  f"kritik? einfach auf diese nachricht antworten.", q["id"])
+        rest = getattr(self, "_slides", {}).get(q["id"])
+        if rest and self.tg.live and self.tg.chat:
+            try:
+                self.tg.album(rest, "die weiteren slides")
+            except Exception:
+                pass
 
     def caption(self, pkg, credit, label=False):
         parts = [pkg.get("caption", "").strip()]

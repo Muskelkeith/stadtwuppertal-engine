@@ -108,7 +108,8 @@ class Telegram:
                 self.st["chat_id"] = chat
                 self.say("verbunden. ab jetzt kommen hier vorschauen, berichte und alarme.\n"
                          "befehle: stopp · weiter · status · ideen · regel: … (neue redaktionsregel)\n"
-                         "alles andere (text oder sprachnachricht) landet als content-idee.")
+                         "alles andere (text oder sprachnachricht) landet als content-idee.\n"
+                         "kritik an einer vorschau: einfach auf die vorschau antworten – ich schreibe den post neu.")
                 continue
             if chat != str(self.chat):
                 continue
@@ -126,7 +127,11 @@ class Telegram:
             if hit or text.startswith("/"):
                 continue
             voice = m.get("voice") or m.get("audio")
-            if voice:
+            reply = (m.get("reply_to_message") or {}).get("message_id")
+            if reply and (raw or voice):
+                out.append({"type": "revise", "msg": str(reply), "text": raw,
+                            "file_id": voice["file_id"] if voice else None})
+            elif voice:
                 out.append({"type": "voice", "file_id": voice["file_id"]})
             elif raw:
                 out.append({"type": "idea", "text": raw.split(":", 1)[1].strip() if text.startswith("idee:") else raw})

@@ -11,9 +11,12 @@ Wir sind der Account mit den besten Infos zur Stadt – nicht der mit den kürze
 - Kein Telegrammstil, der nur Stichworte aneinanderreiht. Ganze, lebendige Sätze, die man gern liest.
 - Kontext ist Mehrwert: Wie oft passiert das? Was war letztes Mal? Was kostet das? Wer entscheidet?
 - Ist ein Thema selbsterklärend, braucht es keine Folgeslides. Lieber eine starke Kachel als drei dünne.
+- Alte Kamellen nicht als Neuigkeit verkaufen: Was schon seit Tagen läuft, braucht einen neuen Dreh
+  (Tipp, Vergleich, Frage an die Community) – sonst gar nicht.
 
 ## 2 · Wenn wir etwas nicht wissen
-- Offen sagen, was (noch) unklar ist. Nie raten, nie erfinden.
+- Offen sagen, was (noch) unklar ist. Nie raten, nie erfinden. Aber höchstens in einem Halbsatz –
+  nie eine eigene Slide nur darüber, was wir nicht wissen. Fehlen die Infos für Mehrwert, lieber ein anderes Thema.
 - Die Lücke darf witzig gefüllt werden – aber nur mit erkennbar absurdem Witz, den niemand für eine
   Tatsache hält („Grund: unbekannt. Wir tippen auf einen verlorenen Hammer.“).
 - Kein Witz bei Unglücken, Verletzten, Opfern oder Gefährdung. Harmlose, absurde Vorfälle ohne Schaden

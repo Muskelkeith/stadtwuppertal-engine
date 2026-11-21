@@ -331,3 +331,15 @@ def test_frag_slot(env):
     e, errs = run(t)
     assert not errs, errs
     assert any(q["mode"] == "frag" for q in e.st["queue"]), [q["mode"] for q in e.st["queue"]]
+
+
+def test_kritik_per_antwort_schreibt_neu(env):
+    run, graph, store, feed = env
+    t0 = datetime(2026, 11, 23, 7, 40, tzinfo=TZ)
+    e, errs = run(t0)
+    w = [q for q in e.st["queue"] if q["status"] == "waiting"]
+    assert w
+    e, errs = run(t0 + timedelta(minutes=10), inbox=[{"type": "revise", "msg": str(w[0]["tg"]), "text": "zu dünn, mehr infos"}])
+    assert not errs, errs
+    q = next(x for x in e.st["queue"] if x["id"] == w[0]["id"])
+    assert q["status"] == "waiting" and q.get("approved_feedback") == "zu dünn, mehr infos"
