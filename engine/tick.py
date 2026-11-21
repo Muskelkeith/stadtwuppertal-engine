@@ -139,10 +139,12 @@ class Engine:
             self.step("planen", self.plan)
             self.step("postfach", self.check_dms)
             self.step("repost-kommentare", self.check_repost_comments)
+            self.step("kommentare", self.check_comments)
             self.step("hashtags", self.scout_hashtags)
             self.step("produzieren", self.produce)
             self.step("posten", self.publish_due)
         self.step("tagesaufgaben", self.daily)
+        self.step("werkstatt-wache", self.werkstatt_wache)
         self.alarm()
         self.cleanup()
         self.store.write_json(STATE, self.st)
@@ -659,7 +661,7 @@ class Engine:
         if res.get("lehre"):
             self.learn(res["lehre"])
         if res.get("technisch"):
-            self.st.setdefault("technik", []).append(f"{day} {kind}: {probs}")
+            self.st.setdefault("technik", []).append({"ts": self.ts(), "kind": kind, "text": probs})
             self.st["technik"] = self.st["technik"][-40:]
         q["qa_try"] = q.get("qa_try", 0) + 1
         if q["qa_try"] <= 2 and not q.get("base"):
@@ -926,6 +928,8 @@ class Engine:
                         self.dm_submission(frm, handle, imgs[0], text)
                         continue
                     else:
+                        if text.strip() and handle:
+                            self.dm_chat(frm, handle, text)
                         continue
                 h = req["h"]
                 if imgs or (self.YES.search(text) and not self.NO.search(text)):
@@ -953,6 +957,71 @@ class Engine:
                     if self.tg.live and self.tg.chat:
                         self.tg._call("sendMessage", chat_id=self.tg.chat, reply_markup=_j.dumps(kb),
                                       text=f"@{h} hat geantwortet: „{text[:300]}“")
+
+    def dm_chat(self, frm, handle, text):
+        """Fremde Nachrichten: Die KI darf nur einordnen und Text vorschlagen. Was passiert, entscheidet dieser Code –
+        niemand kann per DM etwas an der Engine ändern."""
+        day = self.today()
+        cnt = self.st.setdefault("dm_auto", {})
+        if handle in self.st["abgelehnt"] and handle not in self.st.get("reposts", {}):
+            return
+        try:
+            r = self.brain.dm_reply(handle, text)
+        except Exception as e:      # noqa: BLE001
+            self.log(f"dm-antwort {handle}: {str(e)[:80]}")
+            return
+        art = r.get("art", "tief")
+        if art == "foto_raus" and handle in self.st.get("reposts", {}):
+            return self.take_down(frm, handle, self.st["reposts"][handle])
+        if art in ("spam", "beleidigung"):
+            return
+        answer = self.URL.sub("", r.get("antwort") or "").strip()
+        own = cnt.get(handle) == day
+        total = sum(1 for d in cnt.values() if d == day)
+        if art in ("smalltalk", "tipp") and answer and not own and total < 25:
+            self.graph.reply(frm["id"], answer[:600])
+            cnt[handle] = day
+        if art == "tipp":
+            self.add_idea(f"Hinweis von @{handle}: {text[:300]}")
+        if art in ("tief", "foto_raus") or (art in ("smalltalk", "tipp") and not answer):
+            self.tg.say(f"✉️ Nachricht an @stadtwuppertal von @{handle}:\n„{text[:600]}“\n\n"
+                        f"Worum es geht: {r.get('kurz', '')}\nDas beantwortest besser du: https://www.instagram.com/direct/inbox/")
+
+    def check_comments(self):
+        """Antwortet unter unseren Posts – nur auf gute, witzige, kluge Kommentare. Höchstens 3 pro Post, 12 am Tag."""
+        if self.graph is None or getattr(self.graph, "ig_login", False):
+            return
+        if self.ts() - self.st["done"].get("komm_ts", 0) < 30 * 60:
+            return
+        self.st["done"]["komm_ts"] = self.ts()
+        seen = self.st.setdefault("c_seen", {})
+        day = self.today()
+        done_today = int(self.st["done"].get(f"{day}:komm", 0))
+        me = (self.st.get("ig_name") or "stadtwuppertal").lower()
+        for p in [x for x in self.st["posted"] if x.get("ig") and x["ts"] > self.ts() - 3 * 86400][-8:]:
+            if done_today >= 12:
+                break
+            new = [c for c in self.graph.comments(p["ig"])
+                   if c.get("id") not in seen and (c.get("username") or "").lower() != me and not c.get("hidden")]
+            for c in new:
+                seen[c["id"]] = self.ts()
+            if not new:
+                continue
+            post = " ".join(p.get("hook", [])) + " · " + (p.get("rubric") or p.get("mode") or "")
+            try:
+                picks = self.brain.pick_comments(post, [{"id": c["id"], "von": c.get("username"), "text": c.get("text")}
+                                                        for c in new[:30]], max_n=min(3, 12 - done_today))
+            except Exception as e:      # noqa: BLE001
+                self.log(f"kommentare: {str(e)[:80]}")
+                continue
+            ids = {c["id"] for c in new}
+            for a in (picks.get("antworten") or [])[:3]:
+                txt = self.URL.sub("", a.get("text") or "").strip()
+                if a.get("id") in ids and txt and done_today < 12:
+                    self.graph.reply_comment(a["id"], txt)
+                    done_today += 1
+        self.st["done"][f"{day}:komm"] = done_today
+        self.st["c_seen"] = {k: v for k, v in seen.items() if v > self.ts() - 14 * 86400}
 
     RAUS = re.compile(r"\b(raus|rausnehmen|lösch\w*|entfern\w*|nicht einverstanden|möchte (ich )?nicht|will (ich )?nicht|"
                       r"bitte nicht|nein|nicht ok|nicht okay|ohne (meine )?erlaubnis)\b", re.I)
@@ -1367,6 +1436,22 @@ class Engine:
         out.write_text(md, encoding="utf-8")
 
     # ── Aufräumen & Alarm ───────────────────────────────────
+    def werkstatt_wache(self):
+        """48 Stunden nach einer Werkstatt-Reparatur: Häufen sich Fehler beim Produzieren oder Posten,
+        geht es automatisch zurück auf den alten Stand."""
+        from .werkstatt import WERKSTATT
+        w = self.store.read_json(WERKSTATT, {})
+        sha = w.get("sha")
+        if not sha or self.ts() - w.get("ts", 0) > 48 * 3600 or self.st["done"].get("rolled") == sha:
+            return
+        bad = [e for e in self.errors if e.startswith(("produktion", "posten", "veröffentlichen"))]
+        key = f"wk_err:{sha}"
+        self.st["done"][key] = int(self.st["done"].get(key, 0)) + len(bad)
+        if self.st["done"][key] >= 3:
+            (self.root / ".rollback").write_text(sha)
+            self.st["done"]["rolled"] = sha
+            self.tg.say("↩️ Die letzte Werkstatt-Reparatur hat Fehler gemacht. Ich springe auf den alten Stand zurück.")
+
     def alarm(self):
         if not self.errors:
             return

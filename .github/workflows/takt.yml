@@ -38,6 +38,16 @@ jobs:
           GITHUB_TOKEN: ${{ github.token }}
           PYTHONUNBUFFERED: "1"
         run: python -m engine ${{ inputs.befehl || 'dienst' }}
+      - name: Rückfall nach misslungener Werkstatt-Reparatur
+        if: always()
+        run: |
+          if [ -f .rollback ]; then
+            git config user.name "stadtwuppertal-engine"
+            git config user.email "engine@users.noreply.github.com"
+            git pull -q --rebase origin main || git pull -q origin main
+            git revert --no-edit "$(cat .rollback)" && git push -q
+            rm -f .rollback
+          fi
       - name: Wochenbericht sichern (hält den Zeitplan am Leben)
         if: always()
         run: |

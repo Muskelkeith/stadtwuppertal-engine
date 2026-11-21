@@ -46,6 +46,7 @@ photos:
 llm:
   triage: haiku                  # sichten: schnell und sparsam
   write: sonnet                  # schreiben und prüfen
+  code: opus                     # Werkstatt: Code reparieren (fällt sonst auf sonnet zurück)
 
 voice:
   always_hashtags: [wuppertal]

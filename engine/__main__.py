@@ -1,4 +1,4 @@
-"""python -m engine [tick | check | demo]
+"""python -m engine [dienst | tick | check | demo | probe | werkstatt]
 
 tick   ein Takt (das macht GitHub alle 10 Minuten)
 check  prüft alle Verbindungen (Instagram, Telegram, GitHub-Ablage, Claude, Quellen) – postet nichts
@@ -102,12 +102,20 @@ def main(argv):
         sys.exit(0 if check(cfg, s) else 1)
     if cmd == "demo":
         return demo(cfg)
+    if cmd == "probe":
+        from .werkstatt import probe
+        res = probe()
+        print("probe:", res)
+        sys.exit(1 if res["problems"] else 0)
     if s.missing() and "--dry" not in argv:
         print("Einrichtung noch nicht fertig – es fehlt: " + ", ".join(s.missing()) + ". Takt übersprungen.")
         return
     from .tick import Engine
     if cmd == "dienst":
         return dienst(cfg, s, Engine)
+    if cmd == "werkstatt":
+        from .werkstatt import run
+        return run(cfg, s)
     errors = Engine(cfg, s, dry="--dry" in argv).tick()
     print("takt fertig" + (f" mit {len(errors)} fehlern: " + " | ".join(errors) if errors else ""))
 
@@ -126,6 +134,9 @@ def dienst(cfg, s, Engine, minutes=345, every=10):
         except Exception:       # noqa: BLE001
             traceback.print_exc()
         wait = every * 60 - (time.time() - start)
+        if Path(cfg["_root"], ".rollback").exists():
+            print("rückfall auf alten stand angefordert – dienst endet", flush=True)
+            break
         if time.time() + max(wait, 0) > end:
             break
         time.sleep(max(wait, 5))

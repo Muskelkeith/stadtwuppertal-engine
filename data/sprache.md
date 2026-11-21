@@ -99,8 +99,14 @@ Stadtteil-Vergleich („Welcher Stadtteil hat den schönsten Weihnachtsmarkt?“
 („Euer Lieblingsstand?“) · Ritual („Was kauft ihr da jedes Jahr?“) · Erinnerung („Wer kennt das noch?“) ·
 Geständnis · Ranking · kleine Streitfrage („Elberfeld oder Barmen?“) · Ortsfrage
 („Wo liegt bei euch am meisten illegal abgeladener Müll?“). Kurz, beantwortbar mit einem Wort oder Ort.
+- Schlau statt Standard: Die Frage muss zum konkreten Post passen und Lust machen, etwas Eigenes zu erzählen.
+  Verboten sind die Allerwelts-Fragen, die jedes Profil stellt: „Was meint ihr?“, „Wie findet ihr das?“,
+  „Schreibt es in die Kommentare!“, „Daumen hoch oder runter?“. Lieber eine Frage, über die man kurz nachdenkt,
+  die eine kleine Geschichte, einen Ort oder eine steile These hervorlockt.
 
 ## Niemals
+- Ein Datum als Untertitel oder Schild („seit 19.11.“), wenn es nicht der Kern der Nachricht ist. Termine gehören
+  in den Text, wo sie gebraucht werden – bei Dauerthemen wie Weihnachtsmärkten gar nicht prominent.
 - Nicht-Information: kein Satz und keine Slide darüber, was wir nicht wissen („Öffnungszeiten stehen nicht in
   unserem Material“). Wenn uns etwas fehlt, lassen wir es weg – oder machen eine Frage an die Community daraus.
 - Aufforderungen, Instagram zu verlassen („schaut bei den Veranstaltern nach“, „mehr auf der Website“).

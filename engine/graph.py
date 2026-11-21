@@ -120,6 +120,9 @@ class GraphClient:
         return self._req("GET", f"{media_id}/comments", fields="id,text,username,hidden,timestamp",
                          limit=50).get("data", [])
 
+    def reply_comment(self, comment_id: str, text: str):
+        self._req("POST", f"{comment_id}/replies", message=text[:900])
+
     def hide_comment(self, comment_id: str):
         self._req("POST", comment_id, hide="true")
 
@@ -260,6 +263,9 @@ class FakeGraph:
 
     def comments(self, media_id):
         return getattr(self, "comment_box", {}).get(media_id, [])
+
+    def reply_comment(self, comment_id, text):
+        self.done.append(("comment_reply", comment_id, text))
 
     def conversations(self, limit=25):
         return self.inbox

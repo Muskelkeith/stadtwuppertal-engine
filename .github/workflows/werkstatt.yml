@@ -1,0 +1,36 @@
+name: werkstatt
+
+# Einmal pro Woche (Montag früh): Claude repariert, was die Bildkontrolle als technisches Problem gesammelt hat.
+# Übernommen wird nur, was Tests und Probe-Posts besteht. Details: engine/werkstatt.py
+on:
+  schedule:
+    - cron: "23 2 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: werkstatt
+  cancel-in-progress: false
+
+jobs:
+  werkstatt:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install -q -r requirements.txt pytest
+      - run: npm install -g @anthropic-ai/claude-code --silent
+      - name: Werkstatt
+        env:
+          ENGINE_SECRETS: ${{ secrets.ENGINE_SECRETS }}
+          GITHUB_TOKEN: ${{ github.token }}
+          PYTHONUNBUFFERED: "1"
+        run: python -m engine werkstatt
