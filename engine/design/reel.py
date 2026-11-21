@@ -127,7 +127,7 @@ def headline_c(lines, size, color, hcolor, extra=0):
 
 
 STYLE = {"head": (100, (800, 75, 96), CREME, INK, (24, 36), 0.92),
-         "line": (72, (700, 90, 48), INK, CREME, (26, 38), 1.14),
+         "line": (84, (700, 90, 48), INK, CREME, (26, 38), 1.14),
          "pop": (140, (800, 75, 96), INK, ZITRONE, (28, 40), 0.92),
          "cap": (56, (700, 90, 48), INK, CREME, (18, 28), 1.12)}
 SAFE_TOP, SAFE_BOTTOM = RY0 + cd.RAIL_H, 1580       # darunter liegt bei Reels die Instagram-Oberfläche

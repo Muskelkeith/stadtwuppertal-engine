@@ -39,27 +39,27 @@ watt · dat · getz · ne? · wa? · hömma · sach ma · hasse / hasste · biss
   den nächsten Tagen.
 - Caption: erste Zeile = Gefühl des Hooks, 2–4 kurze Zeilen, die Frage, dann „quelle: …“, Fotocredit, Hashtags.
 
-## Unnützes Wissen (feste Linie)
-- Unsere Leute kennen ihre Stadt. Dass Aspirin aus Wuppertal kommt, dass die Schwebebahn alt ist, dass Pina Bausch
-  hier gearbeitet hat, weiß jeder Schüler. Das ist nie die Pointe, höchstens der Einstieg in einem Halbsatz.
-- Wir fangen da an, wo das Allgemeinwissen aufhört: unnützes Wissen, Nischenwissen, Kuriositäten, Hintergründe,
-  Sachen, die man nicht auf dem Schirm hat und am Abend weitererzählt.
-- Kein Fakt ohne „Und dann?“: Jede Info braucht ihren Grund und ihre Folge. „Hoffmann stellt eine Säure her“ ist
-  inhaltsfrei. Warum hat er das gemacht? Wonach hat er gesucht? Was ist daraus geworden? Wer wurde vergessen?
-- Beispiel Aspirin, so tief soll es gehen: Salicylsäure aus Weidenrinde half gegen Schmerzen, schlug aber übel auf den
-  Magen – gesucht wurde eine verträglichere Form. Am 10. August 1897 gelang im Bayer-Labor in Elberfeld reine
-  Acetylsalicylsäure. Elf Tage später acetylierte derselbe Chemiker Morphin – heraus kam Heroin, und Bayer fand das
-  zunächst vielversprechender. Der Name: A für Acetyl, „spir“ von der Spierstaude. Verkauft wurde es erst als Pulver
-  im Glasfläschchen. Und Arthur Eichengrün, sein jüdischer Vorgesetzter, beanspruchte die Erfindung später in einem
-  Brief aus dem KZ Theresienstadt – heute halten viele Forscher ihn für den eigentlichen Kopf dahinter.
-- Solche Fakten immer gegen eine Quelle prüfen. Legenden als Legenden kennzeichnen.
+## Nischenwissen und Kuriositäten
+- Kein Entweder-oder: Grundinfos dürfen vorkommen, aber nicht heruntergebetet werden. Was fast jeder schon weiß
+  (Aspirin kommt aus Wuppertal), ist höchstens ein Halbsatz. Interessanter für alle sind Nischenwissen, Kuriositäten,
+  überraschende Wendungen.
+- Gratwanderung: Die Posts sehen auch Leute, die nicht aus Wuppertal kommen. Also nichts voraussetzen, was Auswärtige
+  nicht verstehen, aber Wuppertalern auch nicht ihre Stadt erklären. Nicht übertreiben.
+- Den stärksten, überraschendsten Fakt nach vorn. Das ist der Aufmacher, nicht die Chronologie.
+- Einfach formulieren: kurze Sätze, lieber ein Punkt statt einem Komma. Kein Fachchinesisch – welche Säure genau,
+  interessiert niemanden.
+- Kein Fakt ohne Bedeutung: Warum ist das spannend oder lustig? Was folgt daraus?
+- Beispiel Aspirin, so ungefähr:
+  „11 Tage nach Aspirin hat derselbe Bayer-Chemiker Heroin hergestellt. Und Heroin kam zuerst auf den Markt.
+  Aspirin wirkte nicht vielversprechend genug.“
+  „Der Name: A für Acetyl. Spirin von Spiraea, einer Pflanzengattung.“ – kurz, fertig, nicht ausschmücken.
+- Fakten immer gegen eine Quelle prüfen. Legenden als Legenden kennzeichnen.
 
 ## Reels
-- Die Züge erzählen eine Geschichte mit Spannungsbogen, nicht eine Liste: Ausgangslage → Suche → Durchbruch →
-  Wendung, die keiner kennt → heute.
-- Ruhig doppelt so viel Text wie früher: 2–3 Sätze pro Zug, zusammen ~150–250 Zeichen. Der Text steht oben unter der
-  Schiene und nutzt die Höhe, statt tief herunterzuhängen.
-- Die Akteure beim Namen nennen (bei Aspirin: Bayer, Felix Hoffmann, Arthur Eichengrün, das Labor in Elberfeld).
+- Die Züge erzählen eine kleine Geschichte mit Aufmacher und Wendung, keine Liste.
+- Die Informationsdichte darf höher sein als früher: 2–3 kurze Sätze pro Zug, etwa 120–200 Zeichen. Nicht überall
+  maximal vollpacken. Der Text steht oben unter der Schiene und verschenkt keinen Platz.
+- Die Akteure beim Namen nennen (bei Aspirin: Bayer, Felix Hoffmann, das Labor in Elberfeld).
 - Sachlich richtig formulieren, so, wie es jemand sagen würde, der das Thema kennt: „Aspirin liegt bis heute in fast
   jeder Hausapotheke“ – nicht „liegt noch rum“ oder „bis heute im Schrank“, das klingt nach alten Resten.
 - Dialekt nur dort, wo er nicht die Bedeutung verdreht.
