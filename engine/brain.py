@@ -247,10 +247,13 @@ Analysiere gründlich und konkret, mit Zahlen wo möglich:
    Was unterscheidet die Top-Posts von den Flops sprachlich?
 3. FORMATE & TIMING: Was läuft als Reel/Karussell/Bild, an welchen Tagen und Uhrzeiten?
 4. FRAGEN: Wie holen sie Kommentare – was davon funktioniert nachweislich?
-5. LÜCKEN: Welche Wuppertal-Themen fehlen dort, die für uns frei sind?
-6. FÜR UNS: Was übernehmen wir als Muster? Woran merkt man Abkupfern (was wir NICHT nachmachen)?
+5. ZIELGRUPPE & INTERESSEN: Wer folgt da (Alter, Lebenswelt), womit beschäftigen sich diese Leute, welche
+   Interessen bedienen die Top-Posts? Welche davon passen auch zu uns – und welche Interessen-Felder gibt es in
+   Wuppertal noch, die niemand bespielt (es gibt tausende Themen und Interessen)?
+6. LÜCKEN: Welche Wuppertal-Themen fehlen dort, die für uns frei sind?
+7. FÜR UNS: Was übernehmen wir als Muster? Woran merkt man Abkupfern (was wir NICHT nachmachen)?
 Beschreibe Muster in eigenen Worten, höchstens Bausteine von 2–4 Wörtern zitieren.
-JSON: {{"themen": ["Feld – Schnitt X, n=Y – kurzer Kommentar"], "captions": ["…"], "formate_timing": ["…"],
+JSON: {{"themen": ["Feld – Schnitt X, n=Y – kurzer Kommentar"], "zielgruppe": ["…"], "captions": ["…"], "formate_timing": ["…"],
 "fragen": ["…"], "luecken": ["…"], "fuer_uns": ["…"], "nicht_nachmachen": ["…"],
 "kurzfazit": "3 Sätze für den Chef, was die wichtigsten Erkenntnisse sind"}}"""
         return self.llm.ask("vorbild", system, prompt, tier="write")

@@ -127,6 +127,51 @@ Geständnis · Ranking · kleine Streitfrage („Elberfeld oder Barmen?“) · O
     mindestens einer zusätzlichen Einordnung. Berichten auch andere darüber, ist es ein normales Nachrichtenthema.
   - Quelle nennen: „quelle: Talzeit“.
 
+## Talzeit-Analyse (53 Posts, 16.10.–21.11.2026, von Hand ausgewertet)
+Talzeit: 38.300 Follower, gut 1,5 Posts am Tag, typischer Post (Median) ~300 Likes.
+Zielgruppe: junge Erwachsene (20–40) plus nostalgische Alteingesessene. Interessen: Cafés & Essens-Trends, lokale
+Originale, Stadtentwicklung, die Schwebebahn (immer), Kindheitserinnerungen, praktische Warnungen.
+
+Was nachweislich läuft (Likes):
+- Menschen mit Herz: der Nachruf auf Kiosk-Marlies 38.000 Likes / 925 Kommentare – 100× der Normalfall.
+  Lokale Originale und Macher (Dat Salón, Ballonkünstler, Café-Gründer) 800–1.800.
+- Praktische Warnung mit Nähe: asiatische Hornisse erkennen 4.600.
+- Kurioses & Nischenwissen: fünf Verkehrsmittel übereinander am Zoo-Stadion 1.850, was die Nummer an der
+  Schwebebahn bedeutet 900 – bei Talzeit selten, aber das stärkste Format pro Aufwand. Das ist UNSERE Lücke.
+- Damals/heute & Kindheit: Wuppertal 2013 vs. heute 1.500, Seelöwen-Mauer im Zoo 860.
+- Stadt-Entscheidungen, die den Alltag treffen: Stadt kauft den Kaufhof 1.600 / 107 Kommentare.
+- Reels laufen etwa doppelt so gut wie Karussells (Median 455 zu 214).
+- Bester Tag Sonntag, dann Dienstag; Freitag/Samstag am schwächsten. Früh vor 9 Uhr schwach,
+  später Vormittag bis Mittag am stärksten.
+
+Was nicht läuft:
+- Bezahlte Anzeigen (Median 85) und Eigenwerbung für Newsletter/App/Podcast (~100) – haben wir beides nicht.
+- Austauschbarer Humor: Memes, Halloween-Kostüme, „Lieblingsreiseziel“, Vorurteile-Videos (130–230).
+- Reine Gesundheits-/Ratgeber-Erklärstücke ohne Wuppertal-Dreh (70–170).
+- Terminlisten sind Mittelmaß (300–600) und holen kaum Kommentare.
+
+Captions bei Talzeit:
+- Einstieg mit Emoji und einer Feststellung oder Überraschung, oft ein kleines Wortspiel („Da vergeht einem das
+  Lachen“ bei einem Lachgas-Fund, „Dieser Termin geht unter die Haut“ bei einer Tattoo-Messe).
+- „Für dich heißt das: …“ übersetzt Beschlüsse in den Alltag. Kurze Absätze, Emoji als Aufzählung.
+- Dialekt sparsam und gezielt („Wat weißte…“, „ausm Tal“). Fehler werden offen oben als „Redaktioneller
+  Hinweis“ korrigiert.
+- Kommentare holen konkrete Entscheidungsfragen („Was wünscht ihr euch für den alten Kaufhof?“) und strittige
+  Stadtthemen (Pina-Bausch-Zentrum: jeder 5. Liker kommentiert). Allerwelts-Fragen unter Listen holen 0–4 Kommentare.
+
+Wie Talzeit auf Kommentare antwortet: selten. Unter den meisten Posts gar nicht, auch nicht unter Debatten.
+Wenn, dann so: eigene Fehler sofort und offen zugeben, kurz und menschlich-witzig reagieren („oh Gott,
+paaaaaaanik 🫪😨“ auf „die ist gestern in mein Wohnzimmer geflogen“), bei praktischen Fragen konkret und
+hilfreich antworten. In politische Streits steigen sie nicht ein.
+
+Was wir daraus machen:
+- Kurioses/Nischenwissen und Damals-heute stark ausbauen – dort ist Talzeit dünn und das Publikum hungrig.
+- Menschen-Geschichten und lokale Originale aufgreifen, wenn sie in den Nachrichten auftauchen.
+- Bei Stadt-Entscheidungen „Was heißt das für dich?“ plus eine konkrete Frage – und wir dürfen dabei Haltung
+  zeigen, das macht Talzeit nicht.
+- Kommentare beantworten wir öfter als Talzeit (nur die guten), im Ton wie oben.
+- Keine austauschbaren Memes und keine Listen ohne eigenen Dreh.
+
 ## Vorbilder aus der Redaktion (Original-Formulierungen, Ton übernehmen, nicht kopieren)
 - „Die Weihnachtsmärkte in Elberfeld und Barmen laufen ja bereits. Wir wissen alle, unsere Weihnachtsmärkte sind
   nicht unbedingt die schönsten, aber wenn man mit den richtigen Leuten unterwegs ist, kann es schon auch
