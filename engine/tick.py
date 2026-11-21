@@ -220,7 +220,7 @@ class Engine:
                 elif ev["cmd"] == "regel" and re.search(r"@([A-Za-z0-9._]+)\s+ignorier", ev["text"]):
                     h = re.search(r"@([A-Za-z0-9._]+)", ev["text"]).group(1).lower()
                     self.st["entdeckt"].pop(h, None)
-                    self.st["abgelehnt"].append(h)
+                    self.st["abgelehnt"][h] = self.today()
                     self.tg.say(f"ok, @{h} ignoriere ich ab jetzt.")
                 elif ev["cmd"] == "regel":
                     old = (self.store.get(RULES) or b"").decode("utf-8")
