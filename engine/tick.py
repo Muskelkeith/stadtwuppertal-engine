@@ -147,12 +147,24 @@ class Engine:
     def setup(self):
         new_secret = _fp(self.s.IG_TOKEN) != self.st.get("ig_token_from") and not self.st.get("ig_direct")
         if self.graph is not None and (not self.st.get("ig_user_id") or new_secret):
-            if new_secret:                    # neuer Schlüssel im Secret → frisch verbinden, alten Seiten-Token vergessen
-                self.graph.token, self.st["page_id"] = self.s.IG_TOKEN, None
-                self.graph.page_token = None
-            if self.s.APP_SECRET and not getattr(self.graph, "ig_login", False):
-                self.graph.exchange_long_lived(str(self.cfg["account"].get("meta_app_id", "")), self.s.APP_SECRET)
-            ig, name = self.graph.discover_ig_user()
+            keep = self.st.get("ig_token")
+            try:
+                if new_secret:                # neuer Schlüssel im Secret → frisch verbinden
+                    self.graph.token, self.graph.page_token = self.s.IG_TOKEN, None
+                if self.s.APP_SECRET and not getattr(self.graph, "ig_login", False):
+                    self.graph.exchange_long_lived(str(self.cfg["account"].get("meta_app_id", "")), self.s.APP_SECRET)
+                ig, name = self.graph.discover_ig_user()
+            except Exception:
+                if not keep:
+                    raise
+                # Schlüssel im Secret schon verbraucht/abgelaufen, aber der Dauer-Schlüssel steht noch: weiter mit dem
+                self.graph.token, self.graph.page_token = keep, None
+                ig, name = self.graph.discover_ig_user()
+                self.st["ig_user_id"], self.st["ig_token_from"] = ig, _fp(self.s.IG_TOKEN)
+                self.st["page_id"] = getattr(self.graph, "page_id", None) or self.st.get("page_id")
+                self.graph.token = getattr(self.graph, "page_token", None) or keep
+                self.st["ig_token"] = self.graph.token
+                return
             self.st["ig_user_id"] = ig
             self.st["ig_direct"] = bool(getattr(self.graph, "ig_login", False))
             self.st["ig_token"], self.st["ig_token_from"] = None, _fp(self.s.IG_TOKEN)
