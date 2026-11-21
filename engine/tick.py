@@ -138,10 +138,15 @@ class Engine:
         return self.errors
 
     def setup(self):
-        if self.graph is not None and not self.st.get("ig_user_id"):
+        new_secret = (self.s.IG_TOKEN or "")[:24] != self.st.get("ig_token_from") and not self.st.get("ig_direct")
+        if self.graph is not None and (not self.st.get("ig_user_id") or new_secret):
+            if new_secret:                    # neuer Schlüssel im Secret → frisch verbinden, alten Seiten-Token vergessen
+                self.graph.token, self.st["page_id"] = self.s.IG_TOKEN, None
+                self.graph.page_token = None
             ig, name = self.graph.discover_ig_user()
             self.st["ig_user_id"] = ig
             self.st["ig_direct"] = bool(getattr(self.graph, "ig_login", False))
+            self.st["ig_token"], self.st["ig_token_from"] = None, (self.s.IG_TOKEN or "")[:24]
             if getattr(self.graph, "page_token", None) and not self.st["ig_direct"]:
                 # Nutzer-Token läuft nach 60 Tagen ab, der Seiten-Token daraus nie → ab jetzt den nehmen
                 self.st["page_id"] = self.graph.page_id
