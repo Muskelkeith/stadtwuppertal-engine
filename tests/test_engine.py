@@ -227,8 +227,10 @@ def test_hashtag_scout(env, monkeypatch):
          "caption": "mittagessen #meinwuppertal"}]}
     e, errs = run(datetime(2026, 11, 23, 11, 0, tzinfo=TZ))
     assert not errs, errs
-    assert ("foto-anfrage", "wupperlicht") in e.tg.outbox
-    assert len([x for x in e.tg.outbox if x[0] == "foto-anfrage"]) == 1, "nur das starke Foto"
+    # Regel: #meinwuppertal wird ohne Anfrage übernommen – mit Credit, und nur das starke Foto
+    assert not [x for x in e.tg.outbox if x[0] == "foto-anfrage"]
+    fotos = [q for q in e.st["queue"] if q["mode"] == "foto"]
+    assert len(fotos) == 1 and "Foto: @wupperlicht" in fotos[0]["caption"]
 
 
 def test_gitstore_mit_echtem_git(tmp_path):
@@ -321,7 +323,7 @@ def test_idee_per_telegram_landet_im_slot(env):
     e, errs = run(t, inbox=[{"type": "idea", "text": "Wo liegt am meisten illegal abgeladener Müll?"}])
     assert not errs, errs
     assert any(q["mode"] == "idee" for q in e.st["queue"]), [q["mode"] for q in e.st["queue"]]
-    assert any("notiert" in x[1] for x in e.tg.outbox if x[0] == "text")
+    assert any("Notiert" in x[1] for x in e.tg.outbox if x[0] == "text")
 
 
 def test_frag_slot(env):

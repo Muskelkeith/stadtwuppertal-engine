@@ -175,7 +175,7 @@ class Engine:
                 self.st["ig_token"], self.st["ig_token_from"] = self.graph.page_token, _fp(self.s.IG_TOKEN)
                 self.graph.token = self.graph.page_token
             self.log(f"Instagram verbunden: @{name} ({ig})")
-            self.tg.say(f"instagram verbunden: @{name}")
+            self.tg.say(f"Instagram ist verbunden (@{name}). Ab jetzt poste ich selbst.")
         if self.graph is not None:
             self.graph.ig = self.st["ig_user_id"]
             if self.st.get("page_id") and not getattr(self.graph, "page_token", None):
@@ -196,13 +196,13 @@ class Engine:
                 text = transcribe(self.tg.download(ev["file_id"]))
             except Exception as e:      # noqa: BLE001
                 self.log(f"sprachnachricht: {str(e)[:120]}")
-                self.tg.say("sprachnachricht konnte ich gerade nicht abhören – schick sie bitte nochmal oder als text.")
+                self.tg.say("Deine Sprachnachricht konnte ich gerade nicht abhören. Schick sie bitte nochmal oder schreib sie kurz als Text.")
                 return
         if not text.strip():
             return
         self.st["ideen"].append({"id": f"i{int(self.ts())}", "text": text.strip()[:2000], "ts": self.ts(), "status": "offen"})
         n = sum(1 for i in self.st["ideen"] if i["status"] == "offen")
-        self.tg.say(f"notiert ✓ ({n} offen): „{text.strip()[:200]}“\nich baue sie in einen der nächsten slots ein.")
+        self.tg.say(f"Notiert: „{text.strip()[:200]}“\n\nDaraus mache ich in den nächsten Tagen einen Post. Offene Ideen gerade: {n}.")
 
     def revise(self, ev):
         """Antwort auf eine Vorschau = Kritik. Post neu schreiben, neu prüfen, neue Vorschau schicken."""
@@ -212,8 +212,9 @@ class Engine:
             text = transcribe(self.tg.download(ev["file_id"]))
         q = next((x for x in self.st["queue"] if str(x.get("tg")) == ev["msg"]), None)
         if not q or q["status"] not in ("waiting", "ready") or not q.get("pkg"):
-            self.tg.say("diesen post finde ich nicht mehr in der warteschlange (schon raus oder verworfen). "
-                        "deine kritik merke ich mir trotzdem als regel, wenn du „regel: …“ davor schreibst.")
+            self.add_idea(f"Post neu machen. Kritik: {ev.get('text', '')}")
+            self.tg.say("Der Post ist schon raus oder verworfen. Ich mache ihn mit deiner Kritik neu, er kommt in einem der nächsten Sendeplätze. "
+                        "Soll das für alle Posts gelten, schreib „regel:“ davor.")
             return
         old = q["pkg"]
         mat = self.material(q)
@@ -227,7 +228,7 @@ class Engine:
         pkg.update(rev.get("fixes") or {})
         pkg["risk"] = max(pkg.get("risk", "gruen"), rev.get("risk", "gruen"), key=["gruen", "gelb", "rot"].index)
         pkg["public_interest"] = bool(rev.get("public_interest", pkg.get("public_interest")))
-        self.tg.mark(q.get("tg"), "überarbeitet ↓")
+        self.tg.mark(q.get("tg"), "Überarbeitet, neue Version unten ↓")
         q["pkg"], q["status"] = pkg, "new"
         photo, credit = self.pick_photo(q, pkg)
         imgs = render.carousel(pkg, photo, seed=q["id"] + "r")
@@ -242,7 +243,7 @@ class Engine:
         q["tg"] = self.tg.preview(self._cover[q["id"]], f"neue fassung nach deiner kritik:\n\n{q['caption'][:800]}", q["id"])
         if self.tg.live and self.tg.chat and len(imgs) > 1:
             try:
-                self.tg.album([render.jpeg(im, 80) for im in imgs[1:]], "die weiteren slides")
+                self.tg.album([render.jpeg(im, 80) for im in imgs[1:]], "Die weiteren Slides")
             except Exception:
                 pass
 
@@ -265,49 +266,49 @@ class Engine:
                 continue
             if ev["type"] == "command" and ev["cmd"] == "ideen":
                 offen = [i for i in self.st["ideen"] if i["status"] == "offen"]
-                self.tg.say("offene ideen:\n" + "\n".join(f"· {i['text'][:120]}" for i in offen[-15:]) if offen
-                            else "keine offenen ideen. schick mir einfach text oder eine sprachnachricht.")
+                self.tg.say("Deine offenen Ideen:\n" + "\n".join(f"• {i['text'][:120]}" for i in offen[-15:]) if offen
+                            else "Gerade keine offenen Ideen. Schick mir einfach einen Text oder eine Sprachnachricht.")
                 continue
             if ev["type"] == "command":
                 if ev["cmd"] == "stopp":
                     self.st["paused"] = True
-                    self.tg.say("pausiert. nichts wird mehr gepostet, bis du „weiter“ schreibst.")
+                    self.tg.say("Pause. Ich poste nichts mehr, bis du „weiter“ schreibst.")
                 elif ev["cmd"] == "weiter":
                     self.st["paused"] = False
-                    self.tg.say("läuft wieder.")
+                    self.tg.say("Läuft wieder. Ich poste wie geplant weiter.")
                 elif ev["cmd"] == "regel" and re.search(r"@([A-Za-z0-9._]+)\s+ignorier", ev["text"]):
                     h = re.search(r"@([A-Za-z0-9._]+)", ev["text"]).group(1).lower()
                     self.st["entdeckt"].pop(h, None)
                     self.st["abgelehnt"][h] = self.today()
-                    self.tg.say(f"ok, @{h} ignoriere ich ab jetzt.")
+                    self.tg.say(f"Alles klar, @{h} lasse ich ab jetzt links liegen.")
                 elif ev["cmd"] == "regel":
                     old = (self.store.get(RULES) or b"").decode("utf-8")
                     self.store.put(RULES, (old + f"- {ev['text'].strip()} ({self.today()})\n").encode("utf-8"))
                     self.brain.rules += f"\n- {ev['text'].strip()}"
-                    self.tg.say("regel gemerkt. gilt ab dem nächsten text.")
+                    self.tg.say("Regel gemerkt. Sie gilt ab dem nächsten Post.")
                 else:
                     self.tg.say(self.status_text())
                 continue
             if ev["code"] in ("fa", "fn"):
                 if ev["code"] == "fa":
                     self.st["bildfreigaben"][ev["item"]] = self.today()
-                    self.tg.say(f"freigabe von @{ev['item']} gemerkt. ihre bilder nutzen wir ab jetzt mit credit.")
+                    self.tg.say(f"Gemerkt: Wir dürfen Fotos von @{ev['item']} nutzen, immer mit Namensnennung.")
                 continue
             item = next((q for q in self.st["queue"] if q["id"] == ev["item"]), None)
             if not item or item["status"] != "waiting":
                 continue
             if ev["code"] == "ok":
                 item.update(status="ready", label=False, approved=True)
-                self.tg.mark(item.get("tg"), "freigegeben ✓")
+                self.tg.mark(item.get("tg"), "Freigegeben ✓")
             else:
                 item["status"] = "dropped"
-                self.tg.mark(item.get("tg"), "verworfen")
+                self.tg.mark(item.get("tg"), "Verworfen")
                 self.log(f"verworfen von dir: {item['id']}")
 
     def status_text(self):
         q = [x for x in self.st["queue"] if x["status"] in ("new", "ready", "waiting")]
-        return (f"{'PAUSIERT · ' if self.st['paused'] else ''}heute gepostet: {len(self.feed_today())} · "
-                f"in arbeit: {len(q)} · letzte meldung: {self.st['log'][-1] if self.st['log'] else '–'}")
+        return (f"{'Pausiert. ' if self.st['paused'] else 'Läuft. '}Heute gepostet: {len(self.feed_today())}. "
+                f"In Arbeit: {len(q)}.\nZuletzt: {self.st['log'][-1] if self.st['log'] else '–'}")
 
     # ── 1. Sammeln & sichten ────────────────────────────────
     def collect(self):
@@ -503,8 +504,8 @@ class Engine:
             if (d.get("followers_count") or 0) >= 300 and fresh and local:
                 self.st["entdeckt"][h] = {"name": d.get("name"), "followers": d.get("followers_count"), "seit": self.today(),
                                           "posts": [(m.get("caption") or "")[:300] for m in media[:6]]}
-                self.tg.say(f"🔭 neu entdeckt: @{h} ({d.get('followers_count')} follower) – {d.get('name') or ''}\n"
-                            f"beobachte ich ab jetzt mit. nicht gewollt? schreib „regel: @{h} ignorieren“.")
+                self.tg.say(f"Neuer Wuppertal-Account entdeckt: @{h} ({d.get('followers_count')} Follower). {d.get('name') or ''}\n"
+                            f"Ich schaue da ab jetzt nach Themen. Willst du das nicht, schreib: regel: @{h} ignorieren")
         for h in list(self.st["kandidaten"])[:-500]:
             self.st["kandidaten"].pop(h, None)
 
@@ -581,7 +582,7 @@ class Engine:
         pkg["public_interest"] = bool(rev.get("public_interest", pkg.get("public_interest")))
         if not rev.get("ok", True):
             q["status"] = "dropped"
-            self.tg.say(f"nicht veröffentlicht ({q['mode']}): {rev.get('note', '')}")
+            self.tg.say(f"Diesen Post habe ich nicht veröffentlicht, die Endkontrolle hat ihn gestoppt: {rev.get('note', '')}")
             return
         q["pkg"] = pkg
         if q["mode"] == "damals":
@@ -719,6 +720,7 @@ class Engine:
                     return
                 raise
             for m in media:
+                m["_tag"] = tag.lower()
                 key = f"ht:{m['id']}"
                 if key in self.st["seen"] or m.get("media_type") not in ("IMAGE", "CAROUSEL_ALBUM") or not m.get("media_url"):
                     continue
@@ -733,31 +735,38 @@ class Engine:
             r = self.judge(key, m["media_url"], {"handle": h, "caption": m.get("caption")}, "community")
             if r.get("score", 0) < p["community_min"] or r.get("people"):
                 continue
-            if h and h in self.st["bildfreigaben"]:
-                self.enqueue("foto", idea={"tag": {"user": h, "image": m["media_url"], "text": (m.get("caption") or "")[:300],
+            direkt = m.get("_tag") == "meinwuppertal"     # Regel: #meinwuppertal-Fotos werden übernommen, mit Credit
+            if (h and h in self.st["bildfreigaben"]) or direkt:
+                self.enqueue("foto", idea={"tag": {"user": h or "", "via": "#meinwuppertal" if not h else "",
+                                                   "image": m["media_url"], "text": (m.get("caption") or "")[:300],
                                                    "rating": r}})
             elif self.worth_asking(h or f"post:{m['id']}", r, p["community_min"]):
                 self.ask(h or f"post:{m['id']}", {"tag": True, "image": m["media_url"], "text": (m.get("caption") or "")[:300],
                                                   "link": m.get("permalink"), "rating": r},
-                         m, "dein Foto unter #" + p["hashtags"][0])
+                         m, "dein Foto unter #" + m["_tag"])
 
     def photo_request(self, handle, item, title=""):
-        """Meta lässt die erste DM nur von Menschen zu: Die Engine macht alles fertig, du tippst einmal und fügst ein.
+        """Meta lässt die erste DM nur von Menschen zu: Die Engine macht alles fertig, du schickst die Nachricht ab.
         Antwort, Dank, Bild abholen und einbauen erledigt sie danach selbst."""
-        dm = (f"Hey! Wir sind @stadtwuppertal. Dein Foto zu „{title[:60]}“ ist richtig stark. "
-              f"Dürfen wir es mit Credit (@{handle}) bei uns zeigen? Gern auch künftig bei Wuppertal-Themen. Danke dir!")
+        about = title[:60] or "dein Foto"
+        about = about[0].upper() + about[1:]
+        dm = (f"Hey! Wir sind @stadtwuppertal. {about} ist richtig stark. "
+              f"Dürfen wir es mit Namensnennung bei uns zeigen? Danke dir!")
         r = (self.st["anfragen"].get(handle) or {}).get("rating") or {}
-        why = f"\nbildredaktion: {r.get('score')}/10 – {r.get('why', '')}" if r else ""
+        link = item.get("permalink") or item.get("link", "")
+        why = f"Bewertung: {r.get('score')}/10. {r.get('why', '')}\n\n" if r else ""
         if handle.startswith("post:"):
-            dm = dm.replace(f" (@{handle})", "")
-            step1 = f"1 · post öffnen, auf den namen tippen, „nachricht“: {item.get('permalink') or item.get('link', '')}"
-            head = "unbekannt (meta liefert keinen namen)"
+            who = "Von wem es ist, verrät Instagram mir nicht. Du siehst es, wenn du den Post öffnest."
+            steps = (f"1. Post öffnen: {link}\n2. Oben auf den Namen tippen, dann auf „Nachricht“.\n"
+                     f"3. Diesen Text einfügen (antippen kopiert ihn):")
         else:
-            step1 = f"1 · tippen: https://ig.me/m/{handle}"
-            head = "@" + handle
-        html = (f"📸 <b>bild-anfrage</b> · {head}\n{title[:80]}{why}\n{item.get('permalink') or item.get('link', '')}\n\n"
-                f"{step1}\n2 · text tippen = kopiert, dann einfügen:\n<code>{dm}</code>\n\n"
-                f"den rest mache ich: antwort lesen, danken, bild holen.")
+            who = f"Es ist von @{handle}."
+            steps = (f"1. Chat öffnen: https://ig.me/m/{handle}\n2. Diesen Text einfügen (antippen kopiert ihn):")
+        html = (f"📸 <b>Kannst du kurz eine Nachricht für mich abschicken?</b>\n\n"
+                f"Ich habe ein starkes Foto gefunden und würde es gern posten. {who}\n{why}"
+                f"Instagram erlaubt Programmen nicht, fremde Leute zuerst anzuschreiben. Deshalb brauche ich dich "
+                f"einmal:\n\n{steps}\n<code>{dm}</code>\n\n"
+                f"Den Rest mache ich: Ich lese die Antwort, bedanke mich und baue das Foto ein.")
         if self.tg.live and self.tg.chat:
             self.tg._call("sendMessage", chat_id=self.tg.chat, text=html, parse_mode="HTML",
                           disable_web_page_preview="true")
@@ -771,7 +780,25 @@ class Engine:
         """Liest Antworten auf Bild-Anfragen: ja → Freigabe merken, danken, Bild holen und nachschieben."""
         if self.graph is None:
             return
-        for conv in self.graph.conversations():
+        if self.st["done"].get("dm_off_until", 0) > self.ts():
+            return
+        try:
+            convs = self.graph.conversations()
+        except Exception as e:      # noqa: BLE001
+            if "2534041" in str(e) or "access to Instagram direct messages" in str(e):
+                self.st["done"]["dm_off_until"] = self.ts() + 86400
+                if not self.st["done"].get("dm_hint"):
+                    self.st["done"]["dm_hint"] = self.today()
+                    self.tg.say("Ich kann eure Instagram-Nachrichten nicht lesen, weil das in der Instagram-App noch "
+                                "gesperrt ist. Brauche ich nur, um Antworten auf Foto-Anfragen mitzubekommen.\n\n"
+                                "So schaltest du es frei (einmalig, 20 Sekunden):\nInstagram-App → Profil @stadtwuppertal → "
+                                "☰ Menü → Einstellungen → Nachrichten und Antworten auf Stories → Nachrichtensteuerung "
+                                "→ Verbundene Tools → „Zugriff auf Nachrichten erlauben“ einschalten.\n\n"
+                                "Alles andere läuft auch ohne.")
+                return
+            raise
+        self.st["done"].pop("dm_hint", None)
+        for conv in convs:
             msgs = (conv.get("messages") or {}).get("data", [])
             for m in reversed(msgs):                      # älteste zuerst
                 frm = m.get("from") or {}
@@ -802,7 +829,7 @@ class Engine:
                     if first:
                         self.graph.reply(frm["id"], "Mega, danke dir! Wir nennen dich als @" + h +
                                          ". Wenn du magst, schick uns das Foto hier gern in voller Größe.")
-                        self.tg.say(f"✓ @{h} hat ja gesagt. freigabe gemerkt.")
+                        self.tg.say(f"@{h} hat zugesagt. Das Foto kommt mit Namensnennung in den Plan.")
                     if req.get("tag"):
                         self.enqueue("foto", idea={"tag": {"user": h, "image": (imgs or [req.get("image")])[0],
                                                            "text": req.get("text", "")}})
@@ -812,7 +839,7 @@ class Engine:
                 elif self.NO.search(text):
                     self.st["anfragen"].pop(h, None)
                     self.st["abgelehnt"][h] = self.today()
-                    self.tg.say(f"@{h} möchte nicht. alles gut, ist vermerkt.")
+                    self.tg.say(f"@{h} möchte nicht, dass wir das Foto nutzen. Ist vermerkt, ich frage nicht nochmal.")
                 else:
                     import json as _j
                     kb = {"inline_keyboard": [[{"text": "als freigabe werten", "callback_data": f"fa:{h}"},
@@ -919,7 +946,8 @@ class Engine:
             t = q["idea"]["tag"]
             r = self.http.get(t["image"], timeout=60)
             r.raise_for_status()
-            meta, raw = {"insta": t["user"], "text": t.get("text"), "consent": True}, r.content
+            meta, raw = {"insta": t["user"], "text": t.get("text"), "consent": True,
+                         "name": ("@" + t["user"]) if t.get("user") else (t.get("via") or "")}, r.content
         else:
             meta = self.store.read_json(f"einreichen/fotos/{q['idea']['submission']}", {})
             raw = self.store.get(f"einreichen/fotos/{meta.get('file', '')}")
@@ -938,7 +966,7 @@ class Engine:
                                           "hinweis": "Nur Caption schreiben: 2–3 Zeilen über Ort/Stimmung, "
                                                      "nichts über Personen behaupten, Frage am Ende."})
         handle = (meta.get("insta") or "").lstrip("@")
-        credit = f"foto: {('@' + handle) if handle else meta.get('name', 'eingereicht')}"
+        credit = f"Foto: {('@' + handle) if handle else (meta.get('name') or 'eingereicht')}"
         pkg.update(rubric="photo", hook=[], slides=[], reel=[])
         q["pkg"] = pkg
         q["media"] = [self.store.media(f"{int(self.ts())}-{q['id']}.jpg", render.jpeg(img))]
@@ -961,21 +989,21 @@ class Engine:
         news_like = pkg.get("public_interest") and q["kind"] in ("feed", "reel") and self.graph is not None
         if pkg.get("risk") == "rot":
             q.update(status="waiting", on_timeout="drop", timeout=self.ts() + 3 * 3600)
-            head = "⚠️ heikel – nur mit deinem ok:\n" + (pkg.get("risk_reason") or "")
+            head = "⚠️ Heikles Thema. Geht nur raus, wenn du „passt“ drückst.\nWarum heikel: " + (pkg.get("risk_reason") or "")
         elif news_like:
             q.update(status="waiting", on_timeout="post", timeout=self.ts() + self.k["approval_timeout_min"] * 60)
-            head = (f"meldung – prüfen? ohne antwort geht sie in {self.k['approval_timeout_min']} min "
-                    f"mit ki-hinweis raus.")
+            head = (f"Neue Meldung. Schau kurz drüber. Ohne Antwort geht sie in {self.k['approval_timeout_min']} Minuten "
+                    f"mit KI-Hinweis raus.")
         else:
             q["status"] = "ready"
             return
         src = "\n".join(f"· {x.get('name')}: {x.get('url', '')}" for x in pkg.get("sources", [])[:4])
-        q["tg"] = self.tg.preview(self._cover[q["id"]], f"{head}\n\n{q['caption'][:600]}\n\nquellen:\n{src}\n\n"
-                                  f"kritik? einfach auf diese nachricht antworten.", q["id"])
+        q["tg"] = self.tg.preview(self._cover[q["id"]], f"{head}\n\n{q['caption'][:600]}\n\nQuellen:\n{src}\n\n"
+                                  f"Was ändern? Antworte einfach auf diese Nachricht.", q["id"])
         rest = getattr(self, "_slides", {}).get(q["id"])
         if rest and self.tg.live and self.tg.chat:
             try:
-                self.tg.album(rest, "die weiteren slides")
+                self.tg.album(rest, "Die weiteren Slides")
             except Exception:
                 pass
 
@@ -1011,10 +1039,10 @@ class Engine:
                            ", ".join(f"{k} {int(a)}" for a, k in fm[:3]) + "; schwach: " +
                            ", ".join(f"{k} {int(a)}" for a, k in fm[-2:]) +
                            ". Mehr von dem, was stark läuft – aber das Programm bleibt gemischt wie ein gutes Radio.")
-        self.tg.say("📊 auswertung der letzten tage\nstark: " + ", ".join(f"{k} ({int(a)})" for a, k in fm[:3]) +
-                    "\nschwach: " + ", ".join(f"{k} ({int(a)})" for a, k in fm[-2:]) +
-                    "\nbeste uhrzeit: " + ", ".join(f"{h} uhr ({int(a)})" for a, h in hr[:2]) +
-                    "\nich richte die nächsten tage danach aus.")
+        self.tg.say("📊 Auswertung der letzten Tage\nLief gut: " + ", ".join(f"{k} ({int(a)})" for a, k in fm[:3]) +
+                    "\nLief schwächer: " + ", ".join(f"{k} ({int(a)})" for a, k in fm[-2:]) +
+                    "\nBeste Uhrzeit: " + ", ".join(f"{h} Uhr ({int(a)})" for a, h in hr[:2]) +
+                    "\n(Zahl in Klammern = Interaktionen im Schnitt.) Danach richte ich die nächsten Tage aus.")
 
     def learned_note(self):
         if self.st.get("kurs"):
@@ -1035,10 +1063,10 @@ class Engine:
             if now >= q.get("timeout", now + 1):
                 if q.get("on_timeout") == "post":
                     q.update(status="ready", label=True)
-                    self.tg.mark(q.get("tg"), "läuft mit ki-hinweis")
+                    self.tg.mark(q.get("tg"), "Ohne Antwort von dir mit KI-Hinweis gepostet")
                 else:
                     q["status"] = "dropped"
-                    self.tg.mark(q.get("tg"), "verfallen")
+                    self.tg.mark(q.get("tg"), "Abgelaufen, nicht gepostet")
         for _ in range(2):            # zweiter Durchgang: Stories, die beim Posten gerade entstanden sind
             self._publish_pass(now)
 
@@ -1087,7 +1115,7 @@ class Engine:
             link = self.graph.permalink(ig)
         except Exception:
             pass
-        self.tg.say(f"gepostet: {' '.join(pkg.get('hook', [])) or q['mode']} {link}".strip())
+        self.tg.say(f"Ist online: {' '.join(pkg.get('hook', [])) or q['mode']}\n{link}".strip())
         self._story_after(q, pkg)
 
     def _story_after(self, q, pkg):
@@ -1146,17 +1174,17 @@ class Engine:
         prev = self.st["followers"].get((self.now() - timedelta(days=1)).date().isoformat())
         delta = f" ({f_now - prev:+d})" if (f_now and prev) else ""
         posts = [p for p in self.st["posted"] if p["day"] == self.today()]
-        lines = [f"tagesbericht · follower: {f_now or '?'}{delta}", ""]
+        lines = [f"Tagesbericht. Follower: {f_now or '?'}{delta}", ""]
         for p in posts:
             s = self.st["stats"].get(p["ig"], {})
-            lines.append(f"· {p['kind']} {p.get('rubric') or p['mode']}: {' '.join(p['hook'])[:40]}"
-                         + (f" – {s.get('total_interactions')} interaktionen" if s else ""))
+            lines.append(f"• {p.get('rubric') or p['mode']} ({p['kind']}): {' '.join(p['hook'])[:40]}"
+                         + (f" – {s.get('total_interactions')} Interaktionen" if s else ""))
         if self.st["radar"]:
-            lines += ["", "läuft woanders gerade:"]
+            lines += ["", "Darüber reden gerade andere Wuppertal-Accounts:"]
             lines += [f"· @{h['handle']} ({h['x']}×): {h['text'][:70]}" for h in self.st["radar"][:3]]
         errs = self.st["done"].get("source_errors") or []
         if errs:
-            lines += ["", f"{len(errs)} quellen hakten (läuft trotzdem)."]
+            lines += ["", f"{len(errs)} Nachrichtenquellen waren nicht erreichbar. Der Rest läuft normal."]
         return "\n".join(lines)
 
     def weekly(self):
@@ -1181,7 +1209,17 @@ class Engine:
         if self.st["alerts"].get(key):
             return
         self.st["alerts"] = {key: True}
-        self.tg.say("⚠️ es hakt:\n" + "\n".join(e[:200] for e in self.errors[:5]))
+        msgs = []
+        for e in self.errors[:5]:
+            name = e.split(":", 1)[0]
+            day = f"{self.today()}:{name}"
+            if self.st["done"].get(f"alarm:{day}"):
+                continue                       # denselben Fehler nur einmal am Tag melden
+            self.st["done"][f"alarm:{day}"] = 1
+            msgs.append(f"• {name}: Das hat gerade nicht geklappt. Ich versuche es automatisch weiter, "
+                        f"du musst nichts tun.\n  (technisch: {e.split(':', 1)[-1].strip()[:120]})")
+        if msgs:
+            self.tg.say("⚠️ Kleine Störung, der Rest läuft normal:\n" + "\n".join(msgs))
 
     def cleanup(self):
         cut = self.ts() - 4 * 86400

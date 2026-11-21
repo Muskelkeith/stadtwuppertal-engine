@@ -34,7 +34,7 @@ class Telegram:
             return None
         return self._call("sendMessage", chat_id=self.chat, text=text[:4000], disable_web_page_preview="true")
 
-    def preview(self, jpeg: bytes, text: str, item_id: str, buttons=(("passt", "ok"), ("weg", "no"))):
+    def preview(self, jpeg: bytes, text: str, item_id: str, buttons=(("Passt", "ok"), ("Weg damit", "no"))):
         kb = {"inline_keyboard": [[{"text": t, "callback_data": f"{code}:{item_id}"} for t, code in buttons]]}
         if not self.live or not self.chat:
             self.outbox.append(("preview", item_id, text))
@@ -60,7 +60,7 @@ class Telegram:
         if not self.live or not self.chat:
             self.outbox.append(("handover", what, len(urls), caption))
             return
-        head = f"📦 {what} zum posten – bilder speichern, dann auf instagram hochladen"
+        head = f"📦 Fertiger {what} zum Posten: Datei speichern und auf Instagram hochladen. Der Text kommt in der nächsten Nachricht."
         if kind == "reel":
             self._call("sendVideo", chat_id=self.chat, video=urls[0], caption=head)
         elif len(urls) == 1:
