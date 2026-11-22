@@ -239,6 +239,9 @@ Gesunder Menschenverstand: Was müssen Wuppertaler heute oder diese Woche wissen
 neue Regeln und Bußgelder, Ansagen der Oberbürgermeisterin oder der Stadt, die alle betreffen → hoch, wenn man es
 als kurze Meldung plus Frage nach eurer Meinung verpacken kann. Kleine, lustige Alltagsbeobachtungen mit
 Wiedererkennungswert (z. B. „Wer kauft auf dem Weihnachtsmarkt eigentlich die Wolf-T-Shirts?“) → hoch.
+Feel-Good und Boulevard: schöne Geschichten, Tiere, Nachbarschaft, Kultur-Highlights, Vereine und Initiativen mit
+coolen Aktionen → hoch. Ein Thema, das bei anderen Wuppertaler Accounts gerade auffällig gut läuft („resonanz“),
+ist ein starkes Signal – dann aber mit eigenem Dreh.
 Niedrig (1–4): Verwaltungsnotizen, Umbenennungen ohne Geschichte, Termine ohne Dreh, Pressemitteilungs-Themen,
 Selbstverständliches, Dinge, die jeder schon weiß, Themen ohne Bild im Kopf.
 Gib zu jedem Thema den stärksten DREH an: den Einstieg, der es interessant macht (oder leer, wenn es keinen gibt).

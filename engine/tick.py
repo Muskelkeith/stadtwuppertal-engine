@@ -144,6 +144,7 @@ class Engine:
             self.step("postfach", self.check_dms)
             self.step("repost-kommentare", self.check_repost_comments)
             self.step("kommentare", self.check_comments)
+            self.step("resonanz", self.resonanz_scan)
             self.step("ideenpool", self.refill_pool)
             self.step("vorbild-puls", self.snapshot_models)
             self.step("vorbild", self.study_models)
@@ -1258,6 +1259,71 @@ class Engine:
     RAUS = re.compile(r"\b(raus|rausnehmen|lösch\w*|entfern\w*|nicht einverstanden|möchte (ich )?nicht|will (ich )?nicht|"
                       r"bitte nicht|nein|nicht ok|nicht okay|ohne (meine )?erlaubnis)\b", re.I)
 
+    def resonanz_scan(self):
+        """Alle 6 Stunden: Was kommt in Wuppertal gerade gut an? Posts, die deutlich über dem Üblichen des jeweiligen
+        Accounts laufen, werden Themen-Kandidaten (die Themenprüfung entscheidet danach wie bei allem anderen)."""
+        if self.graph is None or getattr(self.graph, "ig_login", False):
+            return
+        if self.ts() - self.st["done"].get("resonanz_ts", 0) < 6 * 3600:
+            return
+        self.st["done"]["resonanz_ts"] = self.ts()
+        bad = self.st.setdefault("handle_bad", {})
+        me = (self.st.get("ig_name") or "stadtwuppertal").lower()
+        folgen = []
+        fp = self.root / "data/folgen.txt"
+        if fp.exists():
+            folgen = [h.lower() for line in fp.read_text(encoding="utf-8").splitlines()
+                      if not line.startswith("#") for h in line.split()]
+        known = {h.lower() for h in self.cfg.get("resonanz", []) + self.cfg.get("vorbilder", [])} | \
+                {s["handle"].lower() for s in self.cfg.get("sources", []) if s.get("type") == "instagram"}
+        handles = list(dict.fromkeys(
+            [h.lower() for h in self.cfg.get("resonanz", [])] + [h.lower() for h in self.cfg.get("vorbilder", [])] + folgen
+            + [s["handle"].lower() for s in self.cfg.get("sources", []) if s.get("type") == "instagram"]
+            + list(self.st.get("entdeckt", {}).keys())))
+        handles = [h for h in handles if h not in bad and h != me and h not in self.st["abgelehnt"]]
+        start = int(self.st["done"].get("resonanz_pos", 0)) % max(1, len(handles))
+        batch = (handles[start:] + handles[:start])[:40]
+        self.st["done"]["resonanz_pos"] = start + len(batch)
+        found = []
+        for h in batch:
+            try:
+                d = self.graph.business_discovery(h, limit=15)
+            except Exception:      # noqa: BLE001 – Account gibt es nicht oder ist privat
+                bad[h] = self.today()
+                continue
+            if h not in known and h not in self.st.get("entdeckt", {}) and (d.get("followers_count") or 0) < 1500:
+                bad[h] = "klein"        # wahrscheinlich Privatperson – nicht auswerten
+                continue
+            media = [m for m in (d.get("media") or {}).get("data", []) if m.get("caption")]
+            if len(media) < 5:
+                continue
+            scores = sorted(vorbild.score(m) for m in media)
+            median = max(scores[len(scores) // 2], 1)
+            for m in media:
+                age = vorbild.age_hours({"published": (m.get("timestamp") or "").replace("+0000", "+00:00")}, self.ts())
+                sc = vorbild.score(m)
+                if age <= 96 and sc >= 2 * median and sc >= 40:
+                    found.append((sc / median, h, m))
+        found.sort(reverse=True)
+        top = []
+        for ratio, h, m in found[:8]:
+            iid = f"res:{m['id']}"
+            if iid in self.st["items"]:
+                continue
+            cap = m["caption"].strip()
+            self.st["items"][iid] = {"id": iid, "source": f"@{h}", "handle": h, "kind": "resonanz",
+                                     "title": cap.split(chr(10))[0][:140], "summary": cap[:1200],
+                                     "published": (m.get("timestamp") or "").replace("+0000", "+00:00"),
+                                     "resonanz": round(ratio, 1)}
+            self.st["seen"][iid] = self.ts()
+            self.st["stories"][f"res-{m['id']}"] = {"title": f"läuft gerade bei @{h} ({ratio:.1f}× so gut wie sonst): "
+                                                             + cap.split(chr(10))[0][:110],
+                                                    "score": 7, "items": [iid], "first": self.ts(), "last": self.ts()}
+            top.append(f"@{h} ({ratio:.1f}×): {cap.split(chr(10))[0][:90]}")
+        if top:
+            self.st["resonanz_top"] = (top + self.st.get("resonanz_top", []))[:15]
+            self.log(f"resonanz: {len(top)} Themen, die in Wuppertal gerade gut ankommen")
+
     def snapshot_models(self):
         """Alle 6 Stunden: Likes/Kommentare der frischen Vorbild-Posts mitschreiben – daraus wird die Dynamik."""
         if self.graph is None or getattr(self.graph, "ig_login", False):
@@ -1303,7 +1369,10 @@ class Engine:
                 fazit.append(f"@{h} ({len(media)} Posts): {r['kurzfazit']}")
         if notes:
             first = self.st.get("vorbild_v") != 2
-            self.st["vorbild"] = "\n\n".join(notes)[:4500]
+            if self.st.get("resonanz_top"):
+                notes.append("Was in Wuppertal gerade bei anderen Accounts auffällig gut ankommt:\n- " +
+                             "\n- ".join(self.st["resonanz_top"][:10]))
+            self.st["vorbild"] = "\n\n".join(notes)[:5000]
             self.st["vorbild_fazit"] = "\n\n".join(fazit)
             self.st["vorbild_v"] = 2
             self.brain.rules += "\n\nVORBILD-STUDIE\n" + self.st["vorbild"]

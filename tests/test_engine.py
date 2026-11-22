@@ -642,3 +642,18 @@ def test_ideenpool_nur_belegt_und_gepruefter(monkeypatch):
     assert pool.refill(B(), st, 1000) == 1
     assert st["pool"][0]["titel"] == "Der Elefant Tuffi"
     assert pool.take(st, ["kurios"])["titel"] == "Der Elefant Tuffi" and not st["pool"]
+
+
+def test_resonanz_findet_was_in_wuppertal_gut_laeuft(env):
+    run, graph, store, feed = env
+    feed.pop("items", None)
+    now = "2026-11-23T08:00:00+0000"
+    graph.discovery = {"dergruenezoowuppertal": {"username": "dergruenezoowuppertal", "followers_count": 30000, "media": {"data": [
+        {"id": f"z{i}", "caption": f"Post {i}", "like_count": 100, "comments_count": 2, "timestamp": now} for i in range(6)]
+        + [{"id": "zhit", "caption": "Pinguin-Baby geschlüpft!\nDetails…", "like_count": 900, "comments_count": 60, "timestamp": now}]}}}
+    e, errs = run(datetime(2026, 11, 23, 11, 0, tzinfo=TZ))
+    e.cfg["resonanz"] = ["dergruenezoowuppertal"]
+    e.st["done"]["resonanz_ts"] = 0
+    e.st["done"]["resonanz_pos"] = 0
+    e.resonanz_scan()
+    assert "res-zhit" in e.st["stories"] and "Pinguin" in e.st["stories"]["res-zhit"]["title"]

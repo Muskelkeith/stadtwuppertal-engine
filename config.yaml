@@ -73,6 +73,7 @@ sources:
   - {name: Polizei Wuppertal (Instagram), type: instagram, handle: polizei.nrw.w, filter_wuppertal: false}
   - {name: Stadt Wuppertal, type: rss, homepage: "https://www.wuppertal.de/presse/meldungen/", filter_wuppertal: false}
   - {name: Stadt Wuppertal (Instagram), type: instagram, handle: stadt_wuppertal, filter_wuppertal: false}
+  - {name: Oberbürgermeisterin Miriam Scherff, type: instagram, handle: scherffmiriam, filter_wuppertal: false}
   - {name: WSW, type: instagram, handle: wuppertaler_stadtwerke, filter_wuppertal: false}
   - {name: Autobahn GmbH, type: autobahn, roads: [A46, A1, A535], filter_wuppertal: false}
   # Lokalmedien – die schnellsten zuerst
@@ -103,7 +104,12 @@ event_sources:
 
 # ── Radar: Wer bekommt gerade Aufmerksamkeit? (einmal täglich, nur lesend) ──
 # Vorbilder: werden alle 3 Tage genau studiert (was läuft, Ton, Themen, Formate) – Muster übernehmen, nie Texte.
-vorbilder: [talzeit.wuppertal]
+vorbilder: [talzeit.wuppertal, wuppertal.aktuell]
+
+# Resonanz: Was kommt in Wuppertal gerade gut an? Alle 6 Stunden werden diese Accounts (plus alle Instagram-Quellen
+# und alle selbst entdeckten lokalen Accounts) durchgesehen. Posts, die deutlich besser laufen als beim Account üblich,
+# werden zu Themen-Kandidaten. Falsche Namen merkt die Engine selbst und lässt sie weg.
+resonanz: [lochlochlochlochlochloch]     # plus alle Accounts aus data/folgen.txt
 
 radar: [wuppertal.aktuell, talzeit.wuppertal, radiowuppertal, bergischeblaulichtnews, wuppertal, stadt_wuppertal,
         1live, wdrcosmo, deutschlandfunknova]
