@@ -572,3 +572,16 @@ def test_satz_mit_befehlswort_ist_kein_befehl():
     tg = Telegram("123:abc", {"chat_id": "5"}, http=Http())
     evs = tg.poll()
     assert evs and evs[0]["type"] == "idea"
+
+
+def test_gescheiterter_sendeplatz_bekommt_ersatz(env):
+    run, graph, store, feed = env
+    feed.pop("items", None)
+    e, errs = run(datetime(2026, 11, 23, 11, 0, tzinfo=TZ))
+    e.st["ideen"].append({"id": "i1", "text": "Bubble Tea in Elberfeld", "ts": e.ts(), "status": "offen"})
+    e.st["queue"].append({"id": "q-slot", "mode": "news", "kind": "feed", "status": "dropped", "created": e.ts(), "slot": "mittag"})
+    n = len(e.st["queue"])
+    e.replace_failed_slots()
+    assert len(e.st["queue"]) == n + 1 and e.st["queue"][-1]["slot"] == "mittag" and e.st["queue"][-1]["ersatz"] == 1
+    e.replace_failed_slots()
+    assert len(e.st["queue"]) == n + 1     # nicht doppelt ersetzen

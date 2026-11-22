@@ -240,6 +240,8 @@ class Engine:
             self.log(f"nachricht verstehen: {str(e)[:80]}")
             r = {"art": "idee"}
         art, cmd = r.get("art", "idee"), r.get("befehl")
+        if art == "befehl" and cmd == "jetzt":
+            return self.post_now()
         if art == "befehl" and cmd == "verworfen":
             return self.show_dropped(2 if "alle" in text.lower() else 1)
         if art == "befehl" and cmd in ("status", "ideen", "tipps", "vorbild", "stopp", "weiter"):
@@ -328,6 +330,9 @@ class Engine:
                 continue
             if ev["type"] == "revise":
                 self.step("überarbeiten", self.revise, ev)
+                continue
+            if ev["type"] == "command" and ev["cmd"] == "jetzt":
+                self.post_now()
                 continue
             if ev["type"] == "command" and ev["cmd"] == "verworfen":
                 self.show_dropped()
@@ -463,7 +468,7 @@ class Engine:
             start = self.at(hhmm)
             if not (start <= self.now() < start + timedelta(minutes=90)) or not self.once(f"slot:{name}"):
                 continue
-            self.plan_slot(name)
+            self.plan_slot_tagged(name)
         # Story und Reel des Tages
         if self.at(self.k["reel_slot"]) <= self.now() and self.once("reel"):
             base = next((p for p in reversed(self.st["posted"])
@@ -474,6 +479,26 @@ class Engine:
                 idea = self.pick_idea(prefer="history")
                 if idea:
                     self.enqueue("rubrik", kind="reel", idea=idea)
+
+    def plan_slot_tagged(self, name, ersatz=0):
+        n = len(self.st["queue"])
+        self.plan_slot(name)
+        for q in self.st["queue"][n:]:
+            q.update(slot=name, ersatz=ersatz)
+        if len(self.st["queue"]) == n:
+            self.log(f"sendeplatz {name}: kein passendes Thema gefunden")
+        return len(self.st["queue"]) > n
+
+    def replace_failed_slots(self):
+        """Ist ein Post eines Sendeplatzes gescheitert, sofort Ersatz planen (bis zu 2×, innerhalb von 3 Stunden)."""
+        for q in self.st["queue"]:
+            if q["status"] != "dropped" or not q.get("slot") or q.get("ersetzt"):
+                continue
+            q["ersetzt"] = True
+            if q.get("ersatz", 0) >= 2 or self.ts() - q.get("created", 0) > 3 * 3600:
+                continue
+            if self.plan_slot_tagged(q["slot"], q.get("ersatz", 0) + 1):
+                self.log(f"sendeplatz {q['slot']}: Ersatz für {q['id']} geplant")
 
     def plan_slot(self, name):
         now = self.ts()
@@ -1672,6 +1697,13 @@ class Engine:
                              "grund": q.get("qa_note") or q.get("draft_note") or ""})
         self.st["verworfen"] = arch[-10:]
 
+    def post_now(self):
+        name = "mittag" if self.now().hour < 15 else "abend"
+        if self.plan_slot_tagged(name):
+            self.tg.say("Mach ich. Ich baue jetzt einen Post, er kommt in den nächsten Minuten.")
+        else:
+            self.tg.say("Gerade finde ich kein Thema, das gut genug ist. Schick mir eine Idee, dann baue ich daraus sofort einen.")
+
     def show_dropped(self, n=1):
         arch = self.st.get("verworfen", [])
         if not arch:
@@ -1694,6 +1726,7 @@ class Engine:
                 self.st.setdefault("verworfen_msg", {})[str(res["message_id"])] = a["id"]
 
     def cleanup(self):
+        self.replace_failed_slots()
         self.archive_dropped()
         self.fix_mistaken_ideas()
         cut = self.ts() - 4 * 86400

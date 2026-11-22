@@ -123,7 +123,7 @@ class Telegram:
                     out.append({"type": "command", "cmd": "regel", "text": rule.strip()})
                 continue
             hit = False
-            for cmd in ("stopp", "weiter", "status", "ideen", "vorbild", "tipps", "verworfen"):
+            for cmd in ("stopp", "weiter", "status", "ideen", "vorbild", "tipps", "verworfen", "jetzt"):
                 if text.lstrip("/").strip(" .!?") == cmd:      # nur das Wort allein; ganze Sätze versteht die Engine
                     out.append({"type": "command", "cmd": cmd})
                     hit = True

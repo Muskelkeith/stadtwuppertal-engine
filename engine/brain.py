@@ -230,7 +230,8 @@ Was die Engine gerade weiß: {json.dumps(ctx, ensure_ascii=False)[:3000]}
 Ordne ein:
 - idee: ein Thema, ein Einfall, etwas, worüber ein Post entstehen soll (im Zweifel das).
 - befehl: er will etwas sehen oder steuern → befehl = status | ideen | tipps | vorbild | verworfen (verworfene
-  Entwürfe zeigen, z. B. „zeig mir den Post trotzdem“, „was hast du verworfen?“) | stopp | weiter
+  Entwürfe zeigen, z. B. „zeig mir den Post trotzdem“, „was hast du verworfen?“) | jetzt (sofort einen Post
+  bauen, z. B. „mach jetzt einen Post“, „hau mal was raus“) | stopp | weiter
 - regel: eine dauerhafte Vorgabe für alle künftigen Posts → regel = die Vorgabe in einem klaren Satz.
 - frage: eine Frage an dich, die du mit dem Wissen oben beantworten kannst (z. B. „warum wurde nichts gepostet?“)
   → antwort = ehrliche, konkrete Antwort in 1–4 Sätzen. Was du nicht weißt, sagst du offen.
