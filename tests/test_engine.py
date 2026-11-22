@@ -527,3 +527,16 @@ def test_kritik_zu_altem_post_wird_idee(env):
     e, errs = run(datetime(2026, 11, 23, 11, 0, tzinfo=TZ))
     e.revise({"type": "revise", "msg": "999", "text": "Datum raus, nochmal machen"})
     assert any("Datum raus" in i["text"] for i in e.st["ideen"])
+
+
+def test_endkontrolle_repariert_statt_verwerfen(env):
+    run, graph, store, feed = env
+    feed.pop("items", None)
+    e, errs = run(datetime(2026, 11, 23, 11, 0, tzinfo=TZ))
+    e.brain.write = lambda *a, **k: {"hook": ["test"], "slides": [], "caption": "x"}
+    e.brain.review = lambda *a, **k: {"ok": False, "note": "Material zu dünn", "risk": "gruen"}
+    q = {"id": "q-rv", "mode": "kurios", "kind": "feed", "status": "new", "idea": {"text": "Ölbergfest"}}
+    e._redo = False
+    e.produce_one(q)
+    assert q["status"] == "new" and "Material zu dünn" in q["qa_note"] and e._redo
+    assert not any("nicht veröffentlicht" in x[1] for x in e.tg.outbox if x[0] == "text")

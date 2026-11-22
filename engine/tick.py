@@ -101,6 +101,7 @@ class Engine:
         return self.now().date().isoformat()
 
     def log(self, msg):
+        print(f"  · {msg}", flush=True)       # auch ins GitHub-Protokoll, damit man sieht, woran es hakt
         self.st["log"].append(f"{self.now():%m-%d %H:%M} {msg}")
         self.st["log"] = self.st["log"][-400:]
 
@@ -628,9 +629,22 @@ class Engine:
         pkg["risk"] = max(pkg.get("risk", "gruen"), rev.get("risk", "gruen"), key=["gruen", "gelb", "rot"].index)
         pkg["public_interest"] = bool(rev.get("public_interest", pkg.get("public_interest")))
         if not rev.get("ok", True):
-            q["status"] = "dropped"
-            self.tg.say(f"Diesen Post habe ich nicht veröffentlicht, die Endkontrolle hat ihn gestoppt: {rev.get('note', '')}")
-            return
+            # Nicht wegwerfen: erst reparieren (2 Anläufe), danach dir zeigen statt still verwerfen.
+            note = rev.get("note", "")
+            legal = rev.get("risk") == "rot"
+            q["rv_try"] = q.get("rv_try", 0) + 1
+            if not legal and q["rv_try"] <= 2:
+                q.update(status="new", qa_note=(
+                    f"ENDKONTROLLE hat die letzte Fassung beanstandet: {note} Repariere genau das. Erzähl nur, was das "
+                    f"Material sicher hergibt – lieber kleiner und konkret als groß und vage. Was offen ist, weglassen "
+                    f"statt erfinden. Das Thema ist gut, mach es postbar."))
+                self._redo = True
+                self.log(f"endkontrolle: {q['id']} wird repariert ({q['rv_try']}/2): {note[:120]}")
+                return
+            pkg["risk"] = "rot"
+            pkg["risk_reason"] = ("Rechtlich heikel: " if legal else "Die Endkontrolle ist sich nach zwei Reparaturen "
+                                  "noch unsicher: ") + note
+            self.log(f"endkontrolle: {q['id']} geht dir zur Entscheidung")
         if vb_items:
             theirs = [f"{m.get('title', '')} {m.get('summary', '')}" for m in vb_items]
             ov = vorbild.overlap(vorbild.pkg_text(pkg), theirs)
@@ -1051,7 +1065,14 @@ class Engine:
         for p in [x for x in self.st["posted"] if x.get("ig") and x["ts"] > self.ts() - 3 * 86400][-8:]:
             if done_today >= 12:
                 break
-            new = [c for c in self.graph.comments(p["ig"])
+            if p.get("weg"):
+                continue
+            try:
+                got = self.graph.comments(p["ig"])
+            except Exception:      # noqa: BLE001 – Post gelöscht oder nicht erreichbar: künftig auslassen
+                p["weg"] = True
+                continue
+            new = [c for c in got
                    if c.get("id") not in seen and (c.get("username") or "").lower() != me and not c.get("hidden")]
             for c in new:
                 seen[c["id"]] = self.ts()
@@ -1137,7 +1158,12 @@ class Engine:
             if self.ts() - rep["ts"] > 30 * 86400:
                 self.st["reposts"].pop(h, None)
                 continue
-            for c in self.graph.comments(rep["ig"]):
+            try:
+                got = self.graph.comments(rep["ig"])
+            except Exception:      # noqa: BLE001 – Post schon gelöscht
+                self.st["reposts"].pop(h, None)
+                continue
+            for c in got:
                 if (c.get("username") or "").lower() == h and self.RAUS.search(c.get("text") or ""):
                     self.take_down(None, h, rep)
                     break
@@ -1318,7 +1344,10 @@ class Engine:
         news_like = pkg.get("public_interest") and q["kind"] in ("feed", "reel") and self.graph is not None
         if pkg.get("risk") == "rot":
             q.update(status="waiting", on_timeout="drop", timeout=self.ts() + 3 * 3600)
-            head = "⚠️ Heikles Thema. Geht nur raus, wenn du „passt“ drückst.\nWarum heikel: " + (pkg.get("risk_reason") or "")
+            why = pkg.get("risk_reason") or ""
+            head = ("🤔 Hier bin ich mir unsicher. „Passt“ = geht raus, „Weg damit“ = verworfen. Oder antworte mit "
+                    "Kritik, dann mache ich ihn neu.\nWarum: " + why) if why.startswith("Die Endkontrolle") else \
+                "⚠️ Heikles Thema. Geht nur raus, wenn du „passt“ drückst.\nWarum heikel: " + why
         elif news_like:
             q.update(status="waiting", on_timeout="post", timeout=self.ts() + self.k["approval_timeout_min"] * 60)
             head = (f"Neue Meldung. Schau kurz drüber. Ohne Antwort geht sie in {self.k['approval_timeout_min']} Minuten "
