@@ -244,6 +244,12 @@ class Engine:
         art, cmd = r.get("art", "idee"), r.get("befehl")
         if art == "befehl" and cmd == "jetzt":
             return self.post_now()
+        if art == "befehl" and cmd == "neu":
+            return self.scrap_and_new(text)
+        if art == "befehl" and cmd == "details":
+            self.st["verbose"] = not self.st.get("verbose")
+            return self.tg.say("Ab jetzt zeige ich dir jede Ablehnung mit Begründung." if self.st["verbose"]
+                               else "Alles klar, ich arbeite ab jetzt leise und melde mich nur mit fertigen Posts.")
         if art == "befehl" and cmd == "verworfen":
             return self.show_dropped(2 if "alle" in text.lower() else 1)
         if art == "befehl" and cmd in ("status", "ideen", "tipps", "vorbild", "stopp", "weiter"):
@@ -668,6 +674,26 @@ class Engine:
             self.st["kandidaten"].pop(h, None)
 
     def pick_idea(self, prefer="history"):
+        """Konserve nur, wenn sie die Themenprüfung besteht (bis zu 3 Kandidaten probieren)."""
+        for _ in range(3):
+            idea = self._pick_idea(prefer)
+            if not idea:
+                return None
+            title = idea.get("text") or idea.get("title") or idea.get("event") or json.dumps(idea, ensure_ascii=False)[:200]
+            try:
+                urteile = self.brain.topic_gate([{"id": "x", "titel": str(title)[:300], "rubrik": idea.get("type", "")}]).get("urteile")
+            except Exception:      # noqa: BLE001
+                return None
+            if not urteile:          # Prüfung lieferte nichts (z. B. Testbetrieb) → nicht blockieren
+                return idea
+            v = urteile[0]
+            if (v.get("score") or 0) >= 7:
+                idea["dreh"] = v.get("dreh", "")
+                return idea
+            self.log(f"themenprüfung: Konserve „{str(title)[:60]}“ zu schwach ({v.get('score')}/10)")
+        return None
+
+    def _pick_idea(self, prefer="history"):
         used = set(self.st["used"])
         ideas = yaml.safe_load((self.root / "data/ideas.yaml").read_text(encoding="utf-8")).get("ideas", [])
         hist = yaml.safe_load((self.root / "data/history.yaml").read_text(encoding="utf-8")).get("history", [])
@@ -769,10 +795,11 @@ class Engine:
             legal = rev.get("risk") == "rot"
             q["rv_try"] = q.get("rv_try", 0) + 1
             d = {k: pkg.get(k) for k in ("hook", "caption", "slides", "reel")}
-            self.tg.say((f"📝 Endkontrolle, Version {q['rv_try']}: zurückgewiesen\nWarum: {note}\n\n"
-                         + self.draft_text(d) + "\n\n" +
-                         (f"Ich baue jetzt Version {q['rv_try'] + 1}." if not legal and q["rv_try"] <= 2
-                          else "Ich zeige dir den Post gleich zur Entscheidung."))[:3900])
+            if self.st.get("verbose"):
+                self.tg.say((f"📝 Endkontrolle, Version {q['rv_try']}: zurückgewiesen\nWarum: {note}\n\n"
+                             + self.draft_text(d) + "\n\n" +
+                             (f"Ich baue jetzt Version {q['rv_try'] + 1}." if not legal and q["rv_try"] <= 2
+                              else "Ich zeige dir den Post gleich zur Entscheidung."))[:3900])
             if not legal and q["rv_try"] <= 2:
                 q.update(status="new", qa_note=(
                     f"ENDKONTROLLE hat die letzte Fassung beanstandet: {note} Repariere genau das. Erzähl nur, was das "
@@ -870,13 +897,14 @@ class Engine:
             weiter = "Das ist nicht lesbar zu reparieren – dieser Post wird verworfen. Mit „verworfen“ siehst du ihn."
         msg = (f"🔍 Bildkontrolle, Version {n}: zurückgewiesen\n\n" +
                "\n".join(f"• {p}" for p in (res.get("probleme") or [])) + f"\n\n{weiter}")
-        try:
-            if imgs:
-                self.tg.photo(self.contact_sheet(imgs), msg)
-            else:
+        if self.st.get("verbose"):
+            try:
+                if imgs:
+                    self.tg.photo(self.contact_sheet(imgs), msg)
+                else:
+                    self.tg.say(msg)
+            except Exception:      # noqa: BLE001
                 self.tg.say(msg)
-        except Exception:      # noqa: BLE001
-            self.tg.say(msg)
         if res.get("lehre"):
             self.learn(res["lehre"])
         if res.get("technisch"):
@@ -1849,10 +1877,26 @@ class Engine:
                              "grund": q.get("qa_note") or q.get("draft_note") or ""})
         self.st["verworfen"] = arch[-10:]
 
-    def post_now(self):
+    def scrap_and_new(self, why=""):
+        """Du findest das laufende Thema schlecht: weg damit, als Lehre merken, sofort ein neues Thema."""
+        weg = []
+        for q in self.st["queue"]:
+            if q["status"] in ("new", "waiting", "ready") and not q.get("priority"):
+                q["status"] = "dropped"
+                q["ersetzt"] = True          # kein automatischer Ersatz mit ähnlichem Thema
+                hook = " ".join((q.get("draft") or {}).get("hook") or []) or q.get("mode", "")
+                weg.append(hook)
+        for h in weg:
+            if h:
+                self.learn(f"Themen wie „{h[:60]}“ findet der Chef langweilig – solche Themen nicht mehr machen.")
+        self.tg.say("Weg damit. Ich nehme ein anderes Thema." if weg else "Ich nehme ein neues Thema.")
+        self.post_now(quiet=True)
+
+    def post_now(self, quiet=False):
         name = "mittag" if self.now().hour < 15 else "abend"
         if self.plan_slot_tagged(name):
-            self.tg.say("Mach ich. Ich baue jetzt einen Post, er kommt in den nächsten Minuten.")
+            if not quiet:
+                self.tg.say("Mach ich. Ich baue jetzt einen Post, er kommt, sobald er gut genug ist.")
         else:
             self.tg.say("Gerade finde ich kein Thema, das gut genug ist. Schick mir eine Idee, dann baue ich daraus sofort einen.")
 

@@ -191,7 +191,8 @@ JSON: {{"ok": bool (false NUR bei rechtlichen Problemen oder wenn das Material n
         system = self.system + """
 
 Du bist jetzt die Bildkontrolle. Du siehst die FERTIGEN Bilder eines Posts als Kontaktbogen
-(Reihenfolge links→rechts, oben→unten). Nichts geht raus, was peinlich aussieht oder nicht lesbar ist."""
+(Reihenfolge links→rechts, oben→unten). Nichts geht raus, was peinlich aussieht oder nicht lesbar ist – aber du bist
+eine erfahrene Redakteurin mit Augenmaß, keine Erbsenzählerin."""
         prompt = f"""Format: {kind}. Prüfe streng:
 1. LAYOUT: Ist irgendwo Text abgeschnitten, läuft aus dem Bild oder aus seinem Kasten, überlappt, ist zu klein
    oder kontrastarm? Leere oder kaputte Bilder? Hängt Text unschön tief oder bleibt riesig viel Platz ungenutzt?
@@ -199,8 +200,12 @@ Du bist jetzt die Bildkontrolle. Du siehst die FERTIGEN Bilder eines Posts als K
    Floskeln, Sprachkonzept eingehalten, keine Tipp- oder Grammatikfehler, keine Wiederholungen?
 3. WIRKUNG: Würde man beim Scrollen anhalten und es zu Ende lesen?
 Text des Pakets zum Abgleich: {json.dumps({k: pkg.get(k) for k in ("hook", "slides", "reel")}, ensure_ascii=False)[:3000]}
-JSON: {{"ok": bool (false bei JEDEM Lesbarkeits- oder Layoutfehler und bei klaren Inhaltsfehlern),
-"score": 1-10, "probleme": ["kurz und konkret"], "technisch": bool (true, wenn es am Layout liegt, nicht am Text),
+Augenmaß: Unser Design setzt Text bewusst oben unter die Schiene, Freiraum darunter ist gewollt. Textkacheln ohne
+Foto sind erlaubt. Nicht jeder Post braucht eine Frage. Beanstande nur, was einen Post wirklich schlecht macht –
+nicht Geschmacksfragen oder Kleinigkeiten, die niemand beim Scrollen bemerkt.
+JSON: {{"ok": bool (false NUR bei echten Fehlern: Text abgeschnitten/unlesbar, falsche oder erfundene Fakten,
+Langeweile/Nicht-Info, peinliche Fehler – sonst true, auch wenn du noch Verbesserungsideen hast),
+"score": 1-10, "probleme": ["nur die echten Fehler, kurz und konkret, höchstens 4"], "technisch": bool (true, wenn es am Layout liegt, nicht am Text),
 "lehre": "EINE allgemeine Regel für künftige Posts, die diesen Fehler verhindert – oder leer"}}"""
         return self.llm.ask_image("bildkontrolle", system, prompt, sheet_jpeg, tier="write", side=1600)
 
@@ -274,7 +279,9 @@ Ordne ein:
 - idee: ein Thema, ein Einfall, etwas, worüber ein Post entstehen soll (im Zweifel das).
 - befehl: er will etwas sehen oder steuern → befehl = status | ideen | tipps | vorbild | verworfen (verworfene
   Entwürfe zeigen, z. B. „zeig mir den Post trotzdem“, „was hast du verworfen?“) | jetzt (sofort einen Post
-  bauen, z. B. „mach jetzt einen Post“, „hau mal was raus“) | stopp | weiter
+  bauen, z. B. „mach jetzt einen Post“, „hau mal was raus“) | neu (das laufende Thema ist schlecht, verwerfen
+  und ein anderes nehmen, z. B. „langweilig, neuen Post machen“, „Holzweg“, „vergiss das Thema“) | details
+  (Zwischenschritte zeigen oder nicht mehr zeigen) | stopp | weiter
 - regel: eine dauerhafte Vorgabe für alle künftigen Posts → regel = die Vorgabe in einem klaren Satz.
 - frage: eine Frage an dich, die du mit dem Wissen oben beantworten kannst (z. B. „warum wurde nichts gepostet?“)
   → antwort = ehrliche, konkrete Antwort in 1–4 Sätzen. Was du nicht weißt, sagst du offen.

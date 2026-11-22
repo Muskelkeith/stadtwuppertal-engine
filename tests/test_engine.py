@@ -657,3 +657,26 @@ def test_resonanz_findet_was_in_wuppertal_gut_laeuft(env):
     e.st["done"]["resonanz_pos"] = 0
     e.resonanz_scan()
     assert "res-zhit" in e.st["stories"] and "Pinguin" in e.st["stories"]["res-zhit"]["title"]
+
+
+def test_langweilig_verwirft_und_nimmt_neues_thema(env):
+    run, graph, store, feed = env
+    feed.pop("items", None)
+    e, errs = run(datetime(2026, 11, 23, 11, 0, tzinfo=TZ))
+    e.st["queue"].append({"id": "q-platz", "mode": "history", "kind": "feed", "status": "new", "created": e.ts(),
+                          "draft": {"hook": ["platz weg.", "name auch."]}})
+    e.brain.understand = lambda t, c: {"art": "befehl", "befehl": "neu"}
+    e.understand({"type": "idea", "text": "Super langweilige Idee, neuen Post machen"})
+    assert next(q for q in e.st["queue"] if q["id"] == "q-platz")["status"] == "dropped"
+    assert "platz weg." in e.store.get("_engine/gelernt.md").decode()
+
+
+def test_bot_ist_leise_ohne_details(env):
+    from PIL import Image
+    run, graph, store, feed = env
+    feed.pop("items", None)
+    e, errs = run(datetime(2026, 11, 23, 11, 0, tzinfo=TZ))
+    e.brain.visual_check = lambda *a, **k: {"ok": False, "probleme": ["x"], "technisch": False, "lehre": ""}
+    n = len(e.tg.outbox)
+    e.qa_gate({"id": "t9", "mode": "fact", "kind": "feed", "status": "new"}, [Image.new("RGB", (1080, 1350))], {})
+    assert len(e.tg.outbox) == n
