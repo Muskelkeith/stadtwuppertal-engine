@@ -48,7 +48,10 @@ PACKAGE = """{
  "rubric": "news|history|events|poll|warum|fact|platt|quiz|kurios|spotlight",
  "hook": ["zeile 1", "zeile 2"],
  "schild": "kurz oder leer",
- "options": ["a", "b"]   // nur bei poll/warum/quiz: zwei Antworten statt Schild, sonst []
+ "options": ["a", "b"]   // nur bei poll/warum/quiz: zwei Antworten statt Schild, sonst []. NIE Wörter, die schon im
+                          // Hook stehen (Hook „reibekuchen oder bratwurst?“ → keine options; dann lieber Hook
+                          // „wat kommt auf den pappteller?“ und options ["reibekuchen", "bratwurst"]).
+                          // Auch das Schild sagt nie, was der Hook schon sagt – es ergänzt oder fehlt.
  "slides": [{"head": "kurze unterzeile (eine Frage oder ein Versprechen)", "body": "2–5 Sätze, die genau das einlösen: konkret, mit Mehrwert, normale Groß-/Kleinschreibung"}],  // 0–5
  "reel": [{"head": "unter-hook klein", "lines": ["Satz mit Fakt", "Satz, der erklärt warum / was daraus wurde"], "gag": "Pointe oder leer"},
           {"bild": "Commons-Suchbegriff für ein großes Foto, z. B. 'Felix Hoffmann' oder 'Bayer Elberfeld 1900'", "text": "Bildunterschrift mit Info, 8–20 Wörter"}],

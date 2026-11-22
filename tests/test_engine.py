@@ -613,3 +613,4 @@ def test_schild_ragt_nie_aus_dem_bild():
     z = cd.SCHILD[:3] if isinstance(cd.SCHILD, tuple) else gelb
     for y in range(0, h, 4):
         assert not near(im.getpixel((0, y)), z) and not near(im.getpixel((w - 1, y)), z)
+

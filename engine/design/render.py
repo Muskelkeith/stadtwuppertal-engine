@@ -9,6 +9,8 @@ Paket-Felder, die hier zählen:
 """
 from __future__ import annotations
 
+import re
+
 import contextlib
 import io
 import random
@@ -95,7 +97,15 @@ def cover(pkg: dict, photo: Image.Image | None = None, more: bool = False, wagni
             rail_ink = ink
             fg, sbg = schild_colors(bg, ink)
             hint_bg, plate = bg, (ink if bg in (C["bubblegum"], C["zitrone"]) else None)
+        hook_txt = " ".join(pkg.get("hook") or []).lower()
+        def doppelt(t):      # Schild wiederholt nur, was in der Überschrift schon steht → weglassen
+            w = [x for x in re.findall(r"[a-zäöüß0-9]+", (t or "").lower()) if len(x) > 2]
+            return bool(w) and all(x in hook_txt for x in w)
         opts = [o for o in (pkg.get("options") or []) if o][:2]
+        if any(doppelt(o) for o in opts):
+            opts = []
+        if doppelt(pkg.get("schild")):
+            pkg = {**pkg, "schild": ""}
         ssize = max(84, min(128, int(size * 0.6)))
         if len(opts) == 2 and len(hb[0].lines) >= 1:
             b = hb[0]
