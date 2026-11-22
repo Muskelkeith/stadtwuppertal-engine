@@ -397,7 +397,19 @@ def test_bildkontrolle_macht_neu_lernt_und_verwirft(env):
     assert "überlangen Wörter" in e.brain.rules
     e.qa_gate(q, img, {})
     e.qa_gate(q, img, {})
-    assert q["status"] == "dropped"
+    assert q["status"] == "dropped"          # technischer Fehler: unlesbar → nicht posten
+
+
+def test_bildkontrolle_inhaltlich_unsicher_geht_an_dich(env):
+    from PIL import Image
+    run, graph, store, feed = env
+    feed.pop("items", None)
+    e, errs = run(datetime(2026, 11, 23, 11, 0, tzinfo=TZ))
+    e.brain.visual_check = lambda *a, **k: {"ok": False, "probleme": ["Allerwelts-Frage"], "technisch": False, "lehre": ""}
+    q = {"id": "t2", "mode": "frag", "kind": "feed", "status": "new", "qa_try": 2}
+    pkg = {}
+    assert e.qa_gate(q, [Image.new("RGB", (1080, 1350))], pkg) is True
+    assert pkg["risk"] == "rot" and pkg["risk_reason"].startswith("Die Endkontrolle")
 
 
 def test_regelheft_wird_aufgeraeumt(env):

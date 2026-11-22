@@ -811,6 +811,12 @@ class Engine:
                             f"das nicht passiert – kürzer, klarer, auf mehr Bilder verteilt, wenn nötig.")
             stats[f"{day}:neu"] = stats.get(f"{day}:neu", 0) + 1
             self._redo = True
+        elif not problems and not res.get("technisch") and not q.get("base"):
+            # Inhaltlich nach zwei Reparaturen noch nicht überzeugend: dir zeigen statt still verwerfen
+            pkg["risk"] = "rot"
+            pkg["risk_reason"] = "Die Endkontrolle ist sich nach zwei Reparaturen noch unsicher: " + probs[:300]
+            self.log(f"bildkontrolle: {q['id']} geht dir zur Entscheidung")
+            return True
         else:
             q["status"] = "dropped"
             stats[f"{day}:weg"] = stats.get(f"{day}:weg", 0) + 1
