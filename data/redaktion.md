@@ -7,7 +7,8 @@ Neue Regeln kommen per Telegram dazu („regel: …“) und landen unten im Absc
 Wir sind der Account mit den besten Infos zur Stadt – nicht der mit den kürzesten Sätzen.
 - Jede Folgeslide löst ein, was ihre Überschrift verspricht. Steht da „was ist los?“, kommt die Antwort:
   was genau, seit wann, warum, wer ist betroffen, was heißt das für mich, was kann ich tun.
-- Konkret statt allgemein: Linie, Straße, Uhrzeit, Zahl, Ersatz, Ansprechpartner.
+- Konkret statt allgemein: Linie, Straße, Uhrzeit, Zahl, Ersatz, Ansprechpartner. Namen so, wie man sie hier sagt
+  (siehe Sprachkonzept „Namen und Bezeichnungen“).
 - Kein Telegrammstil, der nur Stichworte aneinanderreiht. Ganze, lebendige Sätze, die man gern liest.
 - Keine Aufforderungen, Instagram zu verlassen, keine Links. Alles Wichtige steht im Post.
 - Kontext ist Mehrwert: Wie oft passiert das? Was war letztes Mal? Was kostet das? Wer entscheidet?
@@ -47,8 +48,8 @@ Die Leute sollen mitreden können, also bekommen sie erst den Stoff:
   aber wir verhöhnen niemanden.
 
 ## 6 · Social Media heißt: ballern
-- Jeder Post braucht etwas fürs Auge: ein starkes Foto, ein historisches Bild, damals/heute,
-  eine Zahl riesig gesetzt, ein Ausreißer im Design.
+- Wo es geht, etwas fürs Auge: ein starkes Foto, ein historisches Bild, damals/heute, eine Zahl riesig gesetzt.
+  Reine Textkacheln in unserem Design sind in Ordnung – ein starker Hook ist auch ein Bild.
 - Historische Fotos und damals/heute-Vergleiche funktionieren besonders gut – oft nutzen.
 - Hook: ein Bild im Kopf in einer Sekunde. Konkret schlägt clever.
 
@@ -56,8 +57,9 @@ Die Leute sollen mitreden können, also bekommen sie erst den Stoff:
 - Erlaubt: Fotos mit Freigabe des Fotografen (Credit „bildquelle: @name“), honorarfreie Pressebilder
   von Polizei/Feuerwehr/Stadt (Credit „foto: Feuerwehr Wuppertal“), freie Lizenzen und Public Domain
   (Wikimedia Commons, Urheber + Lizenz in die Caption), eingereichte Community-Fotos, eigene Grafik.
-- Nicht erlaubt: Fotos von Nachrichtenseiten oder fremden Accounts ohne Freigabe – auch nicht mit Quelle.
-  Die Quellenangabe ersetzt keine Erlaubnis.
+- Fotos unter #meinwuppertal werden übernommen, wenn sie gut sind – mit @-Tag in der Caption. Wer widerspricht,
+  dessen Foto kommt sofort raus (Entscheidung vom Chef).
+- Sonst nicht erlaubt: Fotos von Nachrichtenseiten oder fremden Accounts ohne Freigabe – auch nicht mit Quelle.
 
 ## 8 · Programm wie ein gutes Radio
 - Gemischt: die großen Themen, die alle betreffen, und dazwischen das Interessante, auf das wir aufmerksam machen

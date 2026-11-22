@@ -183,6 +183,9 @@ bei Nachrichten). Tests, die nicht passen, bekommen in tests den Wert null. Gehe
    genutzt, Nischenwissen statt Allgemeinplatz? Wiederholt eine Slide nur die Kachel? Doppelt ein Schild oder eine
    Antwort-Option den Hook? Steht ein Datum als Untertitel, obwohl es nicht der Kern ist? Repariere das selbst.
    Bleibt der Text trotz Reparatur langweilig oder banal → "langweilig": true.
+10. NAMEN (immer): Heißt alles so, wie man es in Wuppertal sagt? Keine offiziellen Langnamen, kein Zusatz
+   „Wuppertal“ an lokalen Namen („der Zoo“, „das Tanztheater“), Schreibweise von Personen, Orten und Läden exakt wie
+   im Material. Korrigiere selbst.
 Material: {json.dumps(material, ensure_ascii=False)[:7000]}
 Paket: {json.dumps(pkg, ensure_ascii=False)}
 JSON: {{"ok": bool (false NUR bei rechtlichen Problemen oder wenn das Material nichts hergibt), "fixes": {{geänderte Paket-Felder}},
@@ -317,13 +320,15 @@ Analysiere gründlich und konkret, mit Zahlen wo möglich:
    Was unterscheidet die Top-Posts von den Flops sprachlich?
 3. FORMATE & TIMING: Was läuft als Reel/Karussell/Bild, an welchen Tagen und Uhrzeiten?
 4. FRAGEN: Wie holen sie Kommentare – was davon funktioniert nachweislich?
+4b. NAMEN: Wie nennen sie Orte, Institutionen, Läden (Kurzformen, Spitznamen, Schreibweisen)? Liste 10–20 Beispiele
+   „so sagt man → statt so“.
 5. ZIELGRUPPE & INTERESSEN: Wer folgt da (Alter, Lebenswelt), womit beschäftigen sich diese Leute, welche
    Interessen bedienen die Top-Posts? Welche davon passen auch zu uns – und welche Interessen-Felder gibt es in
    Wuppertal noch, die niemand bespielt (es gibt tausende Themen und Interessen)?
 6. LÜCKEN: Welche Wuppertal-Themen fehlen dort, die für uns frei sind?
 7. FÜR UNS: Was übernehmen wir als Muster? Woran merkt man Abkupfern (was wir NICHT nachmachen)?
 Beschreibe Muster in eigenen Worten, höchstens Bausteine von 2–4 Wörtern zitieren.
-JSON: {{"themen": ["Feld – Schnitt X, n=Y – kurzer Kommentar"], "zielgruppe": ["…"], "captions": ["…"], "formate_timing": ["…"],
+JSON: {{"themen": ["Feld – Schnitt X, n=Y – kurzer Kommentar"], "namen": ["so sagt man → statt so"], "zielgruppe": ["…"], "captions": ["…"], "formate_timing": ["…"],
 "fragen": ["…"], "luecken": ["…"], "fuer_uns": ["…"], "nicht_nachmachen": ["…"],
 "kurzfazit": "3 Sätze für den Chef, was die wichtigsten Erkenntnisse sind"}}"""
         return self.llm.ask("vorbild", system, prompt, tier="write")

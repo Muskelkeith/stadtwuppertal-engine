@@ -1447,7 +1447,8 @@ class Engine:
             st = vorbild.stats(media, self.tz, self.st.get("vb_hist"))
             r = self.brain.study(h, st, vorbild.table(media, self.tz))
             parts = [f"@{h} ({len(media)} Posts ausgewertet):"]
-            for k, label in (("themen", "Themen nach Erfolg"), ("zielgruppe", "Zielgruppe & Interessen"), ("captions", "Captions"), ("formate_timing", "Formate & Timing"),
+            for k, label in (("themen", "Themen nach Erfolg"), ("namen", "NAMEN (so sagt man hier)"),
+                             ("zielgruppe", "Zielgruppe & Interessen"), ("captions", "Captions"), ("formate_timing", "Formate & Timing"),
                              ("fragen", "Fragen"), ("luecken", "Freie Themen für uns"), ("fuer_uns", "Übernehmen als Muster"),
                              ("nicht_nachmachen", "Nicht nachmachen")):
                 if r.get(k):

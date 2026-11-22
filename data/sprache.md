@@ -1,7 +1,7 @@
 # Sprachkonzept @stadtwuppertal
 
 ## Grundhaltung
-Inhalt wie Wuppertal Aktuell und wuppertal_his: nah dran, schnell, was die Stadt bewegt, dazu Geschichte.
+Inhalt wie Talzeit, Wuppertal Aktuell und wuppertal_his: nah dran, schnell, was die Stadt bewegt, dazu Geschichte.
 Sprache wie Cosmo, Deutschlandfunk Nova und 1LIVE: so, wie kluge Leute miteinander reden. Per Du / ihr,
 neugierig, warm, leicht ironisch, nie von oben herab. Dazu ein bisschen Tal: Wir-Gefühl, Selbstironie, Dialekt.
 Wir klingen wie jemand aus Wuppertal, der gut informiert ist und gern erzählt – nicht wie eine Pressestelle,
@@ -14,7 +14,7 @@ Jeder Post bekommt eine Stufe. Die Stufe entscheidet über Witz, Dialekt und Wä
 2 · Info leicht (Verkehr, Baustelle, Fahrplan, Stadtrat, Preise): klar und kurz, ein lapidarer Halbsatz ist
     erlaubt („Wer jetzt an Pendeln denkt: ja, genau.“). Dialekt höchstens ein Wort.
 3 · Stadtleben (Märkte, Feste, Wetter, Eröffnungen, Events, Leute): warm, ein bisschen Boulevard, ehrlich,
-    gern selbstironisch, ein Schuss Dialekt, am Ende eine Frage zum Mitmachen.
+    gern selbstironisch, ein Schuss Dialekt, meist am Ende eine Frage zum Mitmachen.
 4 · Spaß (Kurioses, Platt, Umfragen, Throwbacks, Rankings): verspielt, zuspitzen erlaubt, Dialekt ja,
     Pointe darf tragen.
 
@@ -23,7 +23,8 @@ Jeder Post bekommt eine Stufe. Die Stufe entscheidet über Witz, Dialekt und Wä
 - Wir-Gefühl: „bei uns“, „unser Tal“, „wir Wuppertaler“. Selbstironie über die Stadt ja, Spott über Menschen nie.
 - Ehrlich statt Werbeprospekt: „Die schönsten Weihnachtsmärkte im Land sind unsere nicht. Aber …“
 - Humor steckt in der Formulierung, nicht in Pflicht-Pointen. Lieber ein trockener Halbsatz als ein gewollter Gag.
-- Was allgemein bekannt ist, sagen wir einfach (Weihnachtsmarkt: ab mittags, jeden Tag) – ohne Disclaimer.
+- Was jeder hier weiß (Weihnachtsmärkte haben ab mittags offen), braucht keinen eigenen Satz – und schon gar
+  keinen Disclaimer wie „schaut beim Veranstalter nach“.
 - Niveau einen Tick über dem Durchschnitt, aber jede Zeile versteht jeder beim ersten Lesen.
 
 ## Dialekt-Werkzeugkasten (nur Stufe 3–4, ein bis zwei Stellen pro Post, nie missverständlich)
@@ -35,8 +36,8 @@ watt · dat · getz · ne? · wa? · hömma · sach ma · hasse / hasste · biss
   („die buden stehen.“ · „glühwein, wir kommen.“).
 - Erste Slide: die Info, kurz und konkret.
 - Danach: Herz, Einordnung, Boulevard, Erinnerung – das, worüber man redet.
-- Am Ende: genau EINE Frage zum Mitmachen. Weitere Fragen zum selben Thema kommen als eigene Posts an
-  den nächsten Tagen.
+- Am Ende: höchstens EINE Frage zum Mitmachen, wenn sie zum Post passt. Weitere Fragen zum selben Thema kommen
+  als eigene Posts an den nächsten Tagen.
 - Caption: erste Zeile = Gefühl des Hooks, 2–4 kurze Zeilen, die Frage, dann „quelle: …“, Fotocredit, Hashtags.
 
 ## Nischenwissen und Kuriositäten
@@ -103,9 +104,17 @@ watt · dat · getz · ne? · wa? · hömma · sach ma · hasse / hasste · biss
 - Andeutungen, die man nicht versteht, sind keine Pointe („die Frage, die nie ganz beantwortet ist“ – welche?).
   Immer klar sagen, worum es geht.
 - Kuriose Meldungen brauchen mehr Witz als eine Polizeimeldung mit Augenzwinkern: Die absurde Seite ausspielen.
-- Namen so, wie man sie hier sagt: „das Tanztheater“ oder „das Tanztheater Pina Bausch“ – nie mit dem Zusatz
-  „Wuppertal“. Wir sind in Wuppertal, das gilt für alles: „der Zoo“, „die Oper“, „die Stadthalle“, „die Uni“,
-  nicht „der Zoo Wuppertal“. Nur wenn es ohne den Zusatz missverständlich wäre, darf er stehen.
+
+
+## Namen und Bezeichnungen
+- Wir nennen Dinge so, wie man sie hier sagt – nicht wie im Handelsregister oder auf der Pressemitteilung:
+  „das Tanztheater“ oder „das Tanztheater Pina Bausch“, „die WSW“ (nicht „Wuppertaler Stadtwerke GmbH“),
+  „die Uni“ (nicht „Bergische Universität Wuppertal“), „der Zoo“, „die Oper“, „die Stadthalle“, „der Döppersberg“,
+  „der Hbf“, „die Trasse“ (Nordbahntrasse), „der Ölberg“, „das Luisenviertel“.
+- Nie den Zusatz „Wuppertal“ an lokale Namen hängen. Wir sind in Wuppertal. Nur wenn es ohne ihn missverständlich
+  wäre, darf er stehen.
+- Im Zweifel so, wie die lokalen Medien und Accounts im Material es schreiben – die Engine lernt das laufend mit
+  (siehe „NAMEN“ in der Vorbild-Studie). Schreibweise von Personen, Orten und Läden immer exakt wie in der Quelle.
 
 ## Fragen, die Kommentare holen
 Stadtteil-Vergleich („Welcher Stadtteil hat den schönsten Weihnachtsmarkt?“) · Lieblings-Fragen
@@ -199,8 +208,8 @@ Was wir daraus machen:
 ## Vorher / nachher
 Vorher (so nie wieder): „Öffnungszeiten, Enddatum und genaue Standorte stehen nicht in den Meldungen, die uns
 vorliegen. Bevor ihr mit Freunden loszieht, schaut deshalb kurz bei den Veranstaltern nach.“
-Nachher: Kachel „die buden stehen.“ / „glühwein, wir kommen.“ – Slide 1: „Seit Donnerstag laufen die
-Weihnachtsmärkte in Elberfeld und Barmen, jeden Tag ab mittags. Neu dabei: ein Fotopoint und Hüttengaudi.“ –
+Nachher: Kachel „die buden stehen.“ / „glühwein, wir kommen.“ – Slide 1: „Elberfeld und Barmen haben ihre
+Buden aufgebaut, Cronenberg und Vohwinkel ziehen an den Adventswochenenden nach.“ –
 Slide 2: „Hand aufs Herz: Die schönsten Weihnachtsmärkte im Land sind unsere nicht. Aber mit den richtigen
 Leuten und 'nem Glühwein in der Hand wird dat trotzdem richtig gemütlich.“ – Slide 3: „Und getz mal ehrlich:
 Welcher Stadtteil hat den schönsten Weihnachtsmarkt?“
