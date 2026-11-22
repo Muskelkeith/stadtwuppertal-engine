@@ -92,6 +92,18 @@ class Telegram:
                 pass
 
     # ── Empfangen ───────────────────────────────────────────
+    def waiting(self, seconds: int = 25) -> bool:
+        """Wartet bis zu `seconds` auf eine neue Nachricht (Long-Polling), ohne sie als gelesen zu markieren."""
+        if not self.live:
+            return False
+        try:
+            r = self.http.post(API.format(token=self.token, method="getUpdates"), timeout=seconds + 15,
+                               data={"offset": self.st.get("tg_offset", 0), "timeout": seconds, "limit": 1,
+                                     "allowed_updates": json.dumps(["message", "callback_query"])})
+            return bool(r.json().get("result"))
+        except Exception:      # noqa: BLE001
+            return False
+
     def poll(self) -> list[dict]:
         """Liefert [{type: decision|command, …}] und merkt sich, was schon gelesen ist."""
         inj = getattr(self, "_inject", None)

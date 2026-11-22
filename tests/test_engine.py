@@ -333,7 +333,11 @@ def test_frag_slot(env):
     run, graph, store, feed = env
     feed["items"] = []
     t = datetime(2026, 11, 26, 12, 35, tzinfo=TZ)      # Donnerstag Mittag → frag
-    e, errs = run(t)
+    e, errs = run(t - timedelta(hours=3))
+    e.st["pool"] = [{"id": "p1", "titel": "Welche Treppe ist eure liebste?", "rubrik": "kreativ", "dreh": "Treppen-Stadt",
+                     "quelle": {"titel": "", "text": "", "url": ""}, "score": 8}]
+    e.st["queue"] = []
+    e.plan_slot("mittag")
     assert not errs, errs
     assert any(q["mode"] == "frag" for q in e.st["queue"]), [q["mode"] for q in e.st["queue"]]
 
@@ -735,3 +739,20 @@ def test_aenderung_ohne_antwortfunktion_geht_an_wartenden_post(env):
     assert q.get("approved_feedback") == "Folgende Änderung: mehr über den Prinzen"
     e.understand({"type": "idea", "text": "Passt"})
     assert q["status"] == "ready"
+
+
+def test_jetzt_nimmt_bestes_thema_und_ersetzt_im_selben_takt(env):
+    run, graph, store, feed = env
+    feed["items"] = []
+    e, errs = run(datetime(2026, 11, 22, 16, 11, tzinfo=TZ))     # Sonntag abend → Rotation wäre „frag“
+    e.st["queue"], e.st["ideen"] = [], []
+    e.st["pool"] = [{"id": "p1", "titel": "Die Schwebebahn fuhr schon 1901", "rubrik": "fact", "dreh": "x",
+                     "quelle": {"titel": "S", "text": "Die Schwebebahn wurde 1901 eröffnet.", "url": ""}, "score": 8},
+                    {"id": "p2", "titel": "Zweites Thema", "rubrik": "history", "dreh": "y",
+                     "quelle": {"titel": "Z", "text": "Fakt.", "url": ""}, "score": 8}]
+    e.post_now()
+    first = e.st["queue"][0]
+    assert first["mode"] == "rubrik" and first.get("sofort")
+    first["status"] = "dropped"                  # erster Versuch scheitert
+    e.replace_failed_slots()
+    assert any(q["status"] == "new" and q.get("sofort") for q in e.st["queue"])

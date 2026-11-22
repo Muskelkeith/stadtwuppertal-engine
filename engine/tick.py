@@ -7,6 +7,7 @@ abgesichert: Wenn eine Quelle oder ein Schritt hakt, läuft der Rest weiter und 
 from __future__ import annotations
 
 import json
+import time
 import random
 import re
 import traceback
@@ -55,6 +56,11 @@ def default_state():
             "ideen": [], "entdeckt": {}, "kandidaten": {}, "kurs": "",
             "used": [], "used_photos": [], "log": [], "alerts": {}, "followers": {}, "bildfreigaben": {},
             "angefragt": {}, "anfragen": {}, "dm_seen": {}, "ratings": {}, "abgelehnt": {}}
+
+
+WTAL = re.compile(r"wupper|elberfeld|barmen|vohwinkel|cronenberg|ronsdorf|beyenburg|langerfeld|oberbarmen|"
+                  r"schwebebahn|nordbahntrasse|döppersberg|ölberg|uellendahl|heckinghausen|sonnborn|katernberg|"
+                  r"talzeit|\btal\b|wsw|bergische uni", re.I)
 
 
 class Engine:
@@ -525,7 +531,10 @@ class Engine:
 
     def plan_slot_tagged(self, name, ersatz=0):
         n = len(self.st["queue"])
-        self.plan_slot(name)
+        if ersatz or name == "jetzt":
+            self.plan_free()
+        else:
+            self.plan_slot(name)
         for q in self.st["queue"][n:]:
             q.update(slot=name, ersatz=ersatz)
         if len(self.st["queue"]) == n:
@@ -540,8 +549,13 @@ class Engine:
             q["ersetzt"] = True
             if q.get("ersatz", 0) >= 2 or self.ts() - q.get("created", 0) > 3 * 3600:
                 continue
+            n = len(self.st["queue"])
             if self.plan_slot_tagged(q["slot"], q.get("ersatz", 0) + 1):
+                for x in self.st["queue"][n:]:
+                    x["sofort"] = q.get("sofort", False)
                 self.log(f"sendeplatz {q['slot']}: Ersatz für {q['id']} geplant")
+            elif q.get("sofort"):
+                self.tg.say("Ich habe mehrere Themen geprüft, keins war gut genug. Schick mir eine Idee, dann baue ich daraus sofort einen Post.")
 
     def plan_slot(self, name):
         now = self.ts()
@@ -571,9 +585,14 @@ class Engine:
                 return
             rubric = "fact"
         if rubric == "frag":
+            p = ideenpool.take(self.st, ["kreativ"])
+            if p:
+                self.enqueue_pool(p)
+                return
+        if rubric == "frag" and len(cands) >= 1:
             self.enqueue("frag", idea={"zuletzt_gepostet": [" ".join(p.get("hook", [])) for p in self.st["posted"]
                                                            if now - p["ts"] < 3 * 86400 and p.get("kind") == "feed"][-6:],
-                                       "aktuelle_themen": [self.st["stories"][k]["title"] for _, k in cands[:10]],
+                                       "aktuelle_themen": [self.st["stories"][k]["title"] for _, k in cands[:1]],
                                        "letzte_fragen": [" ".join(p.get("hook", [])) for p in self.st["posted"][-30:]
                                                          if p.get("mode") == "frag"]})
             return
@@ -613,9 +632,7 @@ class Engine:
             want = ["kreativ"]
         p = ideenpool.take(self.st, want, mmdd) or ideenpool.take(self.st, ["kurios", "fact", "history", "menschen", "orte", "kreativ"], mmdd)
         if p:
-            self.enqueue("rubrik", idea={"_gepr": True, "thema": p["titel"], "dreh": p["dreh"], "rubrik": p["rubrik"],
-                                         "fakten": p["quelle"]["text"], "quelle": "Wikipedia",
-                                         "hinweis": "Nur Fakten aus 'fakten' verwenden."})
+            self.enqueue_pool(p)
             return
         if cands:
             self.enqueue("meldung", story=cands[0][1])
@@ -819,12 +836,19 @@ class Engine:
         return q.get("idea") or {}
 
     def produce(self):
-        todo = [x for x in self.st["queue"] if x["status"] == "new" and x.get("hold_until", 0) <= self.ts()]
-        for q in todo[:2]:   # max 2 pro Takt, damit es flott bleibt
-            self._redo = False
-            self.step(f"produktion {q['id']}", self.produce_one, q)
-            if q["status"] == "new" and not self._redo:
-                q["status"] = "dropped"
+        """Bauen, bis nichts Neues mehr ansteht. Scheitert ein Sendeplatz-Post, kommt der Ersatz noch im selben Takt."""
+        t0 = time.time()
+        for _ in range(4):
+            todo = [x for x in self.st["queue"] if x["status"] == "new" and x.get("hold_until", 0) <= self.ts()]
+            todo.sort(key=lambda x: not x.get("sofort"))
+            if not todo or time.time() - t0 > 12 * 60:
+                break
+            for q in todo[:2]:
+                self._redo = False
+                self.step(f"produktion {q['id']}", self.produce_one, q)
+                if q["status"] == "new" and not self._redo:
+                    q["status"] = "dropped"
+            self.replace_failed_slots()
 
     def produce_one(self, q):
         if q["mode"] == "reel" and q.get("base"):
@@ -1431,6 +1455,8 @@ class Engine:
             if iid in self.st["items"]:
                 continue
             cap = m["caption"].strip()
+            if not (WTAL.search(cap) or WTAL.search(h)):
+                continue
             self.st["items"][iid] = {"id": iid, "source": f"@{h}", "handle": h, "kind": "resonanz",
                                      "title": cap.split(chr(10))[0][:140], "summary": cap[:1200],
                                      "published": (m.get("timestamp") or "").replace("+0000", "+00:00"),
@@ -1795,7 +1821,7 @@ class Engine:
                 today = self.feed_today()
                 if len(today) >= self.k["max_feed_per_day"]:
                     continue
-                if today and now - today[-1]["ts"] < self.k["min_gap_min"] * 60:
+                if today and now - today[-1]["ts"] < self.k["min_gap_min"] * 60 and not q.get("sofort"):
                     continue
             self.step(f"veröffentlichen {q['id']}", self.publish_one, q)
 
@@ -2006,12 +2032,52 @@ class Engine:
         self.post_now(quiet=True)
 
     def post_now(self, quiet=False):
-        name = "mittag" if self.now().hour < 15 else "abend"
-        if self.plan_slot_tagged(name):
+        """„Jetzt“: bestes fertig geprüftes Thema nehmen (keine Rubrik-Rotation) und noch im selben Takt bauen."""
+        n = len(self.st["queue"])
+        self.plan_free()
+        new = self.st["queue"][n:]
+        for q in new:
+            q.update(slot="jetzt", ersatz=0, sofort=True)
+        if new:
             if not quiet:
-                self.tg.say("Mach ich. Ich baue jetzt einen Post, er kommt, sobald er gut genug ist.")
+                self.tg.say("Mach ich. Die Vorschau kommt in wenigen Minuten.")
         else:
-            self.tg.say("Gerade finde ich kein Thema, das gut genug ist. Schick mir eine Idee, dann baue ich daraus sofort einen.")
+            self.tg.say("Gerade habe ich kein Thema, das gut genug ist. Schick mir eine Idee, dann baue ich daraus sofort einen.")
+
+    def plan_free(self):
+        """Ohne Rubrik: deine Idee → starke Meldung (≥7) → geprüftes Pool-Thema → Ideenliste."""
+        now = self.ts()
+        idee = self.next_idea()
+        if idee:
+            idee["status"] = "geplant"
+            self.st["done"][f"{self.today()}:idee"] = True
+            self.enqueue("idee", idea={"idee_von_jd": idee["text"]})
+            return True
+        cands = sorted([(s["score"], k) for k, s in self.st["stories"].items()
+                        if not s.get("queued") and now - s.get("last", now) < 26 * 3600 and s["score"] >= 6],
+                       reverse=True)
+        cands = self.gate_stories(cands[:8])
+        if cands:
+            self.enqueue("meldung", story=cands[0][1])
+            return True
+        p = ideenpool.take(self.st, ["kurios", "fact", "history", "menschen", "orte", "kreativ"], self.now().strftime("%m-%d"))
+        if p:
+            self.enqueue_pool(p)
+            return True
+        idea = self.pick_idea(prefer="history")
+        if idea:
+            self.enqueue("rubrik", idea=idea)
+            return True
+        return False
+
+    def enqueue_pool(self, p):
+        if p["rubrik"] == "kreativ":
+            return self.enqueue("frag", idea={"_gepr": True, "thema": p["titel"], "dreh": p["dreh"], "rubrik": "kreativ",
+                                              "letzte_fragen": [" ".join(x.get("hook", [])) for x in self.st["posted"][-30:]
+                                                                if x.get("mode") == "frag"]})
+        return self.enqueue("rubrik", idea={"_gepr": True, "thema": p["titel"], "dreh": p["dreh"], "rubrik": p["rubrik"],
+                                            "fakten": p["quelle"]["text"], "quelle": "Wikipedia",
+                                            "hinweis": "Nur Fakten aus 'fakten' verwenden."})
 
     @staticmethod
     def draft_text(d):

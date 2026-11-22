@@ -128,19 +128,28 @@ def dienst(cfg, s, Engine, minutes=345, every=10):
     end = time.time() + minutes * 60
     while True:
         start = time.time()
+        tg = None
         try:
-            errors = Engine(cfg, s).tick()
+            eng = Engine(cfg, s)
+            errors = eng.tick()
+            tg = eng.tg
             print(time.strftime("%H:%M"), "takt fertig" + (f" mit {len(errors)} fehlern: " + " | ".join(errors) if errors else ""), flush=True)
         except Exception:       # noqa: BLE001
             traceback.print_exc()
-        wait = every * 60 - (time.time() - start)
         if Path(cfg["_root"], ".rollback").exists():
             print("rückfall auf alten stand angefordert – dienst endet", flush=True)
             break
-        if time.time() + max(wait, 0) > end:
+        # Bis zum nächsten Takt auf Telegram lauschen: schreibst du etwas, geht es sofort los (nicht erst nach 10 Minuten)
+        while time.time() - start < every * 60 and time.time() < end:
+            left = every * 60 - (time.time() - start)
+            if tg is not None and getattr(tg, "live", False):
+                if tg.waiting(int(max(1, min(25, left)))):
+                    print(time.strftime("%H:%M"), "nachricht von dir – takt sofort", flush=True)
+                    break
+            else:
+                time.sleep(max(min(left, 60), 1))
+        if time.time() > end:
             break
-        time.sleep(max(wait, 5))
-
 
 if __name__ == "__main__":
     main(sys.argv)
