@@ -61,7 +61,8 @@ class Telegram:
         media = [{"type": "photo", "media": f"attach://p{i}"} for i in range(len(jpegs[:10]))]
         media[0]["caption"] = text[:1024]
         files = {f"p{i}": (f"p{i}.jpg", j, "image/jpeg") for i, j in enumerate(jpegs[:10])}
-        self._call("sendMediaGroup", chat_id=self.chat, media=json.dumps(media), files=files)
+        res = self._call("sendMediaGroup", chat_id=self.chat, media=json.dumps(media), files=files)
+        return [str(m.get("message_id")) for m in (res or []) if isinstance(m, dict)]
 
     def handover(self, urls: list[str], kind: str, caption: str):
         """Übergabe-Modus (Instagram noch nicht verbunden): fertiger Post zum selbst Hochladen.

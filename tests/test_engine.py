@@ -326,7 +326,7 @@ def test_idee_per_telegram_landet_im_slot(env):
     e, errs = run(t, inbox=[{"type": "idea", "text": "Wo liegt am meisten illegal abgeladener Müll?"}])
     assert not errs, errs
     assert any(q["mode"] == "idee" for q in e.st["queue"]), [q["mode"] for q in e.st["queue"]]
-    assert any("Notiert" in x[1] for x in e.tg.outbox if x[0] == "text")
+    assert any("notiert" in x[1] for x in e.tg.outbox if x[0] == "text")
 
 
 def test_frag_slot(env):
@@ -718,3 +718,20 @@ def test_probephase_nichts_ohne_freigabe(env):
     q = {"id": "qp", "mode": "rubrik", "kind": "feed", "status": "new"}
     e.decide(q, {"hook": ["fensterputzer kommt heim."], "caption": "x", "sources": []}, "")
     assert q["status"] == "waiting" and q["on_timeout"] == "drop"
+
+
+def test_aenderung_ohne_antwortfunktion_geht_an_wartenden_post(env):
+    run, graph, store, feed = env
+    t0 = datetime(2026, 11, 23, 7, 40, tzinfo=TZ)
+    e, errs = run(t0)
+    e.k["freigabe_tage"] = 4
+    w = [q for q in e.st["queue"] if q["status"] == "waiting"]
+    assert w
+    ideen_vorher = len(e.st["ideen"])
+    e.brain.understand = lambda t, c: {"art": "aenderung"} if c.get("wartender_post") else {"art": "idee"}
+    e.understand({"type": "idea", "text": "Folgende Änderung: mehr über den Prinzen"})
+    assert len(e.st["ideen"]) == ideen_vorher
+    q = next(x for x in e.st["queue"] if x["id"] == w[0]["id"])
+    assert q.get("approved_feedback") == "Folgende Änderung: mehr über den Prinzen"
+    e.understand({"type": "idea", "text": "Passt"})
+    assert q["status"] == "ready"

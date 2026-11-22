@@ -289,9 +289,14 @@ Ordne ein:
   und ein anderes nehmen, z. B. „langweilig, neuen Post machen“, „Holzweg“, „vergiss das Thema“) | details
   (Zwischenschritte zeigen oder nicht mehr zeigen) | stopp | weiter
 - regel: eine dauerhafte Vorgabe für alle künftigen Posts → regel = die Vorgabe in einem klaren Satz.
+- aenderung: NUR wenn oben ein „wartender_post“ steht: Kritik oder Änderungswunsch zu genau diesem Post
+  (z. B. „Folgende Änderung: …“, „mehr über den Prinzen“, „das Schild ist zu lang“, „fehlt noch ein Detail“).
+  Bezieht sich die Nachricht inhaltlich auf den wartenden Post, ist es IMMER aenderung, nie idee.
+- freigabe: NUR mit wartendem Post: er passt so und darf raus („passt“, „kann so raus“).
+- verwerfen: NUR mit wartendem Post: er soll weg, ohne neues Thema zu verlangen.
 - frage: eine Frage an dich, die du mit dem Wissen oben beantworten kannst (z. B. „warum wurde nichts gepostet?“)
   → antwort = ehrliche, konkrete Antwort in 1–4 Sätzen. Was du nicht weißt, sagst du offen.
-JSON: {{"art": "idee|befehl|regel|frage", "befehl": "…oder null", "regel": "…oder null", "antwort": "…oder null"}}"""
+JSON: {{"art": "idee|aenderung|freigabe|verwerfen|befehl|regel|frage", "befehl": "…oder null", "regel": "…oder null", "antwort": "…oder null"}}"""
         return self.llm.ask("chef", system, prompt, tier="triage")
 
     def pick_comments(self, post: str, comments: list[dict], max_n: int = 3) -> dict:

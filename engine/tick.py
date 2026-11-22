@@ -218,7 +218,8 @@ class Engine:
             return
         self.st["ideen"].append({"id": f"i{int(self.ts())}", "text": text.strip()[:2000], "ts": self.ts(), "status": "offen"})
         n = sum(1 for i in self.st["ideen"] if i["status"] == "offen")
-        self.tg.say(f"Notiert: „{text.strip()[:200]}“\n\nDaraus mache ich in den nächsten Tagen einen Post. Offene Ideen gerade: {n}.")
+        kurz = text.strip() if len(text.strip()) <= 160 else text.strip()[:160].rsplit(" ", 1)[0] + " …"
+        self.tg.say(f"Idee notiert: „{kurz}“\nDaraus mache ich in den nächsten Tagen einen Post. Offene Ideen: {n}.")
 
     def understand(self, ev):
         """Freie Nachricht von dir: Idee? Befehl? Frage? Erst verstehen, dann handeln."""
@@ -232,16 +233,32 @@ class Engine:
         text = (ev.get("text") or "").strip()
         if not text:
             return
+        pend = self.pending_post()
+        if pend and re.fullmatch(r"(passt|ok|okay|gut so|kann raus|raus damit|geht raus|top|perfekt)[ .!👍]*", text, re.I):
+            return self.approve(pend)
+        if pend and re.fullmatch(r"(weg damit|weg|nee|nein|verwerfen)[ .!]*", text, re.I):
+            return self.reject(pend)
         ctx = {"status": self.status_text(), "letzte_schritte": self.st["log"][-12:],
                "verworfen": [{"was": " ".join(a["draft"].get("hook") or []), "grund": a.get("grund", "")[:200]}
                              for a in self.st.get("verworfen", [])[-3:]],
                "offene_ideen": [i["text"][:80] for i in self.st["ideen"] if i["status"] == "offen"][-8:]}
+        if pend:
+            pk = pend["pkg"]
+            ctx["wartender_post"] = {"hook": " ".join(pk.get("hook") or []),
+                                     "slides": [str(x)[:160] for x in (pk.get("slides") or [])][:6]}
         try:
             r = self.brain.understand(text, ctx)
-        except Exception as e:      # noqa: BLE001 – im Zweifel als Idee sichern, nichts geht verloren
+        except Exception as e:      # noqa: BLE001 – im Zweifel nichts verlieren
             self.log(f"nachricht verstehen: {str(e)[:80]}")
-            r = {"art": "idee"}
+            r = {"art": "aenderung" if pend and re.search(r"änder|statt|fehlt|mehr über|zu (lang|kurz)|schild|slide|kachel|caption", text, re.I) else "idee"}
         art, cmd = r.get("art", "idee"), r.get("befehl")
+        if pend and art == "aenderung":
+            self.tg.say("Verstanden, ich baue den wartenden Post mit deiner Änderung um. Die neue Fassung kommt gleich.")
+            return self.revise({"text": text, "msg": str(pend["tg"])})
+        if pend and art == "freigabe":
+            return self.approve(pend)
+        if pend and art == "verwerfen":
+            return self.reject(pend)
         if art == "befehl" and cmd == "jetzt":
             return self.post_now()
         if art == "befehl" and cmd == "neu":
@@ -269,6 +286,22 @@ class Engine:
         self.tg._inject = [ev]
         self.read_telegram()
 
+    def pending_post(self):
+        """Der zuletzt gezeigte Post, der auf deine Antwort wartet."""
+        w = [x for x in self.st["queue"] if x["status"] == "waiting" and x.get("tg") and x.get("pkg")]
+        return max(w, key=lambda x: x.get("timeout", 0)) if w else None
+
+    def approve(self, q):
+        q.update(status="ready", label=False, approved=True)
+        self.tg.mark(q.get("tg"), "Freigegeben ✓")
+        self.tg.say("Freigegeben, geht im nächsten Sendeplatz raus.")
+
+    def reject(self, q):
+        q["status"] = "dropped"
+        self.tg.mark(q.get("tg"), "Verworfen")
+        self.log(f"verworfen von dir: {q['id']}")
+        self.tg.say("Verworfen.")
+
     def revise(self, ev):
         """Antwort auf eine Vorschau = Kritik. Post neu schreiben, neu prüfen, neue Vorschau schicken."""
         text = ev.get("text") or ""
@@ -287,7 +320,7 @@ class Engine:
                 old.update(status="new", qa_note=f"Der Chef will diesen verworfenen Post doch. Seine Kritik: {text}",
                            rv_try=0, qa_try=0, archiviert=False)
                 return self.tg.say("Alles klar, ich baue ihn mit deiner Kritik neu. Die Vorschau kommt gleich.")
-        q = next((x for x in self.st["queue"] if str(x.get("tg")) == ev["msg"]), None)
+        q = next((x for x in self.st["queue"] if str(x.get("tg")) == ev["msg"] or ev["msg"] in (x.get("tg_extra") or [])), None)
         if not q or q["status"] not in ("waiting", "ready") or not q.get("pkg"):
             self.add_idea(f"Post neu machen. Kritik: {text}")
             self.tg.say("Der Post ist schon raus oder verworfen. Ich mache ihn mit deiner Kritik neu, er kommt in einem der nächsten Sendeplätze. "
@@ -320,7 +353,7 @@ class Engine:
         q["tg"] = self.tg.preview(self._cover[q["id"]], f"neue fassung nach deiner kritik:\n\n{q['caption'][:800]}", q["id"])
         if self.tg.live and self.tg.chat and len(imgs) > 1:
             try:
-                self.tg.album([render.jpeg(im, 80) for im in imgs[1:]], "Die weiteren Slides")
+                q["tg_extra"] = self.tg.album([render.jpeg(im, 80) for im in imgs[1:]], "Die weiteren Slides") or []
             except Exception:
                 pass
 
@@ -1687,7 +1720,7 @@ class Engine:
         rest = getattr(self, "_slides", {}).get(q["id"])
         if rest and self.tg.live and self.tg.chat:
             try:
-                self.tg.album(rest, "Die weiteren Slides")
+                q["tg_extra"] = self.tg.album(rest, "Die weiteren Slides") or []
             except Exception:
                 pass
 
@@ -1934,6 +1967,14 @@ class Engine:
             self.tg.say("⚠️ Kleine Störung, der Rest läuft normal:\n" + "\n".join(msgs))
 
     def fix_mistaken_ideas(self):
+        if not self.st["done"].get("fix_ideen_2"):
+            self.st["done"]["fix_ideen_2"] = 1
+            pend = self.pending_post()
+            for i in self.st["ideen"]:
+                if i["status"] == "offen" and i["text"].lower().startswith(("folgende änderung", "änderung:")):
+                    i["status"] = "erledigt"
+                    if pend:
+                        self.step("überarbeiten", self.revise, {"text": i["text"], "msg": str(pend["tg"])})
         if self.st["done"].get("fix_ideen_1"):
             return
         self.st["done"]["fix_ideen_1"] = 1
