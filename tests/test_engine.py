@@ -695,3 +695,13 @@ def test_jeder_weg_geht_durch_die_themenpruefung(env):
     e._redo = False
     e.produce_one(q)
     assert q["status"] == "dropped" and not geschrieben
+
+
+def test_planung_bricht_nicht_an_resonanz_themen(env):
+    run, graph, store, feed = env
+    feed.pop("items", None)
+    e, errs = run(datetime(2026, 11, 23, 11, 0, tzinfo=TZ))
+    e.st["stories"]["res-x"] = {"title": "läuft gerade bei @zoo", "score": 7, "items": [], "first": e.ts(), "last": e.ts()}
+    e.errors = []
+    e.plan()
+    assert not e.errors

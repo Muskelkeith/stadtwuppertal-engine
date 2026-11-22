@@ -55,6 +55,12 @@ watt · dat · getz · ne? · wa? · hömma · sach ma · hasse / hasste · biss
   „Der Name: A für Acetyl. Spirin von Spiraea, einer Pflanzengattung.“ – kurz, fertig, nicht ausschmücken.
 - Fakten immer gegen eine Quelle prüfen. Legenden als Legenden kennzeichnen.
 
+## Slides mit Augenmaß
+- Nicht alle Slides nur mit einem Satz bestücken, sonst wirkt der Post leer. Eine einzelne kurze Slide (z. B. „Der
+  Name: A für Acetyl. Spirin von Spiraea, einer Pflanzengattung.“) ist völlig in Ordnung – knapp ist gut.
+- Kontrollen beanstanden nur, was einen Post wirklich schlechter macht. Ein guter Post wird nicht wegen
+  Kleinigkeiten verworfen.
+
 ## Reels
 - Die Züge erzählen eine kleine Geschichte mit Aufmacher und Wendung, keine Liste.
 - Die Informationsdichte darf höher sein als früher: 2–3 kurze Sätze pro Zug, etwa 120–200 Zeichen. Nicht überall

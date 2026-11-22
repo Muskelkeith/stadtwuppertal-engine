@@ -441,7 +441,7 @@ class Engine:
                                                          "breaking": False, "risk": "gruen", "rubric": "news"})
                 s["items"] = list(dict.fromkeys(s["items"] + [r["id"]]))[-8:]
                 s["score"] = max(s["score"], float(r.get("score", 0)))
-                s["breaking"] = s["breaking"] or bool(r.get("breaking"))
+                s["breaking"] = s.get("breaking", False) or bool(r.get("breaking"))
                 s["rubric"] = r.get("rubric", s["rubric"])
                 if r.get("risk") == "rot" or s["risk"] == "rot":
                     s["risk"] = "rot"
@@ -464,7 +464,7 @@ class Engine:
         # Eilmeldung
         for slug, s in stories.items():
             fresh = now - s.get("first", now) < 6 * 3600
-            if s["breaking"] and s["score"] >= self.k["breaking_score"] and fresh and not s.get("queued"):
+            if s.get("breaking") and s.get("score", 0) >= self.k["breaking_score"] and fresh and not s.get("queued"):
                 self.enqueue("meldung", story=slug, priority=True)
                 if s["score"] >= 7:
                     s["followup"] = now + self.k["followup_after_h"] * 3600
@@ -1405,7 +1405,8 @@ class Engine:
             self.st["seen"][iid] = self.ts()
             self.st["stories"][f"res-{m['id']}"] = {"title": f"läuft gerade bei @{h} ({ratio:.1f}× so gut wie sonst): "
                                                              + cap.split(chr(10))[0][:110],
-                                                    "score": 7, "items": [iid], "first": self.ts(), "last": self.ts()}
+                                                    "score": 7, "items": [iid], "first": self.ts(), "last": self.ts(),
+                                                    "breaking": False, "rubric": "resonanz"}
             top.append(f"@{h} ({ratio:.1f}×): {cap.split(chr(10))[0][:90]}")
         if top:
             self.st["resonanz_top"] = (top + self.st.get("resonanz_top", []))[:15]
