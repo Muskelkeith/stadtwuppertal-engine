@@ -101,7 +101,9 @@ class Telegram:
                                data={"offset": self.st.get("tg_offset", 0), "timeout": seconds, "limit": 1,
                                      "allowed_updates": json.dumps(["message", "callback_query"])})
             return bool(r.json().get("result"))
-        except Exception:      # noqa: BLE001
+        except Exception:      # noqa: BLE001 – Netz hakt: kurz warten statt Dauerschleife
+            import time
+            time.sleep(min(seconds, 20))
             return False
 
     def poll(self) -> list[dict]:
