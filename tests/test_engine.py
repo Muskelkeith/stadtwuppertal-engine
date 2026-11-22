@@ -614,3 +614,31 @@ def test_schild_ragt_nie_aus_dem_bild():
     for y in range(0, h, 4):
         assert not near(im.getpixel((0, y)), z) and not near(im.getpixel((w - 1, y)), z)
 
+
+
+def test_themenpruefung_laesst_langweiliges_gar_nicht_erst_schreiben(env):
+    run, graph, store, feed = env
+    feed.pop("items", None)
+    e, errs = run(datetime(2026, 11, 23, 11, 0, tzinfo=TZ))
+    e.st["stories"]["platz"] = {"title": "Platz bekommt neuen Namen", "score": 7, "items": [], "first": e.ts()}
+    e.st["stories"]["miete"] = {"title": "Mieten im Ölberg steigen um 18 Prozent", "score": 7, "items": [], "first": e.ts()}
+    e.brain.topic_gate = lambda t: {"urteile": [{"id": "platz", "score": 3}, {"id": "miete", "score": 9, "dreh": "Wer zahlt?"}]}
+    out = e.gate_stories([(7, "platz"), (7, "miete")])
+    assert out == [(9, "miete")] and e.st["stories"]["miete"]["dreh"] == "Wer zahlt?"
+
+
+def test_ideenpool_nur_belegt_und_gepruefter(monkeypatch):
+    from engine import pool
+
+    class B:
+        def pool_ideas(self, ctx):
+            return {"themen": [{"titel": "Der Elefant Tuffi", "rubrik": "kurios", "dreh": "Sprung aus der Bahn", "wiki": ["Tuffi"]},
+                               {"titel": "Erfundenes", "rubrik": "fact", "wiki": ["Gibtsnicht123"]},
+                               {"titel": "Langweilig", "rubrik": "orte", "wiki": ["Rathaus"]}]}
+        def topic_gate(self, topics):
+            return {"urteile": [{"id": t["id"], "score": 9 if "Tuffi" in t["titel"] else 4} for t in topics]}
+    monkeypatch.setattr(pool, "wiki", lambda t: None if "Gibtsnicht" in t else {"titel": t, "text": "Fakt.", "url": "u"})
+    st = {}
+    assert pool.refill(B(), st, 1000) == 1
+    assert st["pool"][0]["titel"] == "Der Elefant Tuffi"
+    assert pool.take(st, ["kurios"])["titel"] == "Der Elefant Tuffi" and not st["pool"]

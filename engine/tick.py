@@ -18,7 +18,7 @@ import requests
 import yaml
 from PIL import Image
 
-from . import vorbild, commons, radar, sources
+from . import pool as ideenpool, vorbild, commons, radar, sources
 from .brain import Brain, stub
 from .design import render
 from .graph import GraphClient
@@ -144,6 +144,7 @@ class Engine:
             self.step("postfach", self.check_dms)
             self.step("repost-kommentare", self.check_repost_comments)
             self.step("kommentare", self.check_comments)
+            self.step("ideenpool", self.refill_pool)
             self.step("vorbild-puls", self.snapshot_models)
             self.step("vorbild", self.study_models)
             self.step("hashtags", self.scout_hashtags)
@@ -508,6 +509,7 @@ class Engine:
         cands = sorted([(s["score"], k) for k, s in self.st["stories"].items()
                         if not s.get("queued") and now - s.get("last", now) < 26 * 3600 and s["score"] >= 6],
                        reverse=True)
+        cands = self.gate_stories(cands[:8])
         weekday = ["mo", "di", "mi", "do", "fr", "sa", "so"][self.now().weekday()]
         plan = self.k["rotation"].get(name, {})
         rubric = plan.get(weekday) if isinstance(plan, dict) else plan
@@ -519,10 +521,11 @@ class Engine:
                                        "aktuelle_themen": [self.st["stories"][k]["title"] for _, k in cands[:8]]})
             return
         if rubric == "kurios":
-            fun = [k for k, s in self.st["stories"].items() if s.get("rubric") == "kurios" and not s.get("queued")
-                   and now - s.get("last", now) < 72 * 3600]
+            fun = [(self.st["stories"][k].get("score", 5), k) for k, s in self.st["stories"].items()
+                   if s.get("rubric") == "kurios" and not s.get("queued") and now - s.get("last", now) < 72 * 3600]
+            fun = self.gate_stories(fun[-5:])
             if fun:
-                self.enqueue("kurios", story=fun[-1])
+                self.enqueue("kurios", story=fun[0][1])
                 return
             rubric = "fact"
         if rubric == "frag":
@@ -558,11 +561,59 @@ class Engine:
         if rubric == "damals":
             self.enqueue("damals")
             return
+        if cands and cands[0][0] >= 8:            # richtig starke Meldung schlägt alles
+            self.enqueue("meldung", story=cands[0][1])
+            return
+        want = {"history": ["history", "menschen", "orte"], "fact": ["fact", "kurios", "orte"],
+                "platt": ["kurios", "fact"], "warum": ["fact", "orte"]}.get(rubric, ["kurios", "fact", "history", "menschen", "orte"])
+        p = ideenpool.take(self.st, want) or ideenpool.take(self.st, ["kurios", "fact", "history", "menschen", "orte"])
+        if p:
+            self.enqueue("rubrik", idea={"thema": p["titel"], "dreh": p["dreh"], "rubrik": p["rubrik"],
+                                         "fakten": p["quelle"]["text"], "quelle": "Wikipedia",
+                                         "hinweis": "Nur Fakten aus 'fakten' verwenden."})
+            return
+        if cands:
+            self.enqueue("meldung", story=cands[0][1])
+            return
         idea = self.pick_idea(prefer=rubric or "history")
         if idea:
             self.enqueue("rubrik", idea=idea)
-        elif cands:
-            self.enqueue("meldung", story=cands[0][1])
+
+    def gate_stories(self, cands):
+        """Themenprüfung vor dem Schreiben: nur Meldungen mit Urteil ≥ 7 bleiben. Urteil wird je Meldung gemerkt."""
+        todo = [k for _, k in cands if "gate" not in self.st["stories"][k]]
+        if todo:
+            topics = []
+            for k in todo:
+                s = self.st["stories"][k]
+                first = self.st["items"].get((s.get("items") or [None])[0]) or {}
+                topics.append({"id": k, "titel": s.get("title", ""), "worum": (first.get("summary") or "")[:400],
+                               "rubrik": s.get("rubric", "")})
+            try:
+                res = self.brain.topic_gate(topics)
+                for v in res.get("urteile") or []:
+                    if v.get("id") in self.st["stories"]:
+                        self.st["stories"][v["id"]].update(gate=int(v.get("score") or 0), dreh=v.get("dreh", ""))
+            except Exception as e:      # noqa: BLE001 – Prüfung nicht möglich: lieber nichts als Langweiliges
+                self.log(f"themenprüfung: {str(e)[:80]}")
+                return []
+        out = [(self.st["stories"][k]["gate"], k) for _, k in cands if self.st["stories"][k].get("gate", 0) >= 7]
+        for _, k in cands:
+            g = self.st["stories"][k].get("gate")
+            if g is not None and g < 7 and not self.st["stories"][k].get("gate_log"):
+                self.st["stories"][k]["gate_log"] = True
+                self.log(f"themenprüfung: „{self.st['stories'][k].get('title', '')[:60]}“ zu schwach ({g}/10)")
+        return sorted(out, reverse=True)
+
+    def refill_pool(self):
+        if len(self.st.get("pool", [])) >= 8 and self.ts() - self.st["done"].get("pool_ts", 0) < 2 * 86400:
+            return
+        if self.ts() - self.st["done"].get("pool_try", 0) < 6 * 3600:
+            return
+        self.st["done"]["pool_try"] = self.ts()
+        n = ideenpool.refill(self.brain, self.st, self.ts(), self.st.get("vorbild", ""))
+        self.st["done"]["pool_ts"] = self.ts()
+        self.log(f"ideenpool: {n} neue Themen recherchiert, {len(self.st.get('pool', []))} im Pool")
 
     def spotlight_pick(self):
         used = set(self.st["used"])
@@ -698,7 +749,9 @@ class Engine:
                    "mindestens eine zusätzliche Einordnung oder einen Hintergrund, der sicher stimmt (Ort, Geschichte, "
                    "Zusammenhang, was es für Anwohner heißt) – nichts erfinden. Unsere Haltung darf kantiger sein.") \
             if vb_items else ""
-        note = "\n".join(x for x in (self.learned_note(), vb_note, q.get("qa_note")) if x)
+        dreh = (self.st["stories"].get(q.get("story") or "", {}) or {}).get("dreh") or (q.get("idea") or {}).get("dreh")
+        dreh_note = f"DREH aus der Themenkonferenz (nutzen!): {dreh}" if dreh else ""
+        note = "\n".join(x for x in (self.learned_note(), vb_note, dreh_note, q.get("qa_note")) if x)
         pkg = self.brain.write(q["mode"], text_mat, note=note, recent_hooks=recent)
         rev = self.brain.review(pkg, text_mat)
         q["draft"] = {k: pkg.get(k) for k in ("hook", "caption", "slides", "reel")}
