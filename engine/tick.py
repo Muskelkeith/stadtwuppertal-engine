@@ -218,6 +218,47 @@ class Engine:
         n = sum(1 for i in self.st["ideen"] if i["status"] == "offen")
         self.tg.say(f"Notiert: „{text.strip()[:200]}“\n\nDaraus mache ich in den nächsten Tagen einen Post. Offene Ideen gerade: {n}.")
 
+    def understand(self, ev):
+        """Freie Nachricht von dir: Idee? Befehl? Frage? Erst verstehen, dann handeln."""
+        if ev["type"] == "voice":
+            try:
+                from .voice import transcribe
+                ev = {"type": "idea", "text": transcribe(self.tg.download(ev["file_id"])), "voice": True}
+            except Exception as e:      # noqa: BLE001
+                self.log(f"sprachnachricht: {str(e)[:120]}")
+                return self.tg.say("Deine Sprachnachricht konnte ich gerade nicht abhören. Schick sie bitte nochmal oder schreib sie kurz als Text.")
+        text = (ev.get("text") or "").strip()
+        if not text:
+            return
+        ctx = {"status": self.status_text(), "letzte_schritte": self.st["log"][-12:],
+               "verworfen": [{"was": " ".join(a["draft"].get("hook") or []), "grund": a.get("grund", "")[:200]}
+                             for a in self.st.get("verworfen", [])[-3:]],
+               "offene_ideen": [i["text"][:80] for i in self.st["ideen"] if i["status"] == "offen"][-8:]}
+        try:
+            r = self.brain.understand(text, ctx)
+        except Exception as e:      # noqa: BLE001 – im Zweifel als Idee sichern, nichts geht verloren
+            self.log(f"nachricht verstehen: {str(e)[:80]}")
+            r = {"art": "idee"}
+        art, cmd = r.get("art", "idee"), r.get("befehl")
+        if art == "befehl" and cmd == "verworfen":
+            return self.show_dropped(2 if "alle" in text.lower() else 1)
+        if art == "befehl" and cmd in ("status", "ideen", "tipps", "vorbild", "stopp", "weiter"):
+            return self.read_telegram_cmd(cmd)
+        if art == "regel" and r.get("regel"):
+            return self.read_telegram_cmd("regel", r["regel"])
+        if art == "frage" and r.get("antwort"):
+            return self.tg.say(r["antwort"][:1500])
+        self.add_idea({"type": "idea", "text": text})
+
+    def read_telegram_cmd(self, cmd, arg=""):
+        """Kurzbefehle auch aus normalen Sätzen heraus ausführen."""
+        if cmd == "regel":
+            ev = {"type": "command", "cmd": "regel", "text": arg}
+        else:
+            ev = {"type": "command", "cmd": cmd}
+        self.tg._inject = [ev]
+        self.read_telegram()
+
     def revise(self, ev):
         """Antwort auf eine Vorschau = Kritik. Post neu schreiben, neu prüfen, neue Vorschau schicken."""
         text = ev.get("text") or ""
@@ -227,6 +268,13 @@ class Engine:
         if text.strip():
             self.st.setdefault("kritik", []).append(text.strip()[:500])
             self.st["kritik"] = self.st["kritik"][-60:]
+        dropped_id = self.st.get("verworfen_msg", {}).get(str(ev.get("msg")))
+        if dropped_id:
+            old = next((x for x in self.st["queue"] if x["id"] == dropped_id), None)
+            if old:
+                old.update(status="new", qa_note=f"Der Chef will diesen verworfenen Post doch. Seine Kritik: {text}",
+                           rv_try=0, qa_try=0, archiviert=False)
+                return self.tg.say("Alles klar, ich baue ihn mit deiner Kritik neu. Die Vorschau kommt gleich.")
         q = next((x for x in self.st["queue"] if str(x.get("tg")) == ev["msg"]), None)
         if not q or q["status"] not in ("waiting", "ready") or not q.get("pkg"):
             self.add_idea(f"Post neu machen. Kritik: {text}")
@@ -276,10 +324,13 @@ class Engine:
     def read_telegram(self):
         for ev in self.tg.poll():
             if ev["type"] in ("idea", "voice"):
-                self.add_idea(ev)
+                self.step("nachricht", self.understand, ev)
                 continue
             if ev["type"] == "revise":
                 self.step("überarbeiten", self.revise, ev)
+                continue
+            if ev["type"] == "command" and ev["cmd"] == "verworfen":
+                self.show_dropped()
                 continue
             if ev["type"] == "command" and ev["cmd"] == "tipps":
                 t = self.st.get("tipps", [])[-15:]
@@ -625,6 +676,8 @@ class Engine:
         note = "\n".join(x for x in (self.learned_note(), vb_note, q.get("qa_note")) if x)
         pkg = self.brain.write(q["mode"], text_mat, note=note, recent_hooks=recent)
         rev = self.brain.review(pkg, text_mat)
+        q["draft"] = {k: pkg.get(k) for k in ("hook", "caption", "slides", "reel")}
+        q["draft_note"] = rev.get("note", "")
         pkg.update(rev.get("fixes") or {})
         pkg["risk"] = max(pkg.get("risk", "gruen"), rev.get("risk", "gruen"), key=["gruen", "gelb", "rot"].index)
         pkg["public_interest"] = bool(rev.get("public_interest", pkg.get("public_interest")))
@@ -1603,7 +1656,46 @@ class Engine:
         if msgs:
             self.tg.say("⚠️ Kleine Störung, der Rest läuft normal:\n" + "\n".join(msgs))
 
+    def fix_mistaken_ideas(self):
+        if self.st["done"].get("fix_ideen_1"):
+            return
+        self.st["done"]["fix_ideen_1"] = 1
+        self.st["ideen"] = [i for i in self.st["ideen"] if not i["text"].lower().startswith(("zeige mir den post", "zeig mir den post"))
+                            and "Kritik: " != i["text"][-8:]]
+
+    def archive_dropped(self):
+        arch = self.st.setdefault("verworfen", [])
+        for q in self.st["queue"]:
+            if q["status"] == "dropped" and q.get("draft") and not q.get("archiviert"):
+                q["archiviert"] = True
+                arch.append({"ts": self.ts(), "id": q["id"], "mode": q["mode"], "draft": q["draft"],
+                             "grund": q.get("qa_note") or q.get("draft_note") or ""})
+        self.st["verworfen"] = arch[-10:]
+
+    def show_dropped(self, n=1):
+        arch = self.st.get("verworfen", [])
+        if not arch:
+            return self.tg.say("Gerade gibt es keine verworfenen Entwürfe.")
+        for a in arch[-n:][::-1]:
+            d = a["draft"]
+            parts = [f"🗑️ Verworfener Entwurf ({a['mode']}, {datetime.fromtimestamp(a['ts'], self.tz):%d.%m. %H:%M})"]
+            if a.get("grund"):
+                parts.append(f"Warum: {a['grund'][:400]}")
+            parts.append("Kachel: " + " ".join(d.get("hook") or []))
+            for i, sl in enumerate(d.get("slides") or [], 2):
+                parts.append(f"Slide {i}: {sl.get('head', '')} – {sl.get('body', '')}".strip(" –"))
+            for i, tr in enumerate(d.get("reel") or [], 1):
+                parts.append(f"Reel {i}: " + (tr.get("head") or "") + " " + " ".join(tr.get("lines") or []) + (tr.get("text") or ""))
+            if d.get("caption"):
+                parts.append("Caption: " + d["caption"][:800])
+            parts.append("\nSoll er doch raus? Antworte auf diese Nachricht mit deiner Kritik, dann baue ich ihn neu.")
+            res = self.tg.say("\n\n".join(parts)[:3900])
+            if isinstance(res, dict) and res.get("message_id"):
+                self.st.setdefault("verworfen_msg", {})[str(res["message_id"])] = a["id"]
+
     def cleanup(self):
+        self.archive_dropped()
+        self.fix_mistaken_ideas()
         cut = self.ts() - 4 * 86400
         self.st["seen"] = {k: v for k, v in self.st["seen"].items() if v > self.ts() - 14 * 86400}
         self.st["items"] = {k: v for k, v in self.st["items"].items() if self.st["seen"].get(k, 0) > cut}

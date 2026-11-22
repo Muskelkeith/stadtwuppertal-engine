@@ -221,6 +221,22 @@ sicher weißt) | spam | beleidigung
 JSON: {{"art": "…", "antwort": "Antwort oder leer (bei tief, spam, beleidigung immer leer)", "kurz": "worum es geht, 1 Satz"}}"""
         return self.llm.ask("dm", system, prompt, tier="write")
 
+    def understand(self, text: str, ctx: dict) -> dict:
+        system = ("Du bist der Telegram-Bot der stadtwuppertal-engine und sprichst mit deinem Chef, der den Account "
+                  "betreibt. Du verstehst, was er mit seiner Nachricht will. Antworte auf Deutsch, locker, kurz.")
+        prompt = f"""Nachricht vom Chef: <<<{text[:1500]}>>>
+Was die Engine gerade weiß: {json.dumps(ctx, ensure_ascii=False)[:3000]}
+
+Ordne ein:
+- idee: ein Thema, ein Einfall, etwas, worüber ein Post entstehen soll (im Zweifel das).
+- befehl: er will etwas sehen oder steuern → befehl = status | ideen | tipps | vorbild | verworfen (verworfene
+  Entwürfe zeigen, z. B. „zeig mir den Post trotzdem“, „was hast du verworfen?“) | stopp | weiter
+- regel: eine dauerhafte Vorgabe für alle künftigen Posts → regel = die Vorgabe in einem klaren Satz.
+- frage: eine Frage an dich, die du mit dem Wissen oben beantworten kannst (z. B. „warum wurde nichts gepostet?“)
+  → antwort = ehrliche, konkrete Antwort in 1–4 Sätzen. Was du nicht weißt, sagst du offen.
+JSON: {{"art": "idee|befehl|regel|frage", "befehl": "…oder null", "regel": "…oder null", "antwort": "…oder null"}}"""
+        return self.llm.ask("chef", system, prompt, tier="triage")
+
     def pick_comments(self, post: str, comments: list[dict], max_n: int = 3) -> dict:
         system = self.system + "\n\nDu betreust jetzt die Kommentare unter unseren Posts." + self.GUARD
         prompt = f"""Unser Post: {post[:600]}

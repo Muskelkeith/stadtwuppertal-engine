@@ -83,6 +83,10 @@ class Telegram:
     # ── Empfangen ───────────────────────────────────────────
     def poll(self) -> list[dict]:
         """Liefert [{type: decision|command, …}] und merkt sich, was schon gelesen ist."""
+        inj = getattr(self, "_inject", None)
+        if inj:                     # Befehl, der aus einem normalen Satz verstanden wurde
+            self._inject = None
+            return inj
         if not self.live:
             return []
         upd = self._call("getUpdates", offset=self.st.get("tg_offset", 0), timeout=0,
@@ -106,10 +110,9 @@ class Telegram:
             text = (m.get("text") or "").strip().lower()
             if not self.chat and text.startswith("/start"):
                 self.st["chat_id"] = chat
-                self.say("verbunden. ab jetzt kommen hier vorschauen, berichte und alarme.\n"
-                         "befehle: stopp · weiter · status · ideen · regel: … (neue redaktionsregel)\n"
-                         "alles andere (text oder sprachnachricht) landet als content-idee.\n"
-                         "kritik an einer vorschau: einfach auf die vorschau antworten – ich schreibe den post neu.")
+                self.say("Verbunden. Hier kommen Vorschauen, Berichte und Meldungen.\n"
+                         "Schreib mir ganz normal: Ideen, Fragen oder was ich tun soll. Kurzbefehle: stopp · weiter · "
+                         "status · ideen · verworfen · regel: …\nKritik an einer Vorschau: einfach darauf antworten.")
                 continue
             if chat != str(self.chat):
                 continue
@@ -120,8 +123,8 @@ class Telegram:
                     out.append({"type": "command", "cmd": "regel", "text": rule.strip()})
                 continue
             hit = False
-            for cmd in ("stopp", "weiter", "status", "ideen", "vorbild", "tipps"):
-                if text.lstrip("/").startswith(cmd):
+            for cmd in ("stopp", "weiter", "status", "ideen", "vorbild", "tipps", "verworfen"):
+                if text.lstrip("/").strip(" .!?") == cmd:      # nur das Wort allein; ganze Sätze versteht die Engine
                     out.append({"type": "command", "cmd": cmd})
                     hit = True
             if hit or text.startswith("/"):

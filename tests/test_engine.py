@@ -540,3 +540,35 @@ def test_endkontrolle_repariert_statt_verwerfen(env):
     e.produce_one(q)
     assert q["status"] == "new" and "Material zu dünn" in q["qa_note"] and e._redo
     assert not any("nicht veröffentlicht" in x[1] for x in e.tg.outbox if x[0] == "text")
+
+
+def test_verworfenes_zeigen_statt_als_idee(env):
+    run, graph, store, feed = env
+    feed.pop("items", None)
+    e, errs = run(datetime(2026, 11, 23, 11, 0, tzinfo=TZ))
+    e.st["queue"].append({"id": "q-weg", "mode": "warum", "kind": "feed", "status": "dropped", "created": e.ts(),
+                          "draft": {"hook": ["kein", "ölbergfest?"], "caption": "Das Fest steht auf der Kippe.",
+                                    "slides": [{"head": "warum", "body": "Anwohner-Kritik"}]},
+                          "draft_note": "Material zu dünn"})
+    e.archive_dropped()
+    ideen_vorher = len(e.st["ideen"])
+    e.brain.understand = lambda t, c: {"art": "befehl", "befehl": "verworfen"}
+    e.understand({"type": "idea", "text": "Zeige mir den Post trotzdem"})
+    assert len(e.st["ideen"]) == ideen_vorher
+    out = [x[1] for x in e.tg.outbox if x[0] == "text"]
+    assert any("ölbergfest?" in o and "Material zu dünn" in o for o in out)
+
+
+def test_satz_mit_befehlswort_ist_kein_befehl():
+    from engine.telegram import Telegram
+
+    class Http:
+        def post(self, url, data=None, files=None, timeout=None):
+            class R:
+                def raise_for_status(self): pass
+                def json(self):
+                    return {"result": [{"update_id": 1, "message": {"chat": {"id": 5}, "text": "Ideen für Bubble-Tea-Läden"}}]}
+            return R()
+    tg = Telegram("123:abc", {"chat_id": "5"}, http=Http())
+    evs = tg.poll()
+    assert evs and evs[0]["type"] == "idea"
