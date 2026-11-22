@@ -32,6 +32,7 @@ def items(n=3, tag="a"):
 @pytest.fixture
 def env(tmp_path, monkeypatch):
     cfg = load_config()
+    cfg["takt"]["freigabe_tage"] = 0
     store = Store(Secrets({}), tmp_path / "store")
     graph = FakeGraph()
     feed = {"items": items()}
@@ -61,7 +62,7 @@ def test_eilmeldung_mit_vorschau_und_timeout(env):
     feed_posts = [d for d in graph.done if d[0] in ("carousel", "image")]
     assert feed_posts, graph.done
     assert "text mit ki erstellt" in feed_posts[0][2][-1]
-    assert any(d[0] == "story" for d in graph.done), "Meldung wird zusätzlich als Story angeschoben"
+    assert not any(d[0] == "story" for d in graph.done), "keine losen Story-Bilder mehr"
 
 
 def test_freigabe_per_knopf_ohne_label(env):
@@ -291,7 +292,7 @@ def test_uebergabe_ohne_instagram(tmp_path, monkeypatch):
     sent = [x for x in e.tg.outbox if x[0] == "handover"]
     assert sent, e.tg.outbox
     assert not any("ki erstellt" in x[3] for x in sent)
-    assert any(x[1] == "story" for x in sent)
+    assert not any(x[1] == "story" for x in sent)
     assert Secrets({"TELEGRAM_TOKEN": "t", "CLAUDE_CODE_OAUTH_TOKEN": "c"}).missing() == []
 
 
@@ -705,3 +706,15 @@ def test_planung_bricht_nicht_an_resonanz_themen(env):
     e.errors = []
     e.plan()
     assert not e.errors
+
+
+def test_probephase_nichts_ohne_freigabe(env):
+    run, graph, store, feed = env
+    feed.pop("items", None)
+    e, errs = run(datetime(2026, 11, 23, 11, 0, tzinfo=TZ))
+    e.k["freigabe_tage"] = 4
+    e.st.pop("freigabe_bis", None)
+    e._cover = {"qp": b"x"}
+    q = {"id": "qp", "mode": "rubrik", "kind": "feed", "status": "new"}
+    e.decide(q, {"hook": ["fensterputzer kommt heim."], "caption": "x", "sources": []}, "")
+    assert q["status"] == "waiting" and q["on_timeout"] == "drop"

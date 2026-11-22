@@ -1660,16 +1660,23 @@ class Engine:
         Alles andere → läuft allein."""
         q["caption"] = self.caption(pkg, credit)
         news_like = pkg.get("public_interest") and q["kind"] in ("feed", "reel") and self.graph is not None
+        tage = self.k.get("freigabe_tage", 4)
+        review_until = self.st.setdefault("freigabe_bis", self.ts() + tage * 86400) if tage else 0
+        probe = q["kind"] in ("feed", "reel") and self.graph is not None and self.ts() < review_until
         if pkg.get("risk") == "rot":
             q.update(status="waiting", on_timeout="drop", timeout=self.ts() + 3 * 3600)
             why = pkg.get("risk_reason") or ""
             head = ("🤔 Hier bin ich mir unsicher. „Passt“ = geht raus, „Weg damit“ = verworfen. Oder antworte mit "
                     "Kritik, dann mache ich ihn neu.\nWarum: " + why) if why.startswith("Die Endkontrolle") else \
                 "⚠️ Heikles Thema. Geht nur raus, wenn du „passt“ drückst.\nWarum heikel: " + why
+        elif probe:
+            # Probephase: Jeder Post braucht dein OK (ohne Antwort wird nichts gepostet)
+            q.update(status="waiting", on_timeout="drop", timeout=self.ts() + 8 * 3600)
+            head = "Neuer Post. „Passt“ = geht raus, „Weg damit“ = verworfen, oder antworte mit Änderungen."
         elif news_like:
             q.update(status="waiting", on_timeout="post", timeout=self.ts() + self.k["approval_timeout_min"] * 60)
-            head = (f"Neue Meldung. Schau kurz drüber. Ohne Antwort geht sie in {self.k['approval_timeout_min']} Minuten "
-                    f"mit KI-Hinweis raus.")
+            head = (f"Neue Meldung. Ohne Antwort geht sie in {self.k['approval_timeout_min']} Minuten mit KI-Hinweis raus. "
+                    f"„Weg damit“ stoppt sie, eine Antwort mit Änderungen baut sie neu.")
         else:
             q["status"] = "ready"
             return
@@ -1794,11 +1801,15 @@ class Engine:
             link = self.graph.permalink(ig)
         except Exception:
             pass
-        self.tg.say(f"Ist online: {' '.join(pkg.get('hook', [])) or q['mode']}\n{link}".strip())
+        self.tg.say((f"Ist online: {' '.join(pkg.get('hook', [])) or q['mode']}\n{link}\n\n"
+                     f"Für die Story: Post öffnen → Papierflieger ✈️ → „Zu deiner Story hinzufügen“.").strip())
         self._story_after(q, pkg)
 
     def _story_after(self, q, pkg):
-        # Nachrichten zusätzlich als Story anschieben
+        # Automatische Story-Bilder sind abgeschaltet: Instagram erlaubt Programmen nicht, einen Feed-Post (antippbar)
+        # in die Story zu teilen – ein loses Kachelbild in der Story bringt nichts.
+        if not self.cfg.get("auto_story", False):
+            return
         if q["kind"] == "feed" and q["mode"] in ("meldung", "nachdreh", "warum") and pkg.get("hook"):
             st_img = render.story(pkg, None, seed=q["id"])
             url = self.store.media(f"{int(self.ts())}-{q['id']}-story.jpg", render.jpeg(st_img))

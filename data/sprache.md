@@ -55,6 +55,11 @@ watt · dat · getz · ne? · wa? · hömma · sach ma · hasse / hasste · biss
   „Der Name: A für Acetyl. Spirin von Spiraea, einer Pflanzengattung.“ – kurz, fertig, nicht ausschmücken.
 - Fakten immer gegen eine Quelle prüfen. Legenden als Legenden kennzeichnen.
 
+## Die Kachel
+- Hook macht neugierig, aber man versteht in einer Sekunde ungefähr, worum es geht. Ist der Hook allein schon klar
+  („die buden stehen. glühwein, wir kommen.“), braucht es nichts weiter. Nur wenn er kryptisch ist („fensterputzer
+  kommt heim.“ + „8× im Januar“), ergänzt das Schild eine halbe Erklärung. Neugier ja, Rätsel nein.
+
 ## Slides mit Augenmaß
 - Nicht alle Slides nur mit einem Satz bestücken, sonst wirkt der Post leer. Eine einzelne kurze Slide (z. B. „Der
   Name: A für Acetyl. Spirin von Spiraea, einer Pflanzengattung.“) ist völlig in Ordnung – knapp ist gut.

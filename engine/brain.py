@@ -35,7 +35,8 @@ WITZ
 HOOK (große Headline auf der Kachel)
 - 1–3 Zeilen, klein geschrieben, je Zeile höchstens ~11 Zeichen, endet meist mit Punkt oder Fragezeichen.
 - Muss im Feed in 1 Sekunde wirken: konkret, überraschend, ein Bild im Kopf. Kein Clickbait, das nicht hält.
-- Schild: optional, max. 16 Zeichen (Ort, Zahl, Pointe). Ein Datum nur, wenn es der Kern ist (z. B. „morgen 18 Uhr“).
+- Schild: optional, max. 22 Zeichen (Ort, Zahl, Pointe, halbe Erklärung). Die Kachel muss in einer Sekunde ungefähr
+  verständlich sein. Ist der Hook allein klar, reicht er; nur wenn er kryptisch ist, liefert das Schild die halbe Erklärung. Ein Datum nur, wenn es der Kern ist (z. B. „morgen 18 Uhr“).
 
 HARTE REGELN
 - Fakten NUR aus dem mitgelieferten Material. Nichts erfinden, keine erfundenen Zitate, keine Zahlen raten.
