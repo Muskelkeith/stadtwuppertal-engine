@@ -566,7 +566,10 @@ class Engine:
             return
         want = {"history": ["history", "menschen", "orte"], "fact": ["fact", "kurios", "orte"],
                 "platt": ["kurios", "fact"], "warum": ["fact", "orte"]}.get(rubric, ["kurios", "fact", "history", "menschen", "orte"])
-        p = ideenpool.take(self.st, want) or ideenpool.take(self.st, ["kurios", "fact", "history", "menschen", "orte"])
+        mmdd = self.now().strftime("%m-%d")
+        if rubric == "frag":
+            want = ["kreativ"]
+        p = ideenpool.take(self.st, want, mmdd) or ideenpool.take(self.st, ["kurios", "fact", "history", "menschen", "orte", "kreativ"], mmdd)
         if p:
             self.enqueue("rubrik", idea={"thema": p["titel"], "dreh": p["dreh"], "rubrik": p["rubrik"],
                                          "fakten": p["quelle"]["text"], "quelle": "Wikipedia",
@@ -611,7 +614,7 @@ class Engine:
         if self.ts() - self.st["done"].get("pool_try", 0) < 6 * 3600:
             return
         self.st["done"]["pool_try"] = self.ts()
-        n = ideenpool.refill(self.brain, self.st, self.ts(), self.st.get("vorbild", ""))
+        n = ideenpool.refill(self.brain, self.st, self.ts(), self.st.get("vorbild", ""), self.now().strftime("%d.%m.%Y"))
         self.st["done"]["pool_ts"] = self.ts()
         self.log(f"ideenpool: {n} neue Themen recherchiert, {len(self.st.get('pool', []))} im Pool")
 

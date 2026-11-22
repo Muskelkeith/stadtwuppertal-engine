@@ -235,6 +235,10 @@ Bewerte jedes Thema 1–10 nach einer Frage: Würden Leute in Wuppertal (und auc
 es zu Ende lesen, kommentieren oder weitererzählen?
 Hoch (8–10): Menschen mit Geschichte, Kurioses und Nischenwissen, Damals/heute, Entscheidungen, die den Alltag
 treffen (Mieten, Parken, Gebühren, Bus, Schwebebahn), praktische Warnungen, Überraschungen, echte Aufreger.
+Gesunder Menschenverstand: Was müssen Wuppertaler heute oder diese Woche wissen? Sperrungen (A46, B7, Schwebebahn),
+neue Regeln und Bußgelder, Ansagen der Oberbürgermeisterin oder der Stadt, die alle betreffen → hoch, wenn man es
+als kurze Meldung plus Frage nach eurer Meinung verpacken kann. Kleine, lustige Alltagsbeobachtungen mit
+Wiedererkennungswert (z. B. „Wer kauft auf dem Weihnachtsmarkt eigentlich die Wolf-T-Shirts?“) → hoch.
 Niedrig (1–4): Verwaltungsnotizen, Umbenennungen ohne Geschichte, Termine ohne Dreh, Pressemitteilungs-Themen,
 Selbstverständliches, Dinge, die jeder schon weiß, Themen ohne Bild im Kopf.
 Gib zu jedem Thema den stärksten DREH an: den Einstieg, der es interessant macht (oder leer, wenn es keinen gibt).
@@ -243,15 +247,18 @@ JSON: {{"urteile": [{{"id": "…", "score": 1-10, "warum": "ein Satz", "dreh": "
 
     def pool_ideas(self, ctx: dict) -> dict:
         system = self.system + "\n\nDu recherchierst jetzt zeitlose Wuppertal-Themen für den Ideenpool."
-        prompt = f"""Schlag 15 starke, zeitlose Wuppertal-Themen vor – gemischt aus: kurios (Kuriositäten, Rekorde,
-Absurdes), fact (Nischenwissen, das kaum einer kennt), history (Damals, Wendepunkte, vergessene Geschichten),
-menschen (Originale, Erfinder, Künstler, Macher aus Wuppertal), orte (Ecken mit überraschender Geschichte).
+        prompt = f"""Heute ist {ctx.get('heute', '')}. Schlag 18 starke Wuppertal-Themen vor – gemischt aus:
+kurios (Kuriositäten, Rekorde, Absurdes), fact (Nischenwissen, das kaum einer kennt), history (Damals, Wendepunkte,
+vergessene Geschichten), menschen (Originale, Erfinder, Künstler, Macher), orte (Ecken mit überraschender Geschichte),
+jahrestag (etwas, das in Wuppertal an einem Tag der NÄCHSTEN 14 TAGE passiert ist – mit "datum": "MM-TT"),
+kreativ (kleine, lustige Alltags- oder Jahreszeiten-Beobachtung als Frage an die Community, mit Wiedererkennungswert,
+z. B. „Wer kauft auf dem Weihnachtsmarkt eigentlich die Wolf-T-Shirts?“ – braucht keine Wikipedia).
 Nicht das, was jeder weiß (Schwebebahn-Basics, „Aspirin kommt aus Wuppertal“) – sondern das Dahinter.
 Bereits gemacht oder im Pool (nicht wiederholen): {json.dumps(ctx.get('schon_gemacht', []), ensure_ascii=False)[:2500]}
 Was beim Vorbild gut läuft: {ctx.get('vorbild', '')}
-Gib zu jedem Thema 1–2 exakte deutsche Wikipedia-Artikeltitel an, in denen die Fakten stehen.
-JSON: {{"themen": [{{"titel": "…", "rubrik": "kurios|fact|history|menschen|orte", "dreh": "der überraschende Einstieg",
-"wiki": ["Artikeltitel", "…"]}}]}}"""
+Gib zu jedem Thema (außer kreativ) 1–2 exakte deutsche Wikipedia-Artikeltitel an, in denen die Fakten stehen.
+JSON: {{"themen": [{{"titel": "…", "rubrik": "kurios|fact|history|menschen|orte|jahrestag|kreativ", "datum": "MM-TT oder leer",
+"dreh": "der überraschende Einstieg", "wiki": ["Artikeltitel", "…"]}}]}}"""
         return self.llm.ask("pool", system, prompt, tier="write")
 
     def understand(self, text: str, ctx: dict) -> dict:

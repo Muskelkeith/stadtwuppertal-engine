@@ -118,6 +118,34 @@ def _image_credit(src: dict) -> str | None:
     return None
 
 
+def fetch_autobahn(src: dict, http=requests) -> list[dict]:
+    """Sperrungen und Baustellen der Autobahn GmbH (offene Schnittstelle), nur was Wuppertal betrifft und bald gilt."""
+    out = []
+    now = datetime.now(timezone.utc)
+    for road in src.get("roads", ["A46", "A1"]):
+        for kind in ("closure", "roadworks"):
+            r = http.get(f"https://verkehr.autobahn.de/o/autobahn/{road}/services/{kind}", headers=UA, timeout=30)
+            r.raise_for_status()
+            for c in r.json().get(kind, []):
+                text = " ".join([c.get("title", ""), c.get("subtitle", "")] + (c.get("description") or []))
+                if "wuppertal" not in text.lower():
+                    continue
+                if kind == "roadworks" and "voll" not in text.lower() and "gesperrt" not in text.lower():
+                    continue
+                start = c.get("startTimestamp")
+                try:
+                    when = datetime.fromisoformat(start.replace("Z", "+00:00")) if start else None
+                except ValueError:
+                    when = None
+                if when and when > now + timedelta(days=4):
+                    continue        # erst kurz vorher melden
+                out.append({"id": f"autobahn:{c.get('identifier')}", "source": "Autobahn GmbH", "kind": "verkehr",
+                            "title": f"{road}: {c.get('title', '')} {c.get('subtitle', '')}".strip(),
+                            "summary": " ".join(c.get("description") or [])[:1200],
+                            "link": "https://www.autobahn.de/", "published": (when or now).isoformat()})
+    return out
+
+
 def fetch_dwd(cfg: dict, http=requests) -> list[dict]:
     d = cfg.get("dwd_warnings", {})
     if not d.get("enabled"):
@@ -160,6 +188,8 @@ def collect(sources: list[dict], cfg_news: dict, graph=None, http=requests,
                 if graph is None:
                     continue
                 got = fetch_instagram(src, cut, graph)
+            elif src["type"] == "autobahn":
+                got = fetch_autobahn(src, http)
             else:
                 continue
             if src.get("filter_wuppertal", True):

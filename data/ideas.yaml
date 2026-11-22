@@ -1,4 +1,12 @@
 ideas:
+- id: jd-wolfshirt
+  type: poll
+  text: 'Ehrliche Frage: Wer kauft auf dem Weihnachtsmarkt eigentlich die T-Shirts mit den Wölfen drauf?'
+  status: geprueft
+- id: jd-weihnachtsmarkt-essen
+  type: poll
+  text: 'Weihnachtsmarkt in Wuppertal: Was ist dein Pflicht-Stand, an dem du jedes Jahr hängen bleibst?'
+  status: geprueft
 - id: poll-duel-01
   type: poll
   text: 'Weihnachtsmarkt: Elberfeld oder Barmen?'

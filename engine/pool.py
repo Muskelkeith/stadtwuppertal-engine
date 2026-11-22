@@ -28,12 +28,12 @@ def wiki(title: str, chars: int = 3500) -> dict | None:
     return None
 
 
-def refill(brain, st, now_ts, vorbild_note: str = "") -> int:
+def refill(brain, st, now_ts, vorbild_note: str = "", heute: str = "") -> int:
     """Pool auffüllen. Gibt die Zahl der neu aufgenommenen Themen zurück."""
     pool = st.setdefault("pool", [])
     used = set(st.setdefault("pool_used", []))
     ideas = brain.pool_ideas({"schon_gemacht": list(used)[-60:] + [p["titel"] for p in pool],
-                              "vorbild": vorbild_note[:1500]})
+                              "vorbild": vorbild_note[:1500], "heute": heute})
     cands = []
     for i, it in enumerate(ideas.get("themen") or []):
         src = None
@@ -41,10 +41,12 @@ def refill(brain, st, now_ts, vorbild_note: str = "") -> int:
             src = wiki(t)
             if src:
                 break
+        if it.get("rubrik") == "kreativ":       # Community-Frage: braucht keine Fakten
+            src = {"titel": "", "text": "", "url": ""}
         if not src:
             continue
         cands.append({"id": f"p{int(now_ts)}-{i}", "titel": it.get("titel", ""), "rubrik": it.get("rubrik", "fact"),
-                      "dreh": it.get("dreh", ""), "quelle": src})
+                      "dreh": it.get("dreh", ""), "datum": it.get("datum", ""), "quelle": src})
     if not cands:
         return 0
     verdict = {v.get("id"): v for v in (brain.topic_gate([{"id": c["id"], "titel": c["titel"], "rubrik": c["rubrik"],
@@ -61,10 +63,17 @@ def refill(brain, st, now_ts, vorbild_note: str = "") -> int:
     return added
 
 
-def take(st, rubriken) -> dict | None:
-    """Bestes Pool-Thema für eine der Rubriken nehmen (und als benutzt markieren)."""
+def take(st, rubriken, today_mmdd: str = "") -> dict | None:
+    """Bestes Pool-Thema für eine der Rubriken nehmen (und als benutzt markieren). Ein Jahrestag von heute geht vor."""
     pool = st.get("pool", [])
     for p in pool:
+        if today_mmdd and p.get("rubrik") == "jahrestag" and p.get("datum") == today_mmdd:
+            pool.remove(p)
+            st.setdefault("pool_used", []).append(p["titel"])
+            return p
+    for p in pool:
+        if p["rubrik"] == "jahrestag":
+            continue          # Jahrestage nur an ihrem Tag
         if p["rubrik"] in rubriken:
             pool.remove(p)
             st.setdefault("pool_used", []).append(p["titel"])

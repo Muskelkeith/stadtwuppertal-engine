@@ -74,6 +74,7 @@ sources:
   - {name: Stadt Wuppertal, type: rss, homepage: "https://www.wuppertal.de/presse/meldungen/", filter_wuppertal: false}
   - {name: Stadt Wuppertal (Instagram), type: instagram, handle: stadt_wuppertal, filter_wuppertal: false}
   - {name: WSW, type: instagram, handle: wuppertaler_stadtwerke, filter_wuppertal: false}
+  - {name: Autobahn GmbH, type: autobahn, roads: [A46, A1, A535], filter_wuppertal: false}
   # Lokalmedien – die schnellsten zuerst
   - {name: Wuppertal Aktuell, type: instagram, handle: wuppertal.aktuell, filter_wuppertal: false}
   - {name: Bergische Blaulichtnews, type: instagram, handle: bergischeblaulichtnews}
