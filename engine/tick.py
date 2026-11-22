@@ -278,6 +278,8 @@ class Engine:
         if text.strip():
             self.st.setdefault("kritik", []).append(text.strip()[:500])
             self.st["kritik"] = self.st["kritik"][-60:]
+        if re.search(r"langweilig|holzweg|interessiert (doch )?(keinen|niemanden)|neues thema|weg damit", text, re.I):
+            return self.scrap_and_new(text)
         dropped_id = self.st.get("verworfen_msg", {}).get(str(ev.get("msg")))
         if dropped_id:
             old = next((x for x in self.st["queue"] if x["id"] == dropped_id), None)
@@ -578,7 +580,7 @@ class Engine:
             want = ["kreativ"]
         p = ideenpool.take(self.st, want, mmdd) or ideenpool.take(self.st, ["kurios", "fact", "history", "menschen", "orte", "kreativ"], mmdd)
         if p:
-            self.enqueue("rubrik", idea={"thema": p["titel"], "dreh": p["dreh"], "rubrik": p["rubrik"],
+            self.enqueue("rubrik", idea={"_gepr": True, "thema": p["titel"], "dreh": p["dreh"], "rubrik": p["rubrik"],
                                          "fakten": p["quelle"]["text"], "quelle": "Wikipedia",
                                          "hinweis": "Nur Fakten aus 'fakten' verwenden."})
             return
@@ -588,6 +590,52 @@ class Engine:
         idea = self.pick_idea(prefer=rubric or "history")
         if idea:
             self.enqueue("rubrik", idea=idea)
+
+    def topic_ok(self, q, mat) -> bool:
+        """Schritt 1 für JEDEN Post: Ist das Thema überhaupt einen Post wert? Sonst wird gar nicht erst geschrieben."""
+        if q.get("gate_ok") or q.get("base"):
+            return True
+        story = self.st["stories"].get(q.get("story") or "")
+        idea = q.get("idea") or {}
+        thr = 5 if q["mode"] == "idee" else (6 if q.get("priority") else 7)
+        if story and story.get("gate") is not None:
+            score, dreh, why = story["gate"], story.get("dreh", ""), ""
+        elif idea.get("_gepr"):
+            score, dreh, why = 10, idea.get("dreh", ""), ""
+        else:
+            if story:
+                desc = story.get("title", "")
+            elif q["mode"] == "frag":
+                desc = "Community-Frage, entsteht aus diesen aktuellen Themen: " + "; ".join(idea.get("aktuelle_themen", [])[:8])
+            elif q["mode"] == "events":
+                desc = "Veranstaltungstipps: " + "; ".join(e.get("title", "") for e in idea.get("events", [])[:10])
+            else:
+                desc = json.dumps(mat, ensure_ascii=False)[:700]
+            try:
+                urteile = self.brain.topic_gate([{"id": "q", "titel": desc[:700], "rubrik": q["mode"]}]).get("urteile")
+            except Exception as e:      # noqa: BLE001
+                self.log(f"themenprüfung: {str(e)[:80]}")
+                return False
+            if not urteile:
+                q["gate_ok"] = True
+                return True
+            score, dreh, why = int(urteile[0].get("score") or 0), urteile[0].get("dreh", ""), urteile[0].get("warum", "")
+            if story is not None:
+                story.update(gate=score, dreh=dreh)
+        if score < thr:
+            q["status"] = "dropped"
+            q["qa_note"] = f"Themenprüfung: {score}/10 – {why}"
+            self.log(f"themenprüfung: {q['id']} ({q['mode']}) verworfen, {score}/10 {why[:80]}")
+            if q["mode"] == "idee" and idea.get("idee_von_jd"):
+                self.tg.say(f"Deine Idee „{idea['idee_von_jd'][:80]}“ habe ich mir angeschaut, finde aber keinen Dreh, der "
+                            f"trägt ({why[:120]}). Hast du einen Einstieg im Kopf? Dann schick ihn mir.")
+            return False
+        q["gate_ok"] = True
+        if dreh:
+            q.setdefault("idea", {})
+            if isinstance(q["idea"], dict):
+                q["idea"].setdefault("dreh", dreh)
+        return True
 
     def gate_stories(self, cands):
         """Themenprüfung vor dem Schreiben: nur Meldungen mit Urteil ≥ 7 bleiben. Urteil wird je Meldung gemerkt."""
@@ -689,6 +737,7 @@ class Engine:
             v = urteile[0]
             if (v.get("score") or 0) >= 7:
                 idea["dreh"] = v.get("dreh", "")
+                idea["_gepr"] = True
                 return idea
             self.log(f"themenprüfung: Konserve „{str(title)[:60]}“ zu schwach ({v.get('score')}/10)")
         return None
@@ -773,6 +822,8 @@ class Engine:
                     self.log(f"talzeit-abstand: {q['id']} wartet noch {36 - youngest:.0f} h")
                     return
         text_mat = {k: v for k, v in mat.items() if not k.startswith("_")} if isinstance(mat, dict) else mat
+        if not self.topic_ok(q, text_mat):
+            return
         recent = [" ".join(p.get("hook", [])) for p in self.st["posted"][-15:]]
         vb_note = ("ABSTAND ZUM VORBILD: Ein Teil des Materials stammt von Talzeit. Erzähl es komplett eigenständig – "
                    "anderer Einstieg, anderer Aufbau, eigene Formulierungen, kein Satz darf ähnlich klingen. Bring "
@@ -782,13 +833,19 @@ class Engine:
         dreh = (self.st["stories"].get(q.get("story") or "", {}) or {}).get("dreh") or (q.get("idea") or {}).get("dreh")
         dreh_note = f"DREH aus der Themenkonferenz (nutzen!): {dreh}" if dreh else ""
         note = "\n".join(x for x in (self.learned_note(), vb_note, dreh_note, q.get("qa_note")) if x)
-        pkg = self.brain.write(q["mode"], text_mat, note=note, recent_hooks=recent)
-        rev = self.brain.review(pkg, text_mat)
+        if q.get("keep_pkg"):          # Text war schon geprüft, nur das Layout hatte einen Fehler → nur neu gestalten
+            pkg, rev = q.pop("keep_pkg"), {"ok": True, "note": ""}
+        else:
+            pkg = self.brain.write(q["mode"], text_mat, note=note, recent_hooks=recent)
+            rev = self.brain.review(pkg, text_mat)
         q["draft"] = {k: pkg.get(k) for k in ("hook", "caption", "slides", "reel")}
         q["draft_note"] = rev.get("note", "")
         pkg.update(rev.get("fixes") or {})
         pkg["risk"] = max(pkg.get("risk", "gruen"), rev.get("risk", "gruen"), key=["gruen", "gelb", "rot"].index)
         pkg["public_interest"] = bool(rev.get("public_interest", pkg.get("public_interest")))
+        if rev.get("langweilig") and rev.get("ok", True):
+            rev["ok"] = False
+            rev["note"] = "Text noch zu langweilig: " + (rev.get("warum_langweilig") or rev.get("note", ""))
         if not rev.get("ok", True):
             # Nicht wegwerfen: erst reparieren (2 Anläufe), danach dir zeigen statt still verwerfen.
             note = rev.get("note", "")
@@ -831,7 +888,7 @@ class Engine:
             return self.produce_damals(q, pkg, mat)
         photo, credit = self.pick_photo(q, pkg)
         q["credit"] = credit
-        seed = q["id"]
+        seed = q["id"] + "v" * q.get("qa_try", 0)       # neuer Layout-Versuch = andere Anordnung
         wagnis = random.Random(seed).random() < self.cfg.get("wagnis_rate", 0.1)
         if q["kind"] == "reel":
             q["caption"] = self.caption(pkg, credit)
@@ -913,6 +970,8 @@ class Engine:
         q["qa_try"] = q.get("qa_try", 0) + 1
         if q["qa_try"] <= 2 and not q.get("base"):
             q["status"] = "new"
+            if res.get("technisch", True) and pkg:
+                q["keep_pkg"] = pkg          # Text behalten, nur neu gestalten
             q["qa_note"] = (f"BILDKONTROLLE hat die letzte Fassung zurückgewiesen: {probs}. Mach es diesmal so, dass "
                             f"das nicht passiert – kürzer, klarer, auf mehr Bilder verteilt, wenn nötig.")
             stats[f"{day}:neu"] = stats.get(f"{day}:neu", 0) + 1

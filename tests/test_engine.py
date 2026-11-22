@@ -680,3 +680,18 @@ def test_bot_ist_leise_ohne_details(env):
     n = len(e.tg.outbox)
     e.qa_gate({"id": "t9", "mode": "fact", "kind": "feed", "status": "new"}, [Image.new("RGB", (1080, 1350))], {})
     assert len(e.tg.outbox) == n
+
+
+def test_jeder_weg_geht_durch_die_themenpruefung(env):
+    run, graph, store, feed = env
+    feed.pop("items", None)
+    e, errs = run(datetime(2026, 11, 23, 11, 0, tzinfo=TZ))
+    geschrieben = []
+    e.brain.write = lambda *a, **k: geschrieben.append(1) or {"hook": ["x"]}
+    e.brain.topic_gate = lambda t: {"urteile": [{"id": "q", "score": 2, "warum": "Platz-Umbenennung interessiert keinen"}]}
+    e.st["stories"]["platz"] = {"title": "Brausenwerther Platz wurde 1960 Teil der Bundesallee", "score": 9, "items": [],
+                                "first": e.ts(), "breaking": True}
+    q = {"id": "q-eil", "mode": "meldung", "kind": "feed", "status": "new", "story": "platz", "priority": True}
+    e._redo = False
+    e.produce_one(q)
+    assert q["status"] == "dropped" and not geschrieben

@@ -178,10 +178,14 @@ bei Nachrichten). Tests, die nicht passen, bekommen in tests den Wert null. Gehe
    Dann streichen oder lockerer formulieren. Dialekt nur, wo er nicht missverständlich ist; bei ernsten Meldungen Hochdeutsch.
 7. FUTTER (bei warum/poll/quiz): Gibt es erst Fakten, konkret Betroffene, beide Seiten, dann eine persönliche Frage?
 8. AUGE: Gibt es etwas fürs Auge (visual, photo_query, starke Zahl)? Hook in 1 Sekunde verständlich, Zeilen ≤ ~11 Zeichen?
+9. NIVEAU (immer): Würden Wuppertaler – und Auswärtige – das zu Ende lesen? Ist der stärkste Fakt vorne, der Dreh
+   genutzt, Nischenwissen statt Allgemeinplatz? Wiederholt eine Slide nur die Kachel? Doppelt ein Schild oder eine
+   Antwort-Option den Hook? Steht ein Datum als Untertitel, obwohl es nicht der Kern ist? Repariere das selbst.
+   Bleibt der Text trotz Reparatur langweilig oder banal → "langweilig": true.
 Material: {json.dumps(material, ensure_ascii=False)[:7000]}
 Paket: {json.dumps(pkg, ensure_ascii=False)}
 JSON: {{"ok": bool (false NUR bei rechtlichen Problemen oder wenn das Material nichts hergibt), "fixes": {{geänderte Paket-Felder}},
-"risk": "gruen|gelb|rot", "public_interest": bool, "tests": {{"mehrwert": 1-5|null, "sprache": 1-5|null, "gag": 1-5|null, "futter": 1-5|null, "auge": 1-5|null}},
+"langweilig": bool, "warum_langweilig": "kurz oder leer", "risk": "gruen|gelb|rot", "public_interest": bool, "tests": {{"mehrwert": 1-5|null, "sprache": 1-5|null, "gag": 1-5|null, "futter": 1-5|null, "auge": 1-5|null}},
 "note": "ein Satz, was du geändert hast"}}"""
         return self.llm.ask("review", system, prompt, tier="write")
 
@@ -193,20 +197,18 @@ JSON: {{"ok": bool (false NUR bei rechtlichen Problemen oder wenn das Material n
 Du bist jetzt die Bildkontrolle. Du siehst die FERTIGEN Bilder eines Posts als Kontaktbogen
 (Reihenfolge links→rechts, oben→unten). Nichts geht raus, was peinlich aussieht oder nicht lesbar ist – aber du bist
 eine erfahrene Redakteurin mit Augenmaß, keine Erbsenzählerin."""
-        prompt = f"""Format: {kind}. Prüfe streng:
-1. LAYOUT: Ist irgendwo Text abgeschnitten, läuft aus dem Bild oder aus seinem Kasten, überlappt, ist zu klein
-   oder kontrastarm? Leere oder kaputte Bilder? Hängt Text unschön tief oder bleibt riesig viel Platz ungenutzt?
-2. INHALT: Hält jedes Bild, was es verspricht? Nischenwissen statt Allgemeinplatz, keine Nicht-Info, keine
-   Floskeln, Sprachkonzept eingehalten, keine Tipp- oder Grammatikfehler, keine Wiederholungen?
-3. WIRKUNG: Würde man beim Scrollen anhalten und es zu Ende lesen?
+        prompt = f"""Format: {kind}. Der Inhalt ist schon geprüft – du prüfst NUR, ob das Gestaltete funktioniert:
+1. Ist irgendwo Text abgeschnitten, läuft aus dem Bild oder aus seinem Kasten, überlappt oder ist unlesbar?
+2. Sind Bilder kaputt, leer oder offensichtlich falsch (Text passt nicht zum Foto)?
+3. Doppeln Schilder wörtlich den Hook? Tippfehler, die im fertigen Bild auffallen?
 Text des Pakets zum Abgleich: {json.dumps({k: pkg.get(k) for k in ("hook", "slides", "reel")}, ensure_ascii=False)[:3000]}
 Augenmaß: Unser Design setzt Text bewusst oben unter die Schiene, Freiraum darunter ist gewollt. Textkacheln ohne
 Foto sind erlaubt. Nicht jeder Post braucht eine Frage. Beanstande nur, was einen Post wirklich schlecht macht –
 nicht Geschmacksfragen oder Kleinigkeiten, die niemand beim Scrollen bemerkt.
-JSON: {{"ok": bool (false NUR bei echten Fehlern: Text abgeschnitten/unlesbar, falsche oder erfundene Fakten,
-Langeweile/Nicht-Info, peinliche Fehler – sonst true, auch wenn du noch Verbesserungsideen hast),
+JSON: {{"ok": bool (false NUR bei echten visuellen Fehlern wie oben – sonst true),
 "score": 1-10, "probleme": ["nur die echten Fehler, kurz und konkret, höchstens 4"], "technisch": bool (true, wenn es am Layout liegt, nicht am Text),
-"lehre": "EINE allgemeine Regel für künftige Posts, die diesen Fehler verhindert – oder leer"}}"""
+"lehre": "EINE allgemeine Regel für künftige Posts, die diesen Fehler verhindert – oder leer"}}
+technisch ist bei dir praktisch immer true (es geht ums Layout)."""
         return self.llm.ask_image("bildkontrolle", system, prompt, sheet_jpeg, tier="write", side=1600)
 
     # ── Gespräche: DMs und Kommentare ───────────────────────
