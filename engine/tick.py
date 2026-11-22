@@ -711,6 +711,11 @@ class Engine:
             note = rev.get("note", "")
             legal = rev.get("risk") == "rot"
             q["rv_try"] = q.get("rv_try", 0) + 1
+            d = {k: pkg.get(k) for k in ("hook", "caption", "slides", "reel")}
+            self.tg.say((f"📝 Endkontrolle, Version {q['rv_try']}: zurückgewiesen\nWarum: {note}\n\n"
+                         + self.draft_text(d) + "\n\n" +
+                         (f"Ich baue jetzt Version {q['rv_try'] + 1}." if not legal and q["rv_try"] <= 2
+                          else "Ich zeige dir den Post gleich zur Entscheidung."))[:3900])
             if not legal and q["rv_try"] <= 2:
                 q.update(status="new", qa_note=(
                     f"ENDKONTROLLE hat die letzte Fassung beanstandet: {note} Repariere genau das. Erzähl nur, was das "
@@ -799,6 +804,22 @@ class Engine:
             return True
         probs = "; ".join(res.get("probleme") or [])[:400]
         self.log(f"bildkontrolle beanstandet {q['id']}: {probs}")
+        n = q.get("qa_try", 0) + 1
+        if not problems and not res.get("technisch") and n > 2 and not q.get("base"):
+            weiter = "Das war der dritte Anlauf – ich zeige dir den Post gleich zur Entscheidung."
+        elif n <= 2 and not q.get("base"):
+            weiter = f"Ich baue jetzt Version {n + 1} und achte genau auf diese Punkte."
+        else:
+            weiter = "Das ist nicht lesbar zu reparieren – dieser Post wird verworfen. Mit „verworfen“ siehst du ihn."
+        msg = (f"🔍 Bildkontrolle, Version {n}: zurückgewiesen\n\n" +
+               "\n".join(f"• {p}" for p in (res.get("probleme") or [])) + f"\n\n{weiter}")
+        try:
+            if imgs:
+                self.tg.photo(self.contact_sheet(imgs), msg)
+            else:
+                self.tg.say(msg)
+        except Exception:      # noqa: BLE001
+            self.tg.say(msg)
         if res.get("lehre"):
             self.learn(res["lehre"])
         if res.get("technisch"):
@@ -1709,6 +1730,17 @@ class Engine:
             self.tg.say("Mach ich. Ich baue jetzt einen Post, er kommt in den nächsten Minuten.")
         else:
             self.tg.say("Gerade finde ich kein Thema, das gut genug ist. Schick mir eine Idee, dann baue ich daraus sofort einen.")
+
+    @staticmethod
+    def draft_text(d):
+        parts = ["Kachel: " + " ".join(d.get("hook") or [])]
+        for i, sl in enumerate(d.get("slides") or [], 2):
+            parts.append(f"Slide {i}: {sl.get('head', '')} – {sl.get('body', '')}".strip(" –"))
+        for i, tr in enumerate(d.get("reel") or [], 1):
+            parts.append(f"Reel {i}: " + (tr.get("head") or "") + " " + " ".join(tr.get("lines") or []) + (tr.get("text") or ""))
+        if d.get("caption"):
+            parts.append("Caption: " + d["caption"][:700])
+        return "\n".join(parts)
 
     def show_dropped(self, n=1):
         arch = self.st.get("verworfen", [])

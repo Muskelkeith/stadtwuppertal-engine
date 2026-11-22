@@ -43,6 +43,16 @@ class Telegram:
                          files={"photo": ("vorschau.jpg", jpeg, "image/jpeg")})
         return str(res["message_id"])
 
+    def photo(self, jpeg: bytes, text: str):
+        """Ein Bild mit Text, ohne Knöpfe. Langer Text geht als zweite Nachricht hinterher."""
+        if not self.live or not self.chat:
+            self.outbox.append(("photo", text))
+            return
+        self._call("sendPhoto", chat_id=self.chat, caption=text[:1024],
+                   files={"photo": ("kontrolle.jpg", jpeg, "image/jpeg")})
+        if len(text) > 1024:
+            self.say(text[1024:])
+
     def album(self, jpegs: list[bytes], text: str):
         """Mehrere Bilder als Info (ohne Knöpfe), z. B. ein gerade gepostetes Karussell."""
         if not self.live or not self.chat:
