@@ -200,6 +200,8 @@ class Engine:
 
     # ── Ideen-Postfach ──────────────────────────────────────
     def add_idea(self, ev):
+        if isinstance(ev, str):
+            ev = {"type": "idea", "text": ev}
         text = ev.get("text", "")
         if ev["type"] == "voice":
             try:
@@ -226,7 +228,7 @@ class Engine:
             self.st["kritik"] = self.st["kritik"][-60:]
         q = next((x for x in self.st["queue"] if str(x.get("tg")) == ev["msg"]), None)
         if not q or q["status"] not in ("waiting", "ready") or not q.get("pkg"):
-            self.add_idea(f"Post neu machen. Kritik: {ev.get('text', '')}")
+            self.add_idea(f"Post neu machen. Kritik: {text}")
             self.tg.say("Der Post ist schon raus oder verworfen. Ich mache ihn mit deiner Kritik neu, er kommt in einem der nächsten Sendeplätze. "
                         "Soll das für alle Posts gelten, schreib „regel:“ davor.")
             return
@@ -277,6 +279,12 @@ class Engine:
                 continue
             if ev["type"] == "revise":
                 self.step("überarbeiten", self.revise, ev)
+                continue
+            if ev["type"] == "command" and ev["cmd"] == "tipps":
+                t = self.st.get("tipps", [])[-15:]
+                self.tg.say("Hinweise aus Instagram-Nachrichten (nur gesammelt, fließen nicht in die Themen ein):\n\n" +
+                            "\n".join(f"• {x['tag']} @{x['von']}: {x['text'][:200]}" for x in t) if t
+                            else "Noch keine Hinweise aus Instagram-Nachrichten.")
                 continue
             if ev["type"] == "command" and ev["cmd"] == "vorbild":
                 self.tg.say(("👀 Stand der Vorbild-Analyse:\n\n" + self.st["vorbild_fazit"]) if self.st.get("vorbild_fazit")
@@ -1022,8 +1030,9 @@ class Engine:
         if art in ("smalltalk", "tipp") and answer and not own and total < 25:
             self.graph.reply(frm["id"], answer[:600])
             cnt[handle] = day
-        if art == "tipp":
-            self.add_idea(f"Hinweis von @{handle}: {text[:300]}")
+        if art == "tipp":       # nur sammeln – Tipps haben keinen Einfluss auf die Themen
+            self.st.setdefault("tipps", []).append({"von": handle, "text": text[:400], "tag": day})
+            self.st["tipps"] = self.st["tipps"][-50:]
         if art in ("tief", "foto_raus") or (art in ("smalltalk", "tipp") and not answer):
             self.tg.say(f"✉️ Nachricht an @stadtwuppertal von @{handle}:\n„{text[:600]}“\n\n"
                         f"Worum es geht: {r.get('kurz', '')}\nDas beantwortest besser du: https://www.instagram.com/direct/inbox/")

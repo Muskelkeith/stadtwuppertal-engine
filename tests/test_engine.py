@@ -507,3 +507,23 @@ def test_reines_talzeit_thema_wartet_36_stunden(env):
     e._redo = False
     e.produce_one(q)
     assert q["status"] == "new" and q["hold_until"] > e.ts() + 30 * 3600 and "pkg" not in q
+
+
+def test_dm_tipps_werden_nur_gesammelt(env):
+    run, graph, store, feed = env
+    feed.pop("items", None)
+    e, errs = run(datetime(2026, 11, 23, 11, 0, tzinfo=TZ))
+    e.brain.dm_reply = lambda h, t: {"art": "tipp", "antwort": "Danke dir!", "kurz": "Hinweis"}
+    vorher = len(e.st["ideen"])
+    graph.inbox = [{"messages": {"data": [{"id": "d3", "from": {"id": "u7", "username": "nachbar"},
+                                           "message": "Bei uns an der Hardt steht seit Wochen ein Bagger rum"}]}}]
+    e.check_dms()
+    assert len(e.st["ideen"]) == vorher and e.st["tipps"][-1]["von"] == "nachbar"
+
+
+def test_kritik_zu_altem_post_wird_idee(env):
+    run, graph, store, feed = env
+    feed.pop("items", None)
+    e, errs = run(datetime(2026, 11, 23, 11, 0, tzinfo=TZ))
+    e.revise({"type": "revise", "msg": "999", "text": "Datum raus, nochmal machen"})
+    assert any("Datum raus" in i["text"] for i in e.st["ideen"])

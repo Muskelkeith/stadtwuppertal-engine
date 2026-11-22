@@ -215,7 +215,7 @@ Assistent antwortet und sich bei allem Wichtigen das Team selbst meldet."""
 <<<{text[:1500]}>>>
 Ordne ein und antworte nur, wenn es harmlos und einfach ist (Smalltalk, Lob, Danke, Gruß, simple Frage, deren
 Antwort jeder Wuppertaler kennt). Locker, warm, kurz (1–2 Sätze), im Ton des Sprachkonzepts, keine Links.
-art: smalltalk | tipp (Themenhinweis für einen Post) | foto_raus (will ein Foto von sich nicht bei uns sehen) |
+art: smalltalk | tipp (Hinweis auf etwas in der Stadt – kurz danken, nichts versprechen) | foto_raus (will ein Foto von sich nicht bei uns sehen) |
 tief (braucht echte Antwort: Kooperation, Presse, Beschwerde, Kritik, persönliches Anliegen, Fakten, die du nicht
 sicher weißt) | spam | beleidigung
 JSON: {{"art": "…", "antwort": "Antwort oder leer (bei tief, spam, beleidigung immer leer)", "kurz": "worum es geht, 1 Satz"}}"""
