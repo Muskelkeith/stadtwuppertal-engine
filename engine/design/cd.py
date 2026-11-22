@@ -157,14 +157,14 @@ def bracket(img, x, y, color):
     ImageDraw.Draw(img).polygon([(x - 26, y - 2), (x + 26, y - 2), (x + STROKE / 2, y + 22), (x - STROKE / 2, y + 22)], fill=color)
 
 
-def hang(canvas, im, pivot, angle=0.0, length=HANG, color=(0, 0, 0), eyelet=True, on_rail=False):
+def hang(canvas, im, pivot, angle=0.0, length=HANG, color=(0, 0, 0), eyelet=True, on_rail=False, dx=0):
     d = ImageDraw.Draw(canvas)
     hx = im.width / 2
     big = Image.new("RGBA", (im.width * 3, im.height * 3), (0, 0, 0, 0))
     cx, cy = im.width * 3 // 2, im.height * 3 // 2
     big.paste(im, (int(cx - hx), cy), im)
     rot = big.rotate(angle, center=(cx, cy), resample=Image.BICUBIC)
-    px, py = pivot[0], pivot[1] + length
+    px, py = pivot[0] + dx, pivot[1] + length
     d.line((pivot[0], pivot[1], px, py), fill=color, width=STROKE)
     canvas.paste(rot, (int(px - cx), int(py - cy)), rot)
     if on_rail:
@@ -228,8 +228,18 @@ def chain(img, hb, li, ci, text, ink, size=128, angle=-6, arrow=False, fg=SCHILD
     """Schild hängt am Fußpunkt eines Zeichens (meist am Punkt)."""
     b, (x, y) = hb
     ax, ay = b.anchor(li, ci, "bottom")
-    s = schild_block(text, size, arrow=arrow, fg=fg, bg=bg)
-    hang(img, s, (x + ax, y + ay - int(b.font.size * 0.06)), angle=angle, length=length + int(b.font.size * 0.06), color=ink)
+    import math
+    px = x + ax
+    margin, floor = 40, int(size * 0.85)
+    while True:      # Schild darf nie aus dem Bild ragen: etwas kleiner setzen, dann seitlich einrücken (Kette schräg)
+        s = schild_block(text, size, arrow=arrow, fg=fg, bg=bg)
+        half = s.width / 2 + abs(math.sin(math.radians(angle))) * s.height
+        if (px - half >= margin and px + half <= img.width - margin) or size <= floor:
+            break
+        size -= 6
+    dx = min(max(px, margin + half), img.width - margin - half) - px
+    hang(img, s, (px, y + ay - int(b.font.size * 0.06)), angle=angle, length=length + int(b.font.size * 0.06),
+         color=ink, dx=dx)
     img.paste(b.im, (int(x), int(y)), b.im)  # Kette beginnt hinter dem Punkt
     return s
 

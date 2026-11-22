@@ -585,3 +585,19 @@ def test_gescheiterter_sendeplatz_bekommt_ersatz(env):
     assert len(e.st["queue"]) == n + 1 and e.st["queue"][-1]["slot"] == "mittag" and e.st["queue"][-1]["ersatz"] == 1
     e.replace_failed_slots()
     assert len(e.st["queue"]) == n + 1     # nicht doppelt ersetzen
+
+
+def test_schild_ragt_nie_aus_dem_bild():
+    from PIL import Image
+    from engine.design import render
+    pkg = {"rubric": "frag", "hook": ["reibekuchen", "oder", "bratwurst?"], "options": ["Reibekuchen", "Bratwurst"],
+           "slides": [], "caption": "x"}
+    imgs = render.carousel(pkg, None, seed=3)
+    im = imgs[0].convert("RGB")
+    w, h = im.size
+    gelb = (255, 220, 0)
+    def near(c, t): return sum(abs(a - b) for a, b in zip(c, t)) < 90
+    from engine.design import cd
+    z = cd.SCHILD[:3] if isinstance(cd.SCHILD, tuple) else gelb
+    for y in range(0, h, 4):
+        assert not near(im.getpixel((0, y)), z) and not near(im.getpixel((w - 1, y)), z)
