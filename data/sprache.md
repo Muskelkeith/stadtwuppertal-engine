@@ -103,7 +103,9 @@ watt · dat · getz · ne? · wa? · hömma · sach ma · hasse / hasste · biss
 - Andeutungen, die man nicht versteht, sind keine Pointe („die Frage, die nie ganz beantwortet ist“ – welche?).
   Immer klar sagen, worum es geht.
 - Kuriose Meldungen brauchen mehr Witz als eine Polizeimeldung mit Augenzwinkern: Die absurde Seite ausspielen.
-- Fakten zu Institutionen exakt benennen: „Tanztheater Wuppertal Pina Bausch“, Spielstätte Opernhaus in Barmen.
+- Namen so, wie man sie hier sagt: „das Tanztheater“ oder „das Tanztheater Pina Bausch“ – nie mit dem Zusatz
+  „Wuppertal“. Wir sind in Wuppertal, das gilt für alles: „der Zoo“, „die Oper“, „die Stadthalle“, „die Uni“,
+  nicht „der Zoo Wuppertal“. Nur wenn es ohne den Zusatz missverständlich wäre, darf er stehen.
 
 ## Fragen, die Kommentare holen
 Stadtteil-Vergleich („Welcher Stadtteil hat den schönsten Weihnachtsmarkt?“) · Lieblings-Fragen
