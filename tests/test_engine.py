@@ -233,7 +233,7 @@ def test_hashtag_scout(env, monkeypatch):
     # Regel: #meinwuppertal wird ohne Anfrage übernommen – mit Credit, und nur das starke Foto
     assert not [x for x in e.tg.outbox if x[0] == "foto-anfrage"]
     fotos = [q for q in e.st["queue"] if q["mode"] == "foto"]
-    assert len(fotos) == 1 and "Foto: @wupperlicht" in fotos[0]["caption"]
+    assert len(fotos) == 1 and "foto: @wupperlicht" in fotos[0]["caption"].lower()
 
 
 def test_gitstore_mit_echtem_git(tmp_path):
@@ -796,3 +796,24 @@ def test_abgelaufene_warnung_wird_nicht_gepostet(env):
     e.st["queue"] = [{"id": "q1", "story": "nebel", "status": "waiting", "kind": "feed", "timeout": e.ts() + 9999}]
     e.publish_due()
     assert e.st["queue"][0]["status"] == "dropped"
+
+
+def test_aenderung_behaelt_foto_und_traegt_fotografen_ein(env, monkeypatch):
+    run, graph, store, feed = env
+    _img_get(monkeypatch)
+    import engine.sources as src
+    monkeypatch.setattr(src, "username_from_permalink", lambda link, http=None: None)
+    graph.authors = {"https://ig/p/a": "waschbaerfan"}
+    graph.hashtag = {"meinwuppertal": [
+        {"id": "a", "media_type": "IMAGE", "media_url": "x", "permalink": "https://ig/p/a", "like_count": 900,
+         "caption": "TOP Herbstbär #meinwuppertal"},
+        {"id": "c", "media_type": "IMAGE", "media_url": "z", "permalink": "https://ig/p/c", "like_count": 800,
+         "caption": "TOP ohne namen #meinwuppertal"}]}
+    e, errs = run(datetime(2026, 11, 23, 11, 0, tzinfo=TZ))
+    fotos = [q for q in e.st["queue"] if q["mode"] == "foto"]
+    assert len(fotos) == 1 and "@waschbaerfan" in fotos[0]["caption"]      # ohne ermittelbaren Fotografen: kein Post
+    q = fotos[0]
+    q["status"], q["tg"] = "waiting", "77"
+    e.revise({"text": "Fotograf ist @herbstknipser", "msg": "77"})
+    assert "@herbstknipser" in q["caption"] and q.get("photo_url") and q["status"] == "waiting"
+    assert "EINTRAGEN" not in q["caption"]

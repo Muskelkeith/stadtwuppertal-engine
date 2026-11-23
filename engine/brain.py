@@ -174,6 +174,24 @@ Liefere genau ein Paket als JSON:
         return self.llm.ask(mode, self.system, prompt, tier="redaktion")
 
     # ── 3. Prüfen ───────────────────────────────────────────
+    def edit(self, pkg: dict, anweisung: str, material) -> dict:
+        """Gezielte Änderung an einem fertigen Post: genau das, was der Chef sagt – sonst nichts."""
+        prompt = f"""Der Chef will an diesem fertigen Post etwas geändert haben: «{anweisung}»
+
+Setz GENAU das um. Alles, was er nicht anspricht, bleibt Wort für Wort gleich – nicht umformulieren, nicht
+„verbessern“, kein neues Thema. Schreib seine Anweisung nie wörtlich in den Post, nie Platzhalter wie
+„@FOTOGRAF_EINTRAGEN“. Bildnachweis und Quellen setzt die Engine selbst, nicht in die Caption schreiben.
+Fotograf/Bildquelle: Nennt er einen @Namen, gib ihn als credit_handle zurück. Nennt er keinen und es fehlt einer,
+ändere nichts am Text und stell in "frage" eine kurze Rückfrage („Wie heißt der Fotograf auf Instagram?“).
+Will er ein anderes Bild: neues_foto true und ein passender photo_query (Wikimedia-Suchbegriff).
+Nutze bei inhaltlichen Ergänzungen nur Fakten aus dem Material.
+
+Post: {json.dumps({k: pkg.get(k) for k in ("hook", "schild", "options", "slides", "caption", "hashtags")}, ensure_ascii=False)}
+Material: {json.dumps(material, ensure_ascii=False, default=str)[:6000]}
+JSON: {{"aenderungen": {{nur die geänderten Felder aus hook, schild, options, slides, caption, hashtags – vollständig}},
+"credit_handle": "", "neues_foto": false, "photo_query": "", "frage": "", "was_geaendert": "kurz, z. B. Fotograf ergänzt"}}"""
+        return self.llm.ask("aendern", self.system, prompt, tier="redaktion")
+
     def review(self, pkg: dict, material, jetzt: str = "") -> dict:
         system = self.system + """
 
@@ -425,6 +443,9 @@ def stub(task: str, prompt: str):
         return {"items": [{"id": i, "story": f"story-{n % 3}", "title": f"Geschichte {n % 3}",
                            "score": 8.5 if n == 0 else 5, "breaking": n == 0, "rubric": "news",
                            "risk": "gruen"} for n, i in enumerate(ids)]}
+    if task == "aendern":
+        return {"aenderungen": {}, "credit_handle": "", "neues_foto": False, "photo_query": "", "frage": "",
+                "was_geaendert": "Fotograf ergänzt"}
     if task == "rate":
         hi = "TOP" in prompt or "semih" in prompt
         return {"score": 8.8 if hi else 5.0, "wow": 8 if hi else 4, "wuppertal": True, "ad": False, "watermark": False,

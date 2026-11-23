@@ -58,6 +58,18 @@ def default_state():
             "angefragt": {}, "anfragen": {}, "dm_seen": {}, "ratings": {}, "abgelehnt": {}}
 
 
+def dhash(raw: bytes) -> int:
+    """64-Bit-Bildfingerabdruck: gleiche Fotos (auch verkleinert/leicht beschnitten) haben fast denselben Wert."""
+    import io
+    im = Image.open(io.BytesIO(raw)).convert("L").resize((9, 8), Image.LANCZOS)
+    px = list(im.getdata())
+    v = 0
+    for y in range(8):
+        for x in range(8):
+            v = (v << 1) | (px[y * 9 + x] > px[y * 9 + x + 1])
+    return v
+
+
 WTAL = re.compile(r"wupper|elberfeld|barmen|vohwinkel|cronenberg|ronsdorf|beyenburg|langerfeld|oberbarmen|"
                   r"schwebebahn|nordbahntrasse|döppersberg|ölberg|uellendahl|heckinghausen|sonnborn|katernberg|"
                   r"talzeit|\btal\b|wsw|bergische uni", re.I)
@@ -333,6 +345,8 @@ class Engine:
             self.tg.say("Der Post ist schon raus oder verworfen. Ich mache ihn mit deiner Kritik neu, er kommt in einem der nächsten Sendeplätze. "
                         "Soll das für alle Posts gelten, schreib „regel:“ davor.")
             return
+        if not re.search(r"neu aufbauen|komplett neu|ganz neu|neu schreiben|von vorn", text, re.I):
+            return self.edit_post(q, text)
         old = q["pkg"]
         mat = self.material(q)
         text_mat = {k: v for k, v in mat.items() if not k.startswith("_")} if isinstance(mat, dict) else mat
@@ -362,6 +376,57 @@ class Engine:
             try:
                 q["tg_extra"] = self.tg.album([render.jpeg(im, 80) for im in imgs[1:]], "Die weiteren Slides") or []
             except Exception:
+                pass
+
+    def edit_post(self, q, text):
+        """Deine Änderung genau umsetzen – Rest, Foto und Farben bleiben. „neu aufbauen“ schreibt ihn komplett neu."""
+        import io
+        old = q["pkg"]
+        try:
+            mat = self.material(q) if q["mode"] != "foto" else {}
+        except Exception:      # noqa: BLE001
+            mat = {}
+        text_mat = {k: v for k, v in mat.items() if not k.startswith("_")} if isinstance(mat, dict) else mat
+        named = re.search(r"@([A-Za-z0-9._]{2,30})", text)
+        r = self.brain.edit(old, text, text_mat)
+        h = named.group(1) if named else (r.get("credit_handle") or "").lstrip("@")
+        if r.get("frage") and not h and not r.get("aenderungen"):
+            self.tg.say(r["frage"] + " Antworte einfach auf die Vorschau, der Post wartet so lange.")
+            return
+        pkg = {**old, **{k: v for k, v in (r.get("aenderungen") or {}).items()
+                         if k in ("hook", "schild", "slides", "caption", "options", "hashtags")}}
+        credit = q.get("credit")
+        if h:
+            credit, q["tag_user"] = f"foto: @{h}", h
+        photo = None
+        if r.get("neues_foto") and r.get("photo_query"):
+            pkg["photo_query"] = r["photo_query"]
+            photo, c = self.pick_photo(q, pkg)
+            if photo is not None:
+                credit = c or credit
+                q["photo_url"] = self.store.media(f"{int(self.ts())}-{q['id']}-foto.jpg", render.jpeg(photo))
+        elif q.get("photo_url"):
+            try:
+                photo = Image.open(io.BytesIO(self.fetch_bytes(q["photo_url"]))).convert("RGB")
+            except Exception as e:      # noqa: BLE001
+                self.log(f"änderung {q['id']}: foto nicht mehr abrufbar ({str(e)[:60]})")
+        if q["mode"] == "foto" and photo is not None:
+            imgs = [render.community(photo, "")]
+        else:
+            imgs = render.carousel(pkg, photo, seed=q["id"] + "e")
+        self.tg.mark(q.get("tg"), "Geändert, neue Version unten ↓")
+        q["pkg"], q["credit"], q["approved_feedback"] = pkg, credit, text
+        q["media"] = [self.store.media(f"{int(self.ts())}-{q['id']}-e{n}.jpg", render.jpeg(im)) for n, im in enumerate(imgs)]
+        self._cover = getattr(self, "_cover", {})
+        self._cover[q["id"]] = render.jpeg(imgs[0], 85)
+        q["caption"] = self.caption(pkg, credit)
+        q.update(status="waiting", on_timeout="drop", timeout=self.ts() + 6 * 3600)
+        what = r.get("was_geaendert") or "geändert"
+        q["tg"] = self.tg.preview(self._cover[q["id"]], f"{what}:\n\n{q['caption'][:800]}", q["id"])
+        if self.tg.live and self.tg.chat and len(imgs) > 1:
+            try:
+                q["tg_extra"] = self.tg.album([render.jpeg(im, 80) for im in imgs[1:]], "Die weiteren Slides") or []
+            except Exception:      # noqa: BLE001
                 pass
 
     def next_idea(self):
@@ -1343,10 +1408,21 @@ class Engine:
                 if AD.search(m.get("caption") or ""):
                     continue
                 cands.append((m.get("like_count") or 0, key, m))
+        wm = self.marketing_hashes()
         for _, key, m in sorted(cands, key=lambda x: -x[0])[:p["rate_per_run"]]:
-            h = sources.username_from_permalink(m.get("permalink", ""), self.http)
-            if h:
-                self.st["kandidaten"][h] = self.st["kandidaten"].get(h, 0) + 2
+            h = sources.username_from_permalink(m.get("permalink", ""), self.http) or \
+                self.graph.oembed_author(m.get("permalink", ""))
+            if not h:
+                self.log(f"hashtag-scout: Fotograf zu {m.get('permalink', '')} nicht ermittelbar – ohne Credit kein Post")
+                continue
+            try:
+                hx = dhash(self.fetch_bytes(m["media_url"]))
+                if any(bin(hx ^ x).count("1") <= 10 for x in wm):
+                    self.log(f"hashtag-scout: Foto von @{h} hatte @wuppertal schon – übersprungen")
+                    continue
+            except Exception:      # noqa: BLE001
+                pass
+            self.st["kandidaten"][h] = self.st["kandidaten"].get(h, 0) + 2
             r = self.judge(key, m["media_url"], {"handle": h, "caption": m.get("caption")}, "community")
             if r.get("score", 0) < p["community_min"] or r.get("people"):
                 continue
@@ -1360,6 +1436,26 @@ class Engine:
                 self.ask(h or f"post:{m['id']}", {"tag": True, "image": m["media_url"], "text": (m.get("caption") or "")[:300],
                                                   "link": m.get("permalink"), "rating": r},
                          m, "dein Foto unter #" + m["_tag"])
+
+    def marketing_hashes(self):
+        """Fingerabdrücke der Bilder, die @wuppertal (Wuppertal Marketing) zuletzt gepostet hat – die nehmen wir nicht."""
+        c = self.st.setdefault("wm_cache", {"ts": 0, "hashes": []})
+        if self.ts() - c["ts"] < 6 * 3600 or self.graph is None:
+            return c["hashes"]
+        c["ts"] = self.ts()
+        try:
+            media = (self.graph.business_discovery("wuppertal", limit=50).get("media") or {}).get("data", [])
+            hs = []
+            for m in media:
+                if m.get("media_url") and m.get("media_type") in ("IMAGE", "CAROUSEL_ALBUM"):
+                    try:
+                        hs.append(dhash(self.fetch_bytes(m["media_url"])))
+                    except Exception:      # noqa: BLE001
+                        pass
+            c["hashes"] = (hs + c["hashes"])[:150]
+        except Exception as e:      # noqa: BLE001
+            self.log(f"wuppertal-abgleich: {str(e)[:80]}")
+        return c["hashes"]
 
     def photo_request(self, handle, item, title=""):
         """Meta lässt die erste DM nur von Menschen zu: Die Engine macht alles fertig, du schickst die Nachricht ab.
@@ -1836,19 +1932,26 @@ class Engine:
                 self.log(f"einreichung verworfen ({r.get('score')}/10): {r.get('why', '')}")
                 return
             q["idea"]["tag"] = {"rating": r, "user": meta.get("insta"), "image": None}
-        img = render.community(Image.open(io.BytesIO(raw)), meta.get("name", ""))
-        pkg = self.brain.write("rubrik", {"typ": "community-foto", "ort": meta.get("ort"), "text": meta.get("text"),
-                                          "hinweis": "Nur Caption schreiben: 2–3 Zeilen über Ort/Stimmung, "
-                                                     "nichts über Personen behaupten, Frage am Ende."})
         handle = (meta.get("insta") or "").lstrip("@")
-        credit = f"Foto: {('@' + handle) if handle else (meta.get('name') or 'eingereicht')}"
-        pkg.update(rubric="photo", hook=[], slides=[], reel=[])
+        if not handle:
+            q["status"] = "dropped"           # ohne Fotografen kein fremdes Foto
+            self.log(f"foto {q['id']}: Fotograf unbekannt – nicht gepostet")
+            return
+        img = render.community(Image.open(io.BytesIO(raw)), meta.get("name", ""))
+        q["photo_url"] = self.store.media(f"{int(self.ts())}-{q['id']}-foto.jpg", raw)
+        pkg = self.brain.write("rubrik", {"typ": "community-foto", "ort": meta.get("ort"), "text": meta.get("text"),
+                                          "hinweis": "Nur Caption schreiben: 2–3 Zeilen über Ort/Stimmung, nichts über "
+                                                     "Personen behaupten. Frage nur, wenn sie sich anbietet. Den "
+                                                     "Bildnachweis und Quellen setzt die Engine selbst – schreib "
+                                                     "nichts dazu in die Caption."})
+        credit = f"foto: @{handle}"
+        pkg.update(rubric="photo", hook=[], slides=[], reel=[], sources=[])
         q["pkg"] = pkg
         q["media"] = [self.store.media(f"{int(self.ts())}-{q['id']}.jpg", render.jpeg(img))]
         self._cover = getattr(self, "_cover", {})
         self._cover[q["id"]] = render.jpeg(img, 85)
         tag = q["idea"].get("tag") or {}
-        if tag.get("direkt") and handle:
+        if handle:
             q["tag_user"] = handle          # @-Nennung in der Caption + Markierung im Bild → Instagram benachrichtigt
         q["caption"] = self.caption(pkg, credit)
         rating = (q["idea"].get("tag") or {}).get("rating") or {}
@@ -1901,7 +2004,10 @@ class Engine:
     URL = re.compile(r"(https?://\S+|www\.\S+|\b[\w-]+\.(?:de|com|net|org)/\S*)", re.I)
 
     def caption(self, pkg, credit, label=False):
-        parts = [re.sub(r"[ \t]+\n", "\n", self.URL.sub("", pkg.get("caption", ""))).strip()]
+        body = re.sub(r"[ \t]+\n", "\n", self.URL.sub("", pkg.get("caption", ""))).strip()
+        body = "\n".join(l for l in body.split("\n")
+                         if not re.search(r"EINTRAGEN|PLATZHALTER|\bTODO\b|^\s*(bild)?quelle:|^\s*foto:", l, re.I))
+        parts = [body.strip()]
         via = [s["name"] for s in pkg.get("sources", []) if s.get("name")]
         if via:
             parts.append("quelle: " + ", ".join(dict.fromkeys(via)))

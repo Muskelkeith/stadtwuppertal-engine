@@ -86,6 +86,15 @@ class GraphClient:
                   f"media.limit({limit}){{id,caption,like_count,comments_count,timestamp,permalink,media_type,media_url}}}}")
         return self._req("GET", self.ig, fields=fields).get("business_discovery", {})
 
+    def oembed_author(self, permalink: str) -> str | None:
+        """Wer hat den Post gemacht? Metas oEmbed liefert den Namen, den die Hashtag-Suche verschweigt."""
+        try:
+            d = self._req("GET", "instagram_oembed", url=permalink, fields="author_name")
+            a = (d.get("author_name") or "").strip().lstrip("@")
+            return a if re.fullmatch(r"[A-Za-z0-9._]{2,30}", a) else None
+        except Exception:      # noqa: BLE001
+            return None
+
     def hashtag_media(self, tag: str, edge: str = "top_media", limit: int = 30) -> list[dict]:
         """Öffentliche Beiträge zu einem Hashtag (braucht Metas Freigabe „Instagram Public Content Access“).
         Meta liefert keinen Nutzernamen, aber den Link zum Post. Max. 30 verschiedene Hashtags pro 7 Tage."""
@@ -251,6 +260,9 @@ class FakeGraph:
 
     def hashtag_media(self, tag, edge="top_media", limit=30):
         return getattr(self, "hashtag", {}).get(tag, []) if edge == "top_media" else []
+
+    def oembed_author(self, permalink):
+        return getattr(self, "authors", {}).get(permalink)
 
     def own_media(self, limit=30):
         return [{"id": x[1], "timestamp": "2026-11-20T10:00:00+0000", "media_product_type": "FEED"} for x in self.done]
