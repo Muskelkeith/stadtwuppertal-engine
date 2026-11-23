@@ -1084,17 +1084,23 @@ class Engine:
         self.decide(q, pkg, credit)
 
     def pick_colors(self, pkg):
-        """Das Raster soll bunt sein: keine Hintergrundfarbe, die in den letzten drei Posts schon lief."""
-        recent = [tuple(p["farbe"])[0] for p in self.st["posted"][-3:] if p.get("farbe")]
-        recent += [tuple(q["pkg"]["farbe"])[0] for q in self.st["queue"]
-                   if q["status"] in ("waiting", "ready", "vorrat") and (q.get("pkg") or {}).get("farbe")]
-        pref = render.PALETTES.get(pkg.get("rubric", "news"), render.PALETTES["news"])
-        pairs = [pref] + [x for x in render.CANDY if x != pref]
+        """Das Raster soll bunt sein: Farbpaar und Hintergrund dürfen in den letzten drei Posts (und in wartenden
+        Vorschauen) nicht schon vorkommen. Alte Posts ohne gespeicherte Farbe zählen mit ihrer Rubrik-Standardfarbe."""
+        def pair(x):
+            f = x.get("farbe") or render.PALETTES.get(x.get("rubric") or "news", render.PALETTES["news"])
+            return tuple(f)
+        recent = [pair(p) for p in self.st["posted"] if p.get("kind") == "feed"][-3:]
+        recent += [pair(q["pkg"]) for q in self.st["queue"]
+                   if q["status"] in ("waiting", "ready") and q.get("pkg") and q["pkg"] is not pkg]
+        used_bg = {r[0] for r in recent}
+        used_sets = {frozenset(r) for r in recent}
         rnd = random.Random(" ".join(pkg.get("hook") or []))
-        free = [x for x in pairs if x[0] not in recent]
+        free = [x for x in render.CANDY if x[0] not in used_bg and frozenset(x) not in used_sets]
         if not free:
-            return list(pref)
-        return list(free[0] if free[0] == pref and rnd.random() < 0.5 else rnd.choice(free))
+            free = [x for x in render.CANDY if frozenset(x) not in used_sets] or list(render.CANDY)
+        last = recent[-1] if recent else None
+        free.sort(key=lambda x: (last is not None and (x[0] in last or x[1] in last), rnd.random()))
+        return list(free[0])
 
     # ── Qualitätskontrolle ──────────────────────────────────
     @staticmethod

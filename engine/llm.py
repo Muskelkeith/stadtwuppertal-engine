@@ -40,11 +40,12 @@ class LLM:
                 raise RuntimeError("Kein Claude-Zugang (CLAUDE_CODE_OAUTH_TOKEN fehlt)")
             return self.stub(task, prompt)
         exe = shutil.which("claude") or "claude"
-        cmd = [exe, "-p", "--output-format", "json", "--tools", "", "--model", self.models.get(tier, "sonnet"),
-               "--system-prompt", system]
+        model = self.models.get(tier, "opus" if tier == "redaktion" else "sonnet")
         last = None
         for attempt in range(2):
-            r = subprocess.run(cmd, input=prompt, capture_output=True, text=True, env=self.env, timeout=420)
+            m = model if attempt == 0 else ("sonnet" if model == "opus" else model)   # Opus voll? dann Sonnet
+            cmd = [exe, "-p", "--output-format", "json", "--tools", "", "--model", m, "--system-prompt", system]
+            r = subprocess.run(cmd, input=prompt, capture_output=True, text=True, env=self.env, timeout=600)
             try:
                 outer = json.loads(r.stdout)
                 if outer.get("is_error"):

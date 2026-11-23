@@ -171,7 +171,7 @@ Material:
 
 Liefere genau ein Paket als JSON:
 {PACKAGE}"""
-        return self.llm.ask(mode, self.system, prompt, tier="write")
+        return self.llm.ask(mode, self.system, prompt, tier="redaktion")
 
     # ── 3. Prüfen ───────────────────────────────────────────
     def review(self, pkg: dict, material, jetzt: str = "") -> dict:
@@ -215,7 +215,7 @@ Paket: {json.dumps(pkg, ensure_ascii=False)}
 JSON: {{"veraltet": bool, "ok": bool (false NUR bei rechtlichen Problemen oder wenn das Material nichts hergibt), "fixes": {{geänderte Paket-Felder}},
 "langweilig": bool, "warum_langweilig": "kurz oder leer", "risk": "gruen|gelb|rot", "public_interest": bool, "tests": {{"mehrwert": 1-5|null, "sprache": 1-5|null, "gag": 1-5|null, "futter": 1-5|null, "auge": 1-5|null}},
 "note": "ein Satz, was du geändert hast"}}"""
-        return self.llm.ask("review", system, prompt, tier="write")
+        return self.llm.ask("review", system, prompt, tier="redaktion")
 
 
     # ── 3b. Bildkontrolle (fertige Bilder ansehen) ──────────
@@ -333,7 +333,7 @@ Ordne ein:
 - frage: eine Frage an dich, die du mit dem Wissen oben beantworten kannst (z. B. „warum wurde nichts gepostet?“)
   → antwort = ehrliche, konkrete Antwort in 1–4 Sätzen. Was du nicht weißt, sagst du offen.
 JSON: {{"art": "idee|aenderung|freigabe|verwerfen|befehl|regel|frage", "befehl": "…oder null", "regel": "…oder null", "antwort": "…oder null"}}"""
-        return self.llm.ask("chef", system, prompt, tier="triage")
+        return self.llm.ask("chef", system, prompt, tier="write")
 
     def pick_comments(self, post: str, comments: list[dict], max_n: int = 3) -> dict:
         system = self.system + "\n\nDu betreust jetzt die Kommentare unter unseren Posts." + self.GUARD

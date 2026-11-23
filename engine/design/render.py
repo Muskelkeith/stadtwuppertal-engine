@@ -89,9 +89,14 @@ def cover(pkg: dict, photo: Image.Image | None = None, more: bool = False, wagni
         bg, ink = palette(rubric, wagnis, rnd, pkg.get("farbe"))
         label = cd.LABELS.get(rubric, cd.LABELS["news"])
         if photo is not None:
-            light = bg if bg != C["creme"] else C["bubblegum"]
-            img = cd.duotone(ImageOps.fit(photo.convert("RGB"), (w, h), Image.LANCZOS), C["brombeer"], light, hi=0.8)
-            rail_ink, text_c = C["brombeer"], C["creme"]
+            # Duoton aus dem gewählten Farbpaar: dunkle Farbe für die Schatten, helle für die Lichter – so sieht
+            # nicht jedes Fotocover gleich lila aus.
+            lum = lambda c: 0.3 * c[0] + 0.59 * c[1] + 0.11 * c[2]
+            dark, light = sorted((bg, ink), key=lum)
+            if lum(dark) > 120:                       # zwei helle Farben → Brombeer als Schatten
+                dark = C["brombeer"]
+            img = cd.duotone(ImageOps.fit(photo.convert("RGB"), (w, h), Image.LANCZOS), dark, light, hi=0.8)
+            rail_ink, text_c = dark, C["creme"]
             ry = cd.rail(img, rail_ink, label, light, y0=_rail_y(h))
             hb, size = _hook(img, pkg["hook"], text_c, ry, hcolor=rail_ink, schild=_sch(pkg))
             fg, sbg = schild_colors(light, rail_ink)

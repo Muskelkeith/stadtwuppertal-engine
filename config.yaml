@@ -47,7 +47,8 @@ photos:
 
 llm:
   triage: haiku                  # sichten: schnell und sparsam
-  write: sonnet                  # schreiben und prüfen
+  write: sonnet                  # Themen prüfen, Nachrichten verstehen, Kommentare
+  redaktion: opus                # Posts schreiben und Endkontrolle – hier entscheidet sich die Qualität
   code: opus                     # Werkstatt: Code reparieren (fällt sonst auf sonnet zurück)
 
 voice:
