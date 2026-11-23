@@ -12,7 +12,7 @@ timezone: Europe/Berlin
 # ── Takt ────────────────────────────────────────────────────
 takt:
   active_hours: [6, 23]          # nur in dieser Zeit wird gepostet
-  collect_every_min: 20          # so oft werden alle Quellen abgeklappert
+  collect_every_min: 10          # so oft werden alle Quellen abgeklappert (jeder Takt)
   slots:                         # feste Sendeplätze (wenn nichts Eiliges anliegt)
     "07:30": morgen
     "12:30": mittag

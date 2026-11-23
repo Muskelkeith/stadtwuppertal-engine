@@ -534,25 +534,32 @@ class Engine:
                     self.enqueue("rubrik", kind="reel", idea=idea)
 
     def plan_news_now(self):
-        """Starke frische Meldung (Prüfung ≥ 7, höchstens 12 h alt) → sofort bauen. Höchstens 3 solcher Extra-Posts am Tag,
-        nur wenn gerade kein anderer Post in Arbeit ist und das Tageslimit nicht erreicht ist."""
+        """Aktuelles sofort raushauen, nicht auf den Sendeplatz warten:
+        - zeitkritisch (Sperrung, Warnung, Ausfall, Termin heute): ab Prüfung 5, solange es frisch ist und noch gilt
+        - sonstige starke Meldung: ab Prüfung 7, höchstens 3 solcher Extra-Posts am Tag."""
         now = self.ts()
         key = f"{self.today()}:news_now"
-        if self.st["done"].get(key, 0) >= 3 or len(self.feed_today()) >= self.k["max_feed_per_day"]:
+        if len(self.feed_today()) >= self.k["max_feed_per_day"] + 2:
             return
         if any(q["kind"] == "feed" and q["status"] == "new" for q in self.st["queue"]):
             return
-        cands = sorted([(s["score"] + (1 if s.get("zeitkritisch") else 0), k) for k, s in self.st["stories"].items()
-                        if not s.get("queued") and s.get("rubric") not in ("resonanz",)
-                        and now - s.get("first", now) < 12 * 3600
-                        and (s["score"] >= 7 or (s.get("zeitkritisch") and s["score"] >= 6))], reverse=True)
-        cands = self.gate_stories(cands[:6])
-        if cands:
-            qid = self.enqueue("meldung", story=cands[0][1])
-            if self.st["stories"][cands[0][1]].get("zeitkritisch"):
-                self.st["queue"][-1]["sofort"] = True
-            self.st["done"][key] = self.st["done"].get(key, 0) + 1
-            self.log(f"nachricht sofort: „{self.st['stories'][cands[0][1]].get('title', '')[:70]}“ ({qid})")
+        fresh = [(s, k) for k, s in self.st["stories"].items()
+                 if not s.get("queued") and s.get("rubric") != "resonanz" and self.gilt_noch(k)]
+        eilig = sorted([(s["score"], k) for s, k in fresh if s.get("zeitkritisch") and s["score"] >= 5
+                        and now - s.get("first", now) < 3 * 3600], reverse=True)
+        pick = self.gate_stories(eilig[:6], minimum=5)
+        if not pick and self.st["done"].get(key, 0) < 3:
+            stark = sorted([(s["score"], k) for s, k in fresh if s["score"] >= 7
+                            and now - s.get("first", now) < 12 * 3600], reverse=True)
+            pick = self.gate_stories(stark[:6], minimum=7)
+            if pick:
+                self.st["done"][key] = self.st["done"].get(key, 0) + 1
+        if pick:
+            k = pick[0][1]
+            qid = self.enqueue("meldung", story=k)
+            self.st["queue"][-1].update(sofort=bool(self.st["stories"][k].get("zeitkritisch")), eilig=True,
+                                        kat=self.KAT.get(self.st["stories"][k].get("rubric", "news"), "info"))
+            self.log(f"nachricht sofort: „{self.st['stories'][k].get('title', '')[:70]}“ ({qid})")
 
     def plan_slot_tagged(self, name, ersatz=0):
         n = len(self.st["queue"])
@@ -1014,7 +1021,7 @@ class Engine:
         pkg.update(rev.get("fixes") or {})
         pkg["risk"] = max(pkg.get("risk", "gruen"), rev.get("risk", "gruen"), key=["gruen", "gelb", "rot"].index)
         pkg["public_interest"] = bool(rev.get("public_interest", pkg.get("public_interest")))
-        if rev.get("langweilig") and rev.get("ok", True) and not q.get("rv_try"):
+        if rev.get("langweilig") and rev.get("ok", True) and not q.get("rv_try") and not q.get("eilig"):
             rev["ok"] = False          # einmal nachschärfen, danach zählt das Urteil nicht mehr als Sperre
             rev["note"] = "Text noch zu flach: " + (rev.get("warum_langweilig") or rev.get("note", ""))
         if not rev.get("ok", True):
