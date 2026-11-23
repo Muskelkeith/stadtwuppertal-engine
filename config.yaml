@@ -117,5 +117,14 @@ resonanz: [lochlochlochlochlochloch]     # plus alle Accounts aus data/folgen.tx
 radar: [wuppertal.aktuell, talzeit.wuppertal, radiowuppertal, bergischeblaulichtnews, wuppertal, stadt_wuppertal]
 # Nur für Ton, Sprache und Captions (siehe data/sprache.md) – nie Themenquelle, nie im Radar
 sprachvorbilder: [1live, wdrcosmo, deutschlandfunknova]
-# Abstand halten (36 h, eigene Formulierung) gilt nur hier. Wuppertal Aktuell dürfen wir offen als Themenquelle nutzen.
-abstand: [talzeit.wuppertal]
+# Abstand zu anderen Medien und Accounts (gilt für ALLE, die nicht Primärquelle sind – Talzeit, Wuppertal Aktuell,
+# Radio Wuppertal, WZ, Rundschau, Blaulichtnews, entdeckte Accounts …), wenn ein Thema NUR von ihnen kommt:
+#   akut (Ankündigung, Lage, Sperrung, Entscheidung – die Info ist öffentlich, alle haben sie von irgendwo): sofort
+#   redaktionell (deren eigene Recherche, Feature, Fundstück): erst nach 12 Stunden
+#   zeitlos (Boulevard, Saison, Weihnachtsmarkt-Kram): erst nach 36 Stunden
+# Immer gilt: eigene Worte, eigener Aufbau, nie abschreiben.
+abstand_stunden: {akut: 0, redaktionell: 12, zeitlos: 36}
+# Primärquellen: deren Infos sind offizielle Mitteilungen – sofort nutzbar
+primaerquellen: [Polizei Wuppertal, Feuerwehr Wuppertal, Stadt Wuppertal, Oberbürgermeisterin, scherffmiriam, WSW,
+                 Autobahn GmbH, Deutscher Wetterdienst, Uni Wuppertal, Pina Bausch, Tanztheater, Utopiastadt,
+                 Wuppertal Live, Community & Solidarity, BIPoC-Referat, Queering the City]

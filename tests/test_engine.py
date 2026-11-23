@@ -512,18 +512,30 @@ def test_abstand_zu_talzeit():
     assert not vorbild.is_model_source({"source": "WZ"}, ["talzeit.wuppertal"])
 
 
-def test_reines_talzeit_thema_wartet_36_stunden(env):
+def test_abstand_zu_anderen_accounts_nach_art(env):
     run, graph, store, feed = env
     feed.pop("items", None)
     e, errs = run(datetime(2026, 11, 23, 11, 0, tzinfo=TZ))
     pub = datetime.fromtimestamp(e.ts() - 2 * 3600, TZ).isoformat()
-    e.st["items"]["tz1"] = {"id": "tz1", "source": "Talzeit", "handle": "talzeit.wuppertal", "title": "Neues Café",
-                            "summary": "Im Luisenviertel eröffnet ein Café.", "published": pub}
-    e.st["stories"]["s-tz"] = {"title": "Neues Café", "items": ["tz1"], "first": e.ts()}
-    q = {"id": "q-tz", "mode": "meldung", "kind": "feed", "status": "new", "story": "s-tz"}
-    e._redo = False
-    e.produce_one(q)
-    assert q["status"] == "new" and q["hold_until"] > e.ts() + 30 * 3600 and "pkg" not in q
+    e.st["items"]["tz1"] = {"id": "tz1", "source": "Talzeit", "handle": "talzeit.wuppertal", "title": "Weihnachtsmarkt",
+                            "summary": "Die Buden stehen.", "published": pub}
+    e.st["items"]["wa1"] = {"id": "wa1", "source": "Wuppertal Aktuell", "handle": "wuppertal.aktuell",
+                            "title": "OB kündigt höhere Parkgebühren an", "summary": "Scherff will Gebühren anheben.",
+                            "published": pub}
+    e.st["items"]["st1"] = {"id": "st1", "source": "Radio Wuppertal", "handle": "radiowuppertal", "title": "Reportage",
+                            "summary": "Unterwegs mit dem letzten Schuster.", "published": pub}
+    e.st["stories"]["s-z"] = {"title": "Weihnachtsmarkt", "items": ["tz1"], "first": e.ts(), "herkunft": "zeitlos"}
+    e.st["stories"]["s-a"] = {"title": "Parkgebühren", "items": ["wa1"], "first": e.ts(), "herkunft": "akut"}
+    e.st["stories"]["s-r"] = {"title": "Schuster", "items": ["st1"], "first": e.ts(), "herkunft": "redaktionell"}
+    out = {}
+    for k in ("s-z", "s-a", "s-r"):
+        q = {"id": f"q-{k}", "mode": "meldung", "kind": "feed", "status": "new", "story": k}
+        e._redo = False
+        e.produce_one(q)
+        out[k] = q
+    assert out["s-z"]["hold_until"] > e.ts() + 30 * 3600          # Boulevard: 36 h
+    assert 8 * 3600 < out["s-r"]["hold_until"] - e.ts() < 11 * 3600   # eigene Recherche: 12 h
+    assert not out["s-a"].get("hold_until")                         # akute Info: sofort
 
 
 def test_dm_tipps_werden_nur_gesammelt(env):

@@ -115,11 +115,14 @@ und höher bewerten – wir erzählen sie dann eigenständig.
 Bewerte jede Meldung. score 0–10 = Wie sehr interessiert das möglichst viele Leute in Wuppertal JETZT
 (Betroffenheit, Gesprächswert, Neuigkeit, Kommentarpotenzial)? breaking = muss sofort raus (Sperrung, Unwetter,
 Ausfall Schwebebahn, Großeinsatz mit Folgen, große Stadt-News). Unwichtiges, Werbung, Doppeltes: score ≤ 3.
+herkunft = akut (öffentliche Info, die alle von irgendwo haben: Ankündigung der OB, Ratsbeschluss, Sperrung, Polizei-/
+Feuerwehrlage, Gebühren, Termine) | redaktionell (eigene Recherche, Reportage, Fundstück oder exklusive Geschichte des
+Mediums/Accounts) | zeitlos (Boulevard, Saison, Weihnachtsmarkt-Kram, Netzfundstück ohne Eile).
 zeitkritisch = gilt heute oder in den nächsten Tagen und betrifft Leute direkt (Sperrung, Baustelle ab heute, Ausfall
 Schwebebahn/Bus, Warnung, Störung, wichtiger Termin, Frist) – solche Infos übernehmen wir schnell.
 rubric kurios = harmlose, absurde Meldung, bei der niemand zu Schaden kam (kurioser Diebstahl, tierischer Einsatz).
 JSON: {{"items": [{{"id": "…", "story": "kurzer-slug", "title": "neutraler Titel der Geschichte",
-"score": 0-10, "breaking": bool, "zeitkritisch": bool, "rubric": "news|events|history|fact|warum|kurios", "risk": "gruen|gelb|rot"}}]}}"""
+"score": 0-10, "breaking": bool, "zeitkritisch": bool, "herkunft": "akut|redaktionell|zeitlos", "rubric": "news|events|history|fact|warum|kurios", "risk": "gruen|gelb|rot"}}]}}"""
         res = self.llm.ask("triage", VOICE, prompt, tier="triage")
         return res.get("items", []) if isinstance(res, dict) else res
 

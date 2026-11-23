@@ -555,6 +555,8 @@ class Engine:
                 s["score"] = max(s["score"], float(r.get("score", 0)))
                 s["breaking"] = s.get("breaking", False) or bool(r.get("breaking"))
                 s["zeitkritisch"] = s.get("zeitkritisch", False) or bool(r.get("zeitkritisch"))
+                if r.get("herkunft") in ("akut", "redaktionell", "zeitlos"):
+                    s["herkunft"] = r["herkunft"]
                 s["rubric"] = r.get("rubric", s["rubric"])
                 if r.get("risk") == "rot" or s["risk"] == "rot":
                     s["risk"] = "rot"
@@ -712,6 +714,13 @@ class Engine:
         if rubric == "spotlight":
             out.append((6.5, "kultur", "spotlight", None))
         return out, rubric
+
+    def is_primary(self, item) -> bool:
+        """Offizielle Mitteilung (Stadt, Polizei, Feuerwehr, OB, WSW, DWD, Autobahn, Institutionen) statt Medium/Account."""
+        if item.get("kind") in ("warning", "autobahn"):
+            return True
+        name = f"{item.get('source', '')} {item.get('handle', '')}".lower()
+        return any(p.lower() in name for p in self.cfg.get("primaerquellen", []))
 
     def gilt_noch(self, slug, puffer_min=45) -> bool:
         """Warnungen/Sperrungen mit Ablaufzeit: nur solange sie noch mindestens `puffer_min` gelten.
@@ -1053,24 +1062,26 @@ class Engine:
         if q["mode"] == "damals" and not mat:
             q["status"] = "dropped"
             return
-        # Abstand zu Vorbildern: reine Talzeit-Themen erst nach 36 h, immer eigenständig erzählt
-        models = [h.lower() for h in self.cfg.get("abstand", ["talzeit.wuppertal"])]
+        # Abstand zu anderen Medien/Accounts: kommt ein Thema NUR von ihnen, hängt die Wartezeit von der Art ab –
+        # akute Info sofort, deren eigene Recherche nach 12 h, zeitloser Boulevard nach 36 h. Immer eigene Worte.
         vb_items = []
         if isinstance(mat, dict) and mat.get("meldungen"):
             ms = mat["meldungen"]
-            vb_items = [m for m in ms if vorbild.is_model_source(m, models)]
-            if vb_items and len(vb_items) == len(ms):
+            vb_items = [m for m in ms if not self.is_primary(m)]
+            if vb_items and len(vb_items) == len(ms) and not q.get("priority"):
+                herkunft = (self.st["stories"].get(q.get("story") or "", {}) or {}).get("herkunft") or "redaktionell"
+                wait = (self.cfg.get("abstand_stunden") or {}).get(herkunft, 12)
                 youngest = min(vorbild.age_hours(m, self.ts()) for m in vb_items)
-                if youngest < 36:
-                    q["hold_until"] = self.ts() + (36 - youngest) * 3600
+                if youngest < wait:
+                    q["hold_until"] = self.ts() + (wait - youngest) * 3600
                     self._redo = True
-                    self.log(f"talzeit-abstand: {q['id']} wartet noch {36 - youngest:.0f} h")
+                    self.log(f"abstand ({herkunft}): {q['id']} wartet noch {wait - youngest:.0f} h")
                     return
         text_mat = {k: v for k, v in mat.items() if not k.startswith("_")} if isinstance(mat, dict) else mat
         if not self.topic_ok(q, text_mat):
             return
         recent = [" ".join(p.get("hook", [])) for p in self.st["posted"][-15:]]
-        vb_note = ("ABSTAND ZUM VORBILD: Ein Teil des Materials stammt von Talzeit. Erzähl es komplett eigenständig – "
+        vb_note = ("EIGENSTÄNDIG: Das Material stammt (teils) von anderen Medien/Accounts. Erzähl es komplett eigenständig – "
                    "anderer Einstieg, anderer Aufbau, eigene Formulierungen, kein Satz darf ähnlich klingen. Bring "
                    "mindestens eine zusätzliche Einordnung oder einen Hintergrund, der sicher stimmt (Ort, Geschichte, "
                    "Zusammenhang, was es für Anwohner heißt) – nichts erfinden. Unsere Haltung darf kantiger sein.") \
