@@ -240,7 +240,8 @@ JSON: {{"art": "…", "antwort": "Antwort oder leer (bei tief, spam, beleidigung
         system = self.system + """
 
 Du bist jetzt die Themenkonferenz. Du entscheidest, BEVOR etwas geschrieben wird, ob ein Thema überhaupt einen Post
-verdient. Streng: Lieber kein Post als ein langweiliger."""
+verdient. Streng bei Füllthemen, großzügig bei echten Nachrichten: Lieber kein Post als ein langweiliger – aber keine
+wichtige Wuppertal-Nachricht verschlafen."""
         prompt = f"""Themen-Kandidaten: {json.dumps(topics, ensure_ascii=False)[:9000]}
 Bewerte jedes Thema 1–10 nach einer Frage: Würden Leute in Wuppertal (und auch Auswärtige) beim Scrollen anhalten,
 es zu Ende lesen, kommentieren oder weitererzählen?
@@ -253,6 +254,12 @@ Wiedererkennungswert (z. B. „Wer kauft auf dem Weihnachtsmarkt eigentlich die 
 Feel-Good und Boulevard: schöne Geschichten, Tiere, Nachbarschaft, Kultur-Highlights, Vereine und Initiativen mit
 coolen Aktionen → hoch. Ein Thema, das bei anderen Wuppertaler Accounts gerade auffällig gut läuft („resonanz“),
 ist ein starkes Signal – dann aber mit eigenem Dreh.
+NACHRICHTEN (rubrik news/meldung): Hier zählt, ob man es als Wuppertaler wissen muss oder will – das ist unser Kern,
+nicht nur Kurioses. Baustellen und Sperrungen ab heute, Polizei-/Feuerwehrlagen mit Folgen, Eröffnungen und
+Verschiebungen (z. B. Villa Amalia), Demos, Entscheidungen im Rat, Firmen aus dem Tal, Erfolge von WSV und BHC,
+große Veranstaltungen diese Woche → 7–9, auch wenn das Thema „normal“ klingt. Der Dreh ist dann: Was heißt das für mich?
+KONKRET: Gibt das Material keine konkreten Fakten her (kein Name, kein Ort, keine Zahl, kein Datum – z. B. „Murals
+in der Stadt“ ohne ein einziges Wandbild), höchstens 4. Ein schönes Wort-Thema ohne Inhalt ist kein Post.
 Niedrig (1–4): Verwaltungsnotizen, Umbenennungen ohne Geschichte, Termine ohne Dreh, Pressemitteilungs-Themen,
 Selbstverständliches, Dinge, die jeder schon weiß, Themen ohne Bild im Kopf.
 Gib zu jedem Thema den stärksten DREH an: den Einstieg, der es interessant macht (oder leer, wenn es keinen gibt).

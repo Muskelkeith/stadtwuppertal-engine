@@ -512,6 +512,8 @@ class Engine:
             if s.get("posted") and s.get("followup") and now >= s["followup"] and not s.get("followed"):
                 s["followed"] = True
                 self.enqueue("nachdreh", story=slug)
+        # Nachrichten, sobald sie da sind – nicht erst im nächsten Sendeplatz
+        self.plan_news_now()
         # feste Slots
         for hhmm, name in self.k["slots"].items():
             start = self.at(hhmm)
@@ -528,6 +530,24 @@ class Engine:
                 idea = self.pick_idea(prefer="history")
                 if idea:
                     self.enqueue("rubrik", kind="reel", idea=idea)
+
+    def plan_news_now(self):
+        """Starke frische Meldung (Prüfung ≥ 7, höchstens 12 h alt) → sofort bauen. Höchstens 3 solcher Extra-Posts am Tag,
+        nur wenn gerade kein anderer Post in Arbeit ist und das Tageslimit nicht erreicht ist."""
+        now = self.ts()
+        key = f"{self.today()}:news_now"
+        if self.st["done"].get(key, 0) >= 3 or len(self.feed_today()) >= self.k["max_feed_per_day"]:
+            return
+        if any(q["kind"] == "feed" and q["status"] in ("new", "waiting", "ready") for q in self.st["queue"]):
+            return
+        cands = sorted([(s["score"], k) for k, s in self.st["stories"].items()
+                        if not s.get("queued") and s.get("rubric") not in ("resonanz",)
+                        and now - s.get("first", now) < 12 * 3600 and s["score"] >= 7], reverse=True)
+        cands = self.gate_stories(cands[:6])
+        if cands:
+            qid = self.enqueue("meldung", story=cands[0][1])
+            self.st["done"][key] = self.st["done"].get(key, 0) + 1
+            self.log(f"nachricht sofort: „{self.st['stories'][cands[0][1]].get('title', '')[:70]}“ ({qid})")
 
     def plan_slot_tagged(self, name, ersatz=0):
         n = len(self.st["queue"])
@@ -570,7 +590,7 @@ class Engine:
         plan = self.k["rotation"].get(name, {})
         rubric = plan.get(weekday) if isinstance(plan, dict) else plan
         idee = self.next_idea() if name != "morgen" else None
-        if idee and not (cands and cands[0][0] >= 7.5):
+        if idee and not (cands and cands[0][0] >= 7):
             idee["status"] = "geplant"
             self.st["done"][f"{self.today()}:idee"] = True
             self.enqueue("idee", idea={"idee_von_jd": idee["text"],
@@ -607,7 +627,7 @@ class Engine:
             if len(ev) >= 3:
                 self.enqueue("events", idea={"events": ev[-40:]})
                 return
-        if cands and (name == "morgen" or cands[0][0] >= 7.5 or not rubric):
+        if cands and (name == "morgen" or cands[0][0] >= 7 or not rubric):
             self.enqueue("meldung", story=cands[0][1])
             return
         if rubric == "warum":
@@ -929,7 +949,7 @@ class Engine:
         if vb_items:
             theirs = [f"{m.get('title', '')} {m.get('summary', '')}" for m in vb_items]
             ov = vorbild.overlap(vorbild.pkg_text(pkg), theirs)
-            if ov > 0.12:
+            if ov > 0.25:
                 self.log(f"talzeit-abstand: {q['id']} zu nah dran ({ov:.0%})")
                 if not q.get("vb_redo"):
                     q.update(vb_redo=True, status="new",
@@ -1993,6 +2013,12 @@ class Engine:
             self.tg.say("⚠️ Kleine Störung, der Rest läuft normal:\n" + "\n".join(msgs))
 
     def fix_mistaken_ideas(self):
+        if not self.st["done"].get("regate_news_1"):
+            self.st["done"]["regate_news_1"] = 1        # neue Themenprüfung: abgelehnte Meldungen nochmal ansehen
+            for st_ in self.st["stories"].values():
+                if (st_.get("gate") or 0) < 7 and not st_.get("queued"):
+                    st_.pop("gate", None)
+                    st_.pop("gate_log", None)
         if not self.st["done"].get("fix_ideen_2"):
             self.st["done"]["fix_ideen_2"] = 1
             pend = self.pending_post()
