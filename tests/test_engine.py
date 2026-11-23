@@ -533,8 +533,8 @@ def test_abstand_zu_anderen_accounts_nach_art(env):
         e._redo = False
         e.produce_one(q)
         out[k] = q
-    assert out["s-z"]["hold_until"] > e.ts() + 30 * 3600          # Boulevard: 36 h
-    assert 8 * 3600 < out["s-r"]["hold_until"] - e.ts() < 11 * 3600   # eigene Recherche: 12 h
+    assert 20 * 3600 < out["s-z"]["hold_until"] - e.ts() < 23 * 3600   # Beitrag eines anderen Accounts: 24 h ab dessen Post
+    assert 20 * 3600 < out["s-r"]["hold_until"] - e.ts() < 23 * 3600
     assert not out["s-a"].get("hold_until")                         # akute Info: sofort
 
 
