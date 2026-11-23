@@ -152,6 +152,11 @@ JSON: {{"items": [{{"id": "…", "story": "kurzer-slug", "title": "neutraler Tit
                       "(head = Name klein, body = wann, wo, warum hingehen). Nur Termine aus dem Material!",
         }
         prompt = f"""Auftrag: {modes[mode]}
+FORMAT NACH STOFF: Nicht alles ist ein Karussell. Kleine Sachen (Wetter, kurze Info, Termin, Boulevard, eine starke
+Zahl, ein schönes Foto) = EIN Post ohne Folgeslides, mit photo_query für ein passendes echtes Foto. Karussell nur, wenn
+es Stoff für mehrere wirklich gute Slides gibt. Lieber ein knackiger Einzelpost als drei dünne Slides.
+STOFF: Steht in einer Meldung „volltext“, ist das der ganze Artikel – nutze die konkreten Details daraus (Namen, Orte,
+Zahlen, Zeiten), nicht nur den Anriss.
 {('Hinweis: ' + note) if note else ''}
 Letzte Hooks (nicht wiederholen): {json.dumps(list(recent_hooks)[-12:], ensure_ascii=False)}
 Material:
@@ -274,11 +279,12 @@ JSON: {{"urteile": [{{"id": "…", "score": 1-10, "warum": "ein Satz", "dreh": "
 
     def pool_ideas(self, ctx: dict) -> dict:
         system = self.system + "\n\nDu recherchierst jetzt zeitlose Wuppertal-Themen für den Ideenpool."
-        prompt = f"""Heute ist {ctx.get('heute', '')}. Schlag 18 starke Wuppertal-Themen vor – gemischt aus:
+        prompt = f"""Heute ist {ctx.get('heute', '')}. Schlag 24 Wuppertal-Themen vor, davon mindestens 6 kreativ – gemischt aus:
 kurios (Kuriositäten, Rekorde, Absurdes), fact (Nischenwissen, das kaum einer kennt), history (Damals, Wendepunkte,
 vergessene Geschichten), menschen (Originale, Erfinder, Künstler, Macher), orte (Ecken mit überraschender Geschichte),
 jahrestag (etwas, das in Wuppertal an einem Tag der NÄCHSTEN 14 TAGE passiert ist – mit "datum": "MM-TT"),
-kreativ (kleine, lustige Alltags- oder Jahreszeiten-Beobachtung als Frage an die Community, mit Wiedererkennungswert,
+kreativ (kleine, lustige Alltags- oder Jahreszeiten-Beobachtung als Frage an die Community, mit Wiedererkennungswert –
+auch Saisonales wie Weihnachtsmarkt, Glühwein, erster Schnee, Karneval, Sommer an der Trasse, Boulevard-Kram,
 z. B. „Wer kauft auf dem Weihnachtsmarkt eigentlich die Wolf-T-Shirts?“ – braucht keine Wikipedia).
 Nicht das, was jeder weiß (Schwebebahn-Basics, „Aspirin kommt aus Wuppertal“) – sondern das Dahinter.
 Bereits gemacht oder im Pool (nicht wiederholen): {json.dumps(ctx.get('schon_gemacht', []), ensure_ascii=False)[:2500]}

@@ -50,6 +50,44 @@ def discover_feeds(homepage: str, http=requests) -> list[str]:
     return [urljoin(homepage, f) for f in p.feeds]
 
 
+class _Paragraphs(HTMLParser):
+    def __init__(self):
+        super().__init__()
+        self.out, self.cur, self.depth, self.skip = [], [], 0, 0
+
+    def handle_starttag(self, tag, attrs):
+        if tag in ("script", "style", "nav", "footer", "aside", "form"):
+            self.skip += 1
+        if tag == "p":
+            self.depth += 1
+
+    def handle_endtag(self, tag):
+        if tag in ("script", "style", "nav", "footer", "aside", "form") and self.skip:
+            self.skip -= 1
+        if tag == "p" and self.depth:
+            self.depth -= 1
+            t = " ".join("".join(self.cur).split())
+            if len(t) > 50:
+                self.out.append(t)
+            self.cur = []
+
+    def handle_data(self, data):
+        if self.depth and not self.skip:
+            self.cur.append(data)
+
+
+def fetch_article(url: str, http=requests, chars: int = 5000) -> str:
+    """Der eigentliche Artikeltext (Absätze), damit Posts aus dem vollen Stoff entstehen statt aus dem Teaser."""
+    try:
+        r = http.get(url, headers=UA, timeout=25)
+        r.raise_for_status()
+        p = _Paragraphs()
+        p.feed(r.text)
+        return "\n".join(p.out)[:chars]
+    except Exception:      # noqa: BLE001
+        return ""
+
+
 def fetch_rss(src: dict, cutoff: datetime, http=requests) -> list[dict]:
     urls = [src["url"]] if src.get("url") else discover_feeds(src["homepage"], http)
     items = []

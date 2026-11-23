@@ -156,6 +156,7 @@ class Engine:
             self.step("vorbild", self.study_models)
             self.step("hashtags", self.scout_hashtags)
             self.step("produzieren", self.produce)
+            self.step("vorrat", self.fill_vorrat)
             self.step("posten", self.publish_due)
         self.step("tagesaufgaben", self.daily)
         self.step("werkstatt-wache", self.werkstatt_wache)
@@ -555,15 +556,14 @@ class Engine:
 
     def plan_slot_tagged(self, name, ersatz=0):
         n = len(self.st["queue"])
-        if ersatz or name == "jetzt":
-            self.plan_free()
-        else:
-            self.plan_slot(name)
+        self.plan_best(name)
         for q in self.st["queue"][n:]:
             q.update(slot=name, ersatz=ersatz)
-        if len(self.st["queue"]) == n:
+        if len(self.st["queue"]) == n and not any(q.get("abgerufen") and q.get("slot") == name and q["status"] != "vorrat"
+                                                   and self.ts() - q.get("due", 0) < 60 for q in self.st["queue"]):
             self.log(f"sendeplatz {name}: kein passendes Thema gefunden")
-        return len(self.st["queue"]) > n
+        return len(self.st["queue"]) > n or any(q.get("abgerufen") and q.get("slot") == name and self.ts() - q.get("due", 0) < 60
+                                                for q in self.st["queue"])
 
     def replace_failed_slots(self):
         """Ist ein Post eines Sendeplatzes gescheitert, sofort Ersatz planen (bis zu 2×, innerhalb von 3 Stunden)."""
@@ -581,89 +581,151 @@ class Engine:
             elif q.get("sofort"):
                 self.tg.say("Ich habe mehrere Themen geprüft, keins war gut genug. Schick mir eine Idee, dann baue ich daraus sofort einen Post.")
 
+    # Kategorien für den Tagesmix
+    KAT = {"news": "info", "events": "info", "kurios": "boulevard", "resonanz": "boulevard", "warum": "community",
+           "fact": "wissen", "orte": "wissen", "history": "geschichte", "menschen": "geschichte", "jahrestag": "geschichte",
+           "kreativ": "community", "frag": "community", "poll": "community", "damals": "geschichte", "idee": "idee",
+           "spotlight": "kultur", "platt": "wissen"}
+
     def plan_slot(self, name):
+        return self.plan_best(name)
+
+    def plan_free(self):
+        return self.plan_best("jetzt")
+
+    def candidates(self, name):
+        """Alles, was gerade postbar ist, mit Wert. Nichts wird abgelehnt – das Beste gewinnt.
+        Nur echter Schrott (Prüfung < 5) fliegt raus."""
         now = self.ts()
-        if any(q.get("priority") and q["kind"] == "feed" and q["status"] in ("new", "waiting", "ready")
-               and now - q.get("created", 0) < 2 * 3600 for q in self.st["queue"]):
-            return                    # eine Eilmeldung füllt den Slot
-        cands = sorted([(s["score"], k) for k, s in self.st["stories"].items()
-                        if not s.get("queued") and now - s.get("last", now) < 26 * 3600 and s["score"] >= 6],
-                       reverse=True)
-        cands = self.gate_stories(cands[:8])
-        weekday = ["mo", "di", "mi", "do", "fr", "sa", "so"][self.now().weekday()]
-        plan = self.k["rotation"].get(name, {})
-        rubric = plan.get(weekday) if isinstance(plan, dict) else plan
+        out = []          # (wert, kategorie, art, payload)
         idee = self.next_idea() if name != "morgen" else None
-        if idee and not (cands and cands[0][0] >= 7):
-            idee["status"] = "geplant"
-            self.st["done"][f"{self.today()}:idee"] = True
-            self.enqueue("idee", idea={"idee_von_jd": idee["text"],
-                                       "aktuelle_themen": [self.st["stories"][k]["title"] for _, k in cands[:8]]})
-            return
-        if rubric == "kurios":
-            fun = [(self.st["stories"][k].get("score", 5), k) for k, s in self.st["stories"].items()
-                   if s.get("rubric") == "kurios" and not s.get("queued") and now - s.get("last", now) < 72 * 3600]
-            fun = self.gate_stories(fun[-5:])
-            if fun:
-                self.enqueue("kurios", story=fun[0][1])
-                return
-            rubric = "fact"
-        if rubric == "frag":
-            p = ideenpool.take(self.st, ["kreativ"])
-            if p:
-                self.enqueue_pool(p)
-                return
-        if rubric == "frag" and len(cands) >= 1:
-            self.enqueue("frag", idea={"zuletzt_gepostet": [" ".join(p.get("hook", [])) for p in self.st["posted"]
-                                                           if now - p["ts"] < 3 * 86400 and p.get("kind") == "feed"][-6:],
-                                       "aktuelle_themen": [self.st["stories"][k]["title"] for _, k in cands[:1]],
-                                       "letzte_fragen": [" ".join(p.get("hook", [])) for p in self.st["posted"][-30:]
-                                                         if p.get("mode") == "frag"]})
-            return
-        if rubric == "spotlight":
-            pick = self.spotlight_pick()
-            if pick:
-                self.enqueue("spotlight", idea=pick)
-                return
-            rubric = "history"
+        if idee:
+            out.append((9.0, "idee", "idee", idee))
+        st_c = sorted([(s["score"], k) for k, s in self.st["stories"].items()
+                       if not s.get("queued") and now - s.get("last", now) < 26 * 3600 and s["score"] >= 4],
+                      reverse=True)[:10]
+        for g, k in self.gate_stories(st_c, minimum=5):
+            s = self.st["stories"][k]
+            v = g + (1.5 if s.get("zeitkritisch") else 0) + (0.5 if now - s.get("first", now) < 6 * 3600 else 0)
+            out.append((v, self.KAT.get(s.get("rubric", "news"), "info"), "story", k))
+        mmdd = self.now().strftime("%m-%d")
+        for p in self.st.get("pool", []):
+            if p["rubrik"] == "jahrestag" and p.get("datum") != mmdd:
+                continue
+            v = p.get("score", 7) - 0.5 + (1.5 if p["rubrik"] == "jahrestag" else 0)
+            out.append((v, self.KAT.get(p["rubrik"], "wissen"), "pool", p))
+        for q in self.st["queue"]:
+            if q["status"] == "vorrat":
+                out.append((q.get("wert", 7) + 0.5, q.get("kat", "wissen"), "vorrat", q))
+        plan = self.k["rotation"].get(name, {}) if name in self.k["rotation"] else {}
+        weekday = ["mo", "di", "mi", "do", "fr", "sa", "so"][self.now().weekday()]
+        rubric = plan.get(weekday) if isinstance(plan, dict) else plan
         if rubric == "events":
             ev = [i for i in self.st["items"].values() if i.get("event")]
             if len(ev) >= 3:
-                self.enqueue("events", idea={"events": ev[-40:]})
-                return
-        if cands and (name == "morgen" or cands[0][0] >= 7 or not rubric):
-            self.enqueue("meldung", story=cands[0][1])
-            return
-        if rubric == "warum":
-            hot = [k for sc, k in cands if self.st["stories"][k]["score"] >= 6]
-            if hot:
-                self.enqueue("warum", story=hot[0])
-                return
-            idea = self.pick_idea(prefer="poll")
-            if idea:
-                self.enqueue("warum", idea=idea)
-                return
+                out.append((7.5, "info", "events", ev[-40:]))
         if rubric == "damals":
-            self.enqueue("damals")
+            out.append((7.0, "geschichte", "damals", None))
+        if rubric == "spotlight":
+            out.append((6.5, "kultur", "spotlight", None))
+        return out, rubric
+
+    def plan_best(self, name):
+        """Ein Sendeplatz bekommt das beste, was da ist – mit Blick auf den Mix der letzten Posts."""
+        if name != "jetzt" and any(q.get("priority") and q["kind"] == "feed" and q["status"] in ("new", "waiting", "ready")
+                                   and self.ts() - q.get("created", 0) < 2 * 3600 for q in self.st["queue"]):
+            return False                    # eine Eilmeldung füllt den Slot
+        cands, rubric = self.candidates(name)
+        last = [self.KAT.get(p.get("kat") or p.get("rubric") or "", p.get("kat") or "info")
+                for p in self.st["posted"] if p.get("kind") == "feed"][-3:]
+        want = self.KAT.get(rubric or "", None)
+
+        def wert(c):
+            v, kat = c[0], c[1]
+            if last and kat == last[-1] and kat != "info":
+                v -= 1.5                    # nicht zweimal hintereinander dasselbe
+            elif kat not in last:
+                v += 1.0                    # Abwechslung
+            if want and kat == want:
+                v += 0.5                    # Wochenplan als sanfter Hinweis, kein Zwang
+            return v
+        cands = [c for c in cands if c[0] >= 5]
+        if not cands:
+            idea = self.pick_idea(prefer="history")
+            if idea:
+                self.enqueue("rubrik", idea=idea)
+                return True
+            return False
+        v, kat, art, x = max(cands, key=wert)
+        if art == "idee":
+            x["status"] = "geplant"
+            self.st["done"][f"{self.today()}:idee"] = True
+            qid = self.enqueue("idee", idea={"idee_von_jd": x["text"]})
+        elif art == "story":
+            qid = self.enqueue("meldung", story=x)
+            if self.st["stories"][x].get("zeitkritisch"):
+                self.st["queue"][-1]["sofort"] = True
+        elif art == "pool":
+            self.st["pool"].remove(x)
+            self.st.setdefault("pool_used", []).append(x["titel"])
+            qid = self.enqueue_pool(x)
+        elif art == "vorrat":
+            return self.activate(x, name)
+        elif art == "events":
+            qid = self.enqueue("events", idea={"events": x})
+        elif art == "damals":
+            qid = self.enqueue("damals")
+        else:
+            pick = self.spotlight_pick()
+            if not pick:
+                return False
+            qid = self.enqueue("spotlight", idea=pick)
+        self.st["queue"][-1].update(kat=kat, wert=round(v, 1))
+        return True
+
+    # ── Vorrat: fertige Posts auf Halde, damit nie ein Sendeplatz leer bleibt ──
+    def fill_vorrat(self):
+        h = self.now().hour
+        if not (7 <= h < 21) or any(q["status"] == "new" for q in self.st["queue"]):
             return
-        if cands and cands[0][0] >= 8:            # richtig starke Meldung schlägt alles
-            self.enqueue("meldung", story=cands[0][1])
+        vor = [q for q in self.st["queue"] if q["status"] == "vorrat"]
+        for q in vor:
+            if self.ts() - q.get("created", 0) > 2 * 86400:
+                q["status"] = "dropped"
+        vor = [q for q in vor if q["status"] == "vorrat"]
+        if len(vor) >= self.k.get("vorrat", 2):
             return
-        want = {"history": ["history", "menschen", "orte"], "fact": ["fact", "kurios", "orte"],
-                "platt": ["kurios", "fact"], "warum": ["fact", "orte"]}.get(rubric, ["kurios", "fact", "history", "menschen", "orte"])
-        mmdd = self.now().strftime("%m-%d")
-        if rubric == "frag":
-            want = ["kreativ"]
-        p = ideenpool.take(self.st, want, mmdd) or ideenpool.take(self.st, ["kurios", "fact", "history", "menschen", "orte", "kreativ"], mmdd)
-        if p:
-            self.enqueue_pool(p)
+        have = {q.get("kat") for q in vor}
+        pool = [p for p in self.st.get("pool", []) if p["rubrik"] != "jahrestag"]
+        pool.sort(key=lambda p: (self.KAT.get(p["rubrik"], "wissen") in have, -p.get("score", 0)))
+        if not pool:
             return
-        if cands:
-            self.enqueue("meldung", story=cands[0][1])
-            return
-        idea = self.pick_idea(prefer=rubric or "history")
-        if idea:
-            self.enqueue("rubrik", idea=idea)
+        p = pool[0]
+        self.st["pool"].remove(p)
+        self.st.setdefault("pool_used", []).append(p["titel"])
+        self.enqueue_pool(p)
+        self.st["queue"][-1].update(vorrat=True, kat=self.KAT.get(p["rubrik"], "wissen"), wert=p.get("score", 7))
+        self.log(f"vorrat: baue „{p['titel'][:60]}“ auf Halde")
+
+    def activate(self, q, name):
+        """Fertigen Vorrats-Post für einen Sendeplatz (oder „jetzt“) rausholen: Vorschau kommt sofort."""
+        q.update(abgerufen=True, slot=name, sofort=(name == "jetzt"), due=self.ts(), created=self.ts())
+        try:
+            imgs = [self.fetch_bytes(u) for u in q.get("media") or []]
+        except Exception as e:      # noqa: BLE001 – Bilder weg? dann neu bauen
+            self.log(f"vorrat: bilder nicht mehr da ({str(e)[:60]}), baue neu")
+            q.update(status="new", keep_pkg=q.get("pkg"))
+            return True
+        if not imgs:
+            q.update(status="new", keep_pkg=q.get("pkg"))
+            return True
+        self._cover = getattr(self, "_cover", {})
+        self._cover[q["id"]] = imgs[0]
+        self._slides = getattr(self, "_slides", {})
+        self._slides[q["id"]] = imgs[1:]
+        self.decide(q, q["pkg"], q.get("credit"))
+        self.log(f"vorrat: „{' '.join(q['pkg'].get('hook') or [])}“ für {name} genommen")
+        return True
 
     def topic_ok(self, q, mat) -> bool:
         """Schritt 1 für JEDEN Post: Ist das Thema überhaupt einen Post wert? Sonst wird gar nicht erst geschrieben."""
@@ -671,7 +733,7 @@ class Engine:
             return True
         story = self.st["stories"].get(q.get("story") or "")
         idea = q.get("idea") or {}
-        thr = 5 if q["mode"] == "idee" else (6 if q.get("priority") else 7)
+        thr = 4 if q["mode"] == "idee" else 5
         if story and story.get("gate") is not None:
             score, dreh, why = story["gate"], story.get("dreh", ""), ""
         elif idea.get("_gepr"):
@@ -711,7 +773,7 @@ class Engine:
                 q["idea"].setdefault("dreh", dreh)
         return True
 
-    def gate_stories(self, cands):
+    def gate_stories(self, cands, minimum=7):
         """Themenprüfung vor dem Schreiben: nur Meldungen mit Urteil ≥ 7 bleiben. Urteil wird je Meldung gemerkt."""
         todo = [k for _, k in cands if "gate" not in self.st["stories"][k]]
         if todo:
@@ -731,10 +793,10 @@ class Engine:
             except Exception as e:      # noqa: BLE001 – Prüfung nicht möglich: lieber nichts als Langweiliges
                 self.log(f"themenprüfung: {str(e)[:80]}")
                 return []
-        out = [(self.st["stories"][k]["gate"], k) for _, k in cands if self.st["stories"][k].get("gate", 0) >= 7]
+        out = [(self.st["stories"][k]["gate"], k) for _, k in cands if self.st["stories"][k].get("gate", 0) >= minimum]
         for _, k in cands:
             g = self.st["stories"][k].get("gate")
-            if g is not None and g < 7 and not self.st["stories"][k].get("gate_log"):
+            if g is not None and g < minimum and not self.st["stories"][k].get("gate_log"):
                 self.st["stories"][k]["gate_log"] = True
                 self.log(f"themenprüfung: „{self.st['stories'][k].get('title', '')[:60]}“ zu schwach ({g}/10)")
         return sorted(out, reverse=True)
@@ -857,8 +919,11 @@ class Engine:
                     "_bild": commons.fetch(hit, self.http), "_credit": commons.credit(hit)}
         if q.get("story"):
             s = self.st["stories"][q["story"]]
-            return {"geschichte": s["title"],
-                    "meldungen": [self.st["items"][i] for i in s["items"] if i in self.st["items"]]}
+            its = [self.st["items"][i] for i in s["items"] if i in self.st["items"]]
+            for it in its[:3]:              # ganze Meldung holen, nicht nur den Anrisstext aus dem Feed
+                if it.get("kind") == "rss" and it.get("link") and "volltext" not in it:
+                    it["volltext"] = sources.fetch_article(it["link"], self.http)
+            return {"geschichte": s["title"], "meldungen": its}
         return q.get("idea") or {}
 
     def produce(self):
@@ -926,9 +991,9 @@ class Engine:
         pkg.update(rev.get("fixes") or {})
         pkg["risk"] = max(pkg.get("risk", "gruen"), rev.get("risk", "gruen"), key=["gruen", "gelb", "rot"].index)
         pkg["public_interest"] = bool(rev.get("public_interest", pkg.get("public_interest")))
-        if rev.get("langweilig") and rev.get("ok", True):
-            rev["ok"] = False
-            rev["note"] = "Text noch zu langweilig: " + (rev.get("warum_langweilig") or rev.get("note", ""))
+        if rev.get("langweilig") and rev.get("ok", True) and not q.get("rv_try"):
+            rev["ok"] = False          # einmal nachschärfen, danach zählt das Urteil nicht mehr als Sperre
+            rev["note"] = "Text noch zu flach: " + (rev.get("warum_langweilig") or rev.get("note", ""))
         if not rev.get("ok", True):
             # Nicht wegwerfen: erst reparieren (2 Anläufe), danach dir zeigen statt still verwerfen.
             note = rev.get("note", "")
@@ -940,17 +1005,17 @@ class Engine:
                              + self.draft_text(d) + "\n\n" +
                              (f"Ich baue jetzt Version {q['rv_try'] + 1}." if not legal and q["rv_try"] <= 2
                               else "Ich zeige dir den Post gleich zur Entscheidung."))[:3900])
-            if not legal and q["rv_try"] <= 2:
+            if not legal and q["rv_try"] <= 1:
                 q.update(status="new", qa_note=(
                     f"ENDKONTROLLE hat die letzte Fassung beanstandet: {note} Repariere genau das. Erzähl nur, was das "
                     f"Material sicher hergibt – lieber kleiner und konkret als groß und vage. Was offen ist, weglassen "
                     f"statt erfinden. Das Thema ist gut, mach es postbar."))
                 self._redo = True
-                self.log(f"endkontrolle: {q['id']} wird repariert ({q['rv_try']}/2): {note[:120]}")
+                self.log(f"endkontrolle: {q['id']} wird einmal nachgeschärft: {note[:120]}")
                 return
             pkg["risk"] = "rot"
-            pkg["risk_reason"] = ("Rechtlich heikel: " if legal else "Die Endkontrolle ist sich nach zwei Reparaturen "
-                                  "noch unsicher: ") + note
+            pkg["risk_reason"] = ("Rechtlich heikel: " if legal else "Die Endkontrolle ist sich noch "
+                                  "unsicher: ") + note
             self.log(f"endkontrolle: {q['id']} geht dir zur Entscheidung")
         if vb_items:
             theirs = [f"{m.get('title', '')} {m.get('summary', '')}" for m in vb_items]
@@ -962,9 +1027,9 @@ class Engine:
                              qa_note=f"Die letzte Fassung war zu nah an Talzeits Formulierungen ({ov:.0%} gleiche Wortfolgen). "
                                      "Komplett neu und eigenständig formulieren.")
                     self._redo = True
-                else:
-                    q["status"] = "dropped"
-                return
+                    return
+                pkg["risk"] = "rot"
+                pkg["risk_reason"] = f"Die Endkontrolle ist sich noch unsicher: Text ist {ov:.0%} wortgleich mit Talzeit."
         q["pkg"] = pkg
         if q["mode"] == "damals":
             q.pop("_damals", None)
@@ -976,6 +1041,7 @@ class Engine:
         if q["kind"] == "reel":
             q["caption"] = self.caption(pkg, credit)
             return self.render_reel(q, photo)
+        pkg["farbe"] = pkg.get("farbe") or self.pick_colors(pkg)
         imgs = render.carousel(pkg, photo, wagnis=wagnis, seed=seed)
         if not self.qa_gate(q, imgs, pkg):
             return
@@ -986,6 +1052,19 @@ class Engine:
         self._slides = getattr(self, "_slides", {})
         self._slides[q["id"]] = [render.jpeg(im, 80) for im in imgs[1:]]
         self.decide(q, pkg, credit)
+
+    def pick_colors(self, pkg):
+        """Das Raster soll bunt sein: keine Hintergrundfarbe, die in den letzten drei Posts schon lief."""
+        recent = [tuple(p["farbe"])[0] for p in self.st["posted"][-3:] if p.get("farbe")]
+        recent += [tuple(q["pkg"]["farbe"])[0] for q in self.st["queue"]
+                   if q["status"] in ("waiting", "ready", "vorrat") and (q.get("pkg") or {}).get("farbe")]
+        pref = render.PALETTES.get(pkg.get("rubric", "news"), render.PALETTES["news"])
+        pairs = [pref] + [x for x in render.CANDY if x != pref]
+        rnd = random.Random(" ".join(pkg.get("hook") or []))
+        free = [x for x in pairs if x[0] not in recent]
+        if not free:
+            return list(pref)
+        return list(free[0] if free[0] == pref and rnd.random() < 0.5 else rnd.choice(free))
 
     # ── Qualitätskontrolle ──────────────────────────────────
     @staticmethod
@@ -1749,6 +1828,9 @@ class Engine:
         """Freigabe-Logik: rot → nur mit deinem Tipp. Nachrichten → Vorschau, nach Ablauf mit KI-Hinweis.
         Alles andere → läuft allein."""
         q["caption"] = self.caption(pkg, credit)
+        if q.get("vorrat") and not q.get("abgerufen"):
+            q["status"] = "vorrat"          # liegt fertig auf Halde, Vorschau erst wenn er dran ist
+            return
         news_like = pkg.get("public_interest") and q["kind"] in ("feed", "reel") and self.graph is not None
         tage = self.k.get("freigabe_tage", 4)
         review_until = self.st.setdefault("freigabe_bis", self.ts() + tage * 86400) if tage else 0
@@ -1880,7 +1962,8 @@ class Engine:
         pkg = q.get("pkg", {})
         self.st["posted"].append({"qid": q["id"], "ig": ig, "ts": self.ts(), "day": self.today(), "kind": q["kind"],
                                   "mode": q["mode"], "rubric": pkg.get("rubric"), "hook": pkg.get("hook", []),
-                                  "reel_ok": bool(pkg.get("reel")), "label": bool(q.get("label"))})
+                                  "reel_ok": bool(pkg.get("reel")), "label": bool(q.get("label")),
+                                  "farbe": pkg.get("farbe"), "kat": q.get("kat")})
         if q.get("story"):
             self.st["stories"][q["story"]]["posted"] = True
         self.log(f"gepostet {q['kind']} {q['mode']}: {' '.join(pkg.get('hook', []))}")
@@ -2070,41 +2153,17 @@ class Engine:
     def post_now(self, quiet=False):
         """„Jetzt“: bestes fertig geprüftes Thema nehmen (keine Rubrik-Rotation) und noch im selben Takt bauen."""
         n = len(self.st["queue"])
-        self.plan_free()
+        ok = self.plan_best("jetzt")
         new = self.st["queue"][n:]
         for q in new:
             q.update(slot="jetzt", ersatz=0, sofort=True)
+        if ok and not new:
+            return                      # kam aus dem Vorrat, Vorschau ist schon unterwegs
         if new:
             if not quiet:
                 self.tg.say("Mach ich. Die Vorschau kommt in wenigen Minuten.")
         else:
             self.tg.say("Gerade habe ich kein Thema, das gut genug ist. Schick mir eine Idee, dann baue ich daraus sofort einen.")
-
-    def plan_free(self):
-        """Ohne Rubrik: deine Idee → starke Meldung (≥7) → geprüftes Pool-Thema → Ideenliste."""
-        now = self.ts()
-        idee = self.next_idea()
-        if idee:
-            idee["status"] = "geplant"
-            self.st["done"][f"{self.today()}:idee"] = True
-            self.enqueue("idee", idea={"idee_von_jd": idee["text"]})
-            return True
-        cands = sorted([(s["score"], k) for k, s in self.st["stories"].items()
-                        if not s.get("queued") and now - s.get("last", now) < 26 * 3600 and s["score"] >= 6],
-                       reverse=True)
-        cands = self.gate_stories(cands[:8])
-        if cands:
-            self.enqueue("meldung", story=cands[0][1])
-            return True
-        p = ideenpool.take(self.st, ["kurios", "fact", "history", "menschen", "orte", "kreativ"], self.now().strftime("%m-%d"))
-        if p:
-            self.enqueue_pool(p)
-            return True
-        idea = self.pick_idea(prefer="history")
-        if idea:
-            self.enqueue("rubrik", idea=idea)
-            return True
-        return False
 
     def enqueue_pool(self, p):
         if p["rubrik"] == "kreativ":
@@ -2155,7 +2214,7 @@ class Engine:
         self.st["seen"] = {k: v for k, v in self.st["seen"].items() if v > self.ts() - 14 * 86400}
         self.st["items"] = {k: v for k, v in self.st["items"].items() if self.st["seen"].get(k, 0) > cut}
         self.st["stories"] = {k: v for k, v in self.st["stories"].items() if v.get("last", v["first"]) > cut}
-        self.st["queue"] = [q for q in self.st["queue"] if q["status"] in ("new", "ready", "waiting")
+        self.st["queue"] = [q for q in self.st["queue"] if q["status"] in ("new", "ready", "waiting", "vorrat")
                             or q.get("created", 0) > cut][-80:]
         for q in self.st["queue"]:
             q.pop("cover_jpeg", None)

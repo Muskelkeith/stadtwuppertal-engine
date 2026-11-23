@@ -25,6 +25,10 @@ PALETTES = {      # Hintergrund, Schrift
     "poll": ("bubblegum", "brombeer"), "warum": ("bubblegum", "brombeer"), "fact": ("creme", "brombeer"),
     "platt": ("kirsche", "creme"), "quiz": ("zitrone", "brombeer"), "photo": ("creme", "brombeer"),
 }
+# Alle Candy-Paare, die gut lesbar sind – die Engine wechselt sie ab, damit das Raster knallt
+CANDY = [("creme", "kirsche"), ("kirsche", "creme"), ("bubblegum", "brombeer"), ("brombeer", "bubblegum"),
+         ("zitrone", "brombeer"), ("brombeer", "zitrone"), ("creme", "brombeer"), ("bubblegum", "kirsche"),
+         ("kirsche", "zitrone")]
 # Ausreißer: erlaubte Paare, die im System bleiben, aber überraschen
 WAGNIS = [("zitrone", "kirsche"), ("brombeer", "zitrone"), ("kirsche", "zitrone"), ("bubblegum", "kirsche"),
           ("zitrone", "brombeer"), ("creme", "bubblegum")]
@@ -40,7 +44,9 @@ def canvas(w, h):
         cd.W, cd.H = old
 
 
-def palette(rubric: str, wagnis: bool = False, rnd: random.Random | None = None):
+def palette(rubric: str, wagnis: bool = False, rnd: random.Random | None = None, farbe=None):
+    if farbe and len(farbe) == 2 and farbe[0] in C and farbe[1] in C:
+        return C[farbe[0]], C[farbe[1]]
     if wagnis:
         bgk, ink = (rnd or random).choice(WAGNIS)
     else:
@@ -80,7 +86,7 @@ def _hook(img, lines, ink, ry, hcolor=None, max_h=None, schild=None):
 def cover(pkg: dict, photo: Image.Image | None = None, more: bool = False, wagnis=False, rnd=None, w=1080, h=1350):
     rubric = pkg.get("rubric", "news")
     with canvas(w, h):
-        bg, ink = palette(rubric, wagnis, rnd)
+        bg, ink = palette(rubric, wagnis, rnd, pkg.get("farbe"))
         label = cd.LABELS.get(rubric, cd.LABELS["news"])
         if photo is not None:
             light = bg if bg != C["creme"] else C["bubblegum"]
@@ -134,7 +140,7 @@ def _rail_y(h):
 def follow(pkg: dict, slide: dict, more: bool, wagnis=False, rnd=None):
     rubric = pkg.get("rubric", "news")
     with canvas(1080, 1350):
-        bg, ink = palette(rubric, wagnis, rnd)
+        bg, ink = palette(rubric, wagnis, rnd, pkg.get("farbe"))
         img = Image.new("RGB", (cd.W, cd.H), bg)
         ry = cd.rail(img, ink, cd.LABELS.get(rubric, cd.LABELS["news"]), bg)
         head = (slide.get("head") or "").strip().lower()

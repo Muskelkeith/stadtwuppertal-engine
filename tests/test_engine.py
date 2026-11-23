@@ -756,3 +756,29 @@ def test_jetzt_nimmt_bestes_thema_und_ersetzt_im_selben_takt(env):
     first["status"] = "dropped"                  # erster Versuch scheitert
     e.replace_failed_slots()
     assert any(q["status"] == "new" and q.get("sofort") for q in e.st["queue"])
+
+
+def test_vorrat_wird_gebaut_und_bei_jetzt_sofort_gezeigt(env, monkeypatch):
+    run, graph, store, feed = env
+    feed["items"] = []
+    e, errs = run(datetime(2026, 11, 24, 10, 0, tzinfo=TZ))
+    e.st["queue"], e.st["ideen"], e.st["stories"] = [], [], {}
+    e.st["pool"] = [{"id": "p1", "titel": "Die Schwebebahn fuhr schon 1901", "rubrik": "fact", "dreh": "x",
+                     "quelle": {"titel": "S", "text": "Die Schwebebahn wurde 1901 eröffnet.", "url": ""}, "score": 8}]
+    e.fill_vorrat()
+    assert e.st["queue"] and e.st["queue"][0].get("vorrat")
+    e.produce()
+    q = e.st["queue"][0]
+    assert q["status"] == "vorrat", q["status"]
+    monkeypatch.setattr(e, "fetch_bytes", lambda url: b"jpg")
+    e.post_now()
+    assert q["status"] in ("waiting", "ready") and q.get("abgerufen")
+
+
+def test_farben_wechseln_im_raster(env):
+    run, graph, store, feed = env
+    e, errs = run(datetime(2026, 11, 24, 10, 0, tzinfo=TZ))
+    e.st["posted"] = [{"farbe": ["kirsche", "creme"], "kind": "feed"}, {"farbe": ["creme", "kirsche"], "kind": "feed"}]
+    e.st["queue"] = []
+    f = e.pick_colors({"rubric": "history", "hook": ["test"]})
+    assert f[0] not in ("kirsche", "creme")
