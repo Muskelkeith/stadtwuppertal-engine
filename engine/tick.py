@@ -538,7 +538,7 @@ class Engine:
         key = f"{self.today()}:news_now"
         if self.st["done"].get(key, 0) >= 3 or len(self.feed_today()) >= self.k["max_feed_per_day"]:
             return
-        if any(q["kind"] == "feed" and q["status"] in ("new", "waiting", "ready") for q in self.st["queue"]):
+        if any(q["kind"] == "feed" and q["status"] == "new" for q in self.st["queue"]):
             return
         cands = sorted([(s["score"], k) for k, s in self.st["stories"].items()
                         if not s.get("queued") and s.get("rubric") not in ("resonanz",)
