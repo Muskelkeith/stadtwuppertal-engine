@@ -12,6 +12,9 @@ Wir sind der Account mit den besten Infos zur Stadt – nicht der mit den kürze
 - Kein Telegrammstil, der nur Stichworte aneinanderreiht. Ganze, lebendige Sätze, die man gern liest.
 - Keine Aufforderungen, Instagram zu verlassen, keine Links. Alles Wichtige steht im Post.
 - Kontext ist Mehrwert: Wie oft passiert das? Was war letztes Mal? Was kostet das? Wer entscheidet?
+- Wir übernehmen Inhalte, keine Hinweise auf Inhalte: Nie „@xy hat dazu gepostet/fotografiert, schaut mal rein“.
+  Wir erzählen die Sache selbst (was, wo, wer, wann) und zeigen sie, wenn wir das Bild haben. Der Account steht nur
+  als Foto- oder Quellennennung dabei.
 - Ist ein Thema selbsterklärend, braucht es keine Folgeslides. Lieber eine starke Kachel als drei dünne.
 - Alte Kamellen nicht als Neuigkeit verkaufen: Was schon seit Tagen läuft, braucht einen neuen Dreh
   (Tipp, Vergleich, Frage an die Community) – sonst gar nicht.

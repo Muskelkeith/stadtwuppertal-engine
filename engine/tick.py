@@ -481,6 +481,7 @@ class Engine:
                 s["items"] = list(dict.fromkeys(s["items"] + [r["id"]]))[-8:]
                 s["score"] = max(s["score"], float(r.get("score", 0)))
                 s["breaking"] = s.get("breaking", False) or bool(r.get("breaking"))
+                s["zeitkritisch"] = s.get("zeitkritisch", False) or bool(r.get("zeitkritisch"))
                 s["rubric"] = r.get("rubric", s["rubric"])
                 if r.get("risk") == "rot" or s["risk"] == "rot":
                     s["risk"] = "rot"
@@ -540,12 +541,15 @@ class Engine:
             return
         if any(q["kind"] == "feed" and q["status"] == "new" for q in self.st["queue"]):
             return
-        cands = sorted([(s["score"], k) for k, s in self.st["stories"].items()
+        cands = sorted([(s["score"] + (1 if s.get("zeitkritisch") else 0), k) for k, s in self.st["stories"].items()
                         if not s.get("queued") and s.get("rubric") not in ("resonanz",)
-                        and now - s.get("first", now) < 12 * 3600 and s["score"] >= 7], reverse=True)
+                        and now - s.get("first", now) < 12 * 3600
+                        and (s["score"] >= 7 or (s.get("zeitkritisch") and s["score"] >= 6))], reverse=True)
         cands = self.gate_stories(cands[:6])
         if cands:
             qid = self.enqueue("meldung", story=cands[0][1])
+            if self.st["stories"][cands[0][1]].get("zeitkritisch"):
+                self.st["queue"][-1]["sofort"] = True
             self.st["done"][key] = self.st["done"].get(key, 0) + 1
             self.log(f"nachricht sofort: „{self.st['stories'][cands[0][1]].get('title', '')[:70]}“ ({qid})")
 
@@ -715,8 +719,10 @@ class Engine:
             for k in todo:
                 s = self.st["stories"][k]
                 first = self.st["items"].get((s.get("items") or [None])[0]) or {}
+                its = [self.st["items"].get(i) or {} for i in s.get("items") or []]
                 topics.append({"id": k, "titel": s.get("title", ""), "worum": (first.get("summary") or "")[:400],
-                               "rubrik": s.get("rubric", "")})
+                               "rubrik": s.get("rubric", ""), "zeitkritisch": bool(s.get("zeitkritisch")),
+                               "bilder_vorhanden": any(x.get("image") and x.get("image_ok") for x in its)})
             try:
                 res = self.brain.topic_gate(topics)
                 for v in res.get("urteile") or []:
@@ -1105,6 +1111,8 @@ class Engine:
                 try:
                     r = self.http.get(it["image"], timeout=60)
                     r.raise_for_status()
+                    if ok.startswith("foto: @"):
+                        q["tag_user"] = ok[7:]
                     return Image.open(io.BytesIO(r.content)).convert("RGB"), ok
                 except Exception:
                     pass
@@ -1477,13 +1485,15 @@ class Engine:
             cap = m["caption"].strip()
             if not (WTAL.search(cap) or WTAL.search(h)):
                 continue
+            img = m.get("media_url") if m.get("media_type") in ("IMAGE", "CAROUSEL_ALBUM") else None
             self.st["items"][iid] = {"id": iid, "source": f"@{h}", "handle": h, "kind": "resonanz",
+                                     "image": img, "image_ok": sources.photo_credit(h) if img else None,
+                                     "link": m.get("permalink", ""),
                                      "title": cap.split(chr(10))[0][:140], "summary": cap[:1200],
                                      "published": (m.get("timestamp") or "").replace("+0000", "+00:00"),
                                      "resonanz": round(ratio, 1)}
             self.st["seen"][iid] = self.ts()
-            self.st["stories"][f"res-{m['id']}"] = {"title": f"läuft gerade bei @{h} ({ratio:.1f}× so gut wie sonst): "
-                                                             + cap.split(chr(10))[0][:110],
+            self.st["stories"][f"res-{m['id']}"] = {"title": cap.split(chr(10))[0][:140],
                                                     "score": 7, "items": [iid], "first": self.ts(), "last": self.ts(),
                                                     "breaking": False, "rubric": "resonanz"}
             top.append(f"@{h} ({ratio:.1f}×): {cap.split(chr(10))[0][:90]}")
@@ -2013,8 +2023,8 @@ class Engine:
             self.tg.say("⚠️ Kleine Störung, der Rest läuft normal:\n" + "\n".join(msgs))
 
     def fix_mistaken_ideas(self):
-        if not self.st["done"].get("regate_news_1"):
-            self.st["done"]["regate_news_1"] = 1        # neue Themenprüfung: abgelehnte Meldungen nochmal ansehen
+        if not self.st["done"].get("regate_news_2"):
+            self.st["done"]["regate_news_2"] = 1        # neue Themenprüfung: abgelehnte Meldungen nochmal ansehen
             for st_ in self.st["stories"].values():
                 if (st_.get("gate") or 0) < 7 and not st_.get("queued"):
                     st_.pop("gate", None)

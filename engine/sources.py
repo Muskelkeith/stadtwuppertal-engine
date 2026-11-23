@@ -79,6 +79,23 @@ def fetch_rss(src: dict, cutoff: datetime, http=requests) -> list[dict]:
     return items
 
 
+# Medien-Accounts: deren Fotos nie automatisch übernehmen (Redaktionsfotos, Agenturbilder)
+MEDIEN = {"talzeit.wuppertal", "wuppertal.aktuell", "radiowuppertal", "wuppertalerrundschau", "wz_wuppertal",
+          "wznewsline", "wdr", "wdrlokalzeit", "lokalzeitbergischesland", "bergischeblaulichtnews", "wuppertaltotal",
+          "wuppertal_live", "wuppertallive", "rponline", "bild", "express"}
+
+
+def photo_credit(handle: str, src: dict | None = None) -> str | None:
+    """Fotos von Instagram-Accounts (Künstler, Fotografen, Initiativen, Stadt, WSW …) dürfen mit @-Nennung übernommen
+    werden – außer von Medienhäusern."""
+    if src is not None and _image_credit(src):
+        return _image_credit(src)
+    h = (handle or "").lower().lstrip("@")
+    if not h or h in MEDIEN or (src or {}).get("medium"):
+        return None
+    return f"foto: @{h}"
+
+
 def fetch_instagram(src: dict, cutoff: datetime, graph) -> list[dict]:
     """Liest öffentliche Beiträge eines Business-/Creator-Accounts über die offizielle Business Discovery API."""
     data = graph.business_discovery(src["handle"], limit=src.get("limit", 15))
@@ -94,7 +111,7 @@ def fetch_instagram(src: dict, cutoff: datetime, graph) -> list[dict]:
                       "title": cap.split("\n")[0][:160], "summary": cap[:1500], "link": m.get("permalink", ""),
                       "published": when.isoformat() if when else None, "handle": src["handle"],
                       "likes": m.get("like_count"), "comments": m.get("comments_count"), "image": img,
-                      "image_ok": _image_credit(src) if img else None, "credits": credit_handles(cap),
+                      "image_ok": photo_credit(src["handle"], src) if img else None, "credits": credit_handles(cap),
                       "ask_source": bool(src.get("anfragen"))})
     return items
 

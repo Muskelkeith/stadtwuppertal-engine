@@ -108,9 +108,11 @@ und höher bewerten – wir erzählen sie dann eigenständig.
 Bewerte jede Meldung. score 0–10 = Wie sehr interessiert das möglichst viele Leute in Wuppertal JETZT
 (Betroffenheit, Gesprächswert, Neuigkeit, Kommentarpotenzial)? breaking = muss sofort raus (Sperrung, Unwetter,
 Ausfall Schwebebahn, Großeinsatz mit Folgen, große Stadt-News). Unwichtiges, Werbung, Doppeltes: score ≤ 3.
+zeitkritisch = gilt heute oder in den nächsten Tagen und betrifft Leute direkt (Sperrung, Baustelle ab heute, Ausfall
+Schwebebahn/Bus, Warnung, Störung, wichtiger Termin, Frist) – solche Infos übernehmen wir schnell.
 rubric kurios = harmlose, absurde Meldung, bei der niemand zu Schaden kam (kurioser Diebstahl, tierischer Einsatz).
 JSON: {{"items": [{{"id": "…", "story": "kurzer-slug", "title": "neutraler Titel der Geschichte",
-"score": 0-10, "breaking": bool, "rubric": "news|events|history|fact|warum|kurios", "risk": "gruen|gelb|rot"}}]}}"""
+"score": 0-10, "breaking": bool, "zeitkritisch": bool, "rubric": "news|events|history|fact|warum|kurios", "risk": "gruen|gelb|rot"}}]}}"""
         res = self.llm.ask("triage", VOICE, prompt, tier="triage")
         return res.get("items", []) if isinstance(res, dict) else res
 
@@ -254,10 +256,14 @@ Wiedererkennungswert (z. B. „Wer kauft auf dem Weihnachtsmarkt eigentlich die 
 Feel-Good und Boulevard: schöne Geschichten, Tiere, Nachbarschaft, Kultur-Highlights, Vereine und Initiativen mit
 coolen Aktionen → hoch. Ein Thema, das bei anderen Wuppertaler Accounts gerade auffällig gut läuft („resonanz“),
 ist ein starkes Signal – dann aber mit eigenem Dreh.
-NACHRICHTEN (rubrik news/meldung): Hier zählt, ob man es als Wuppertaler wissen muss oder will – das ist unser Kern,
-nicht nur Kurioses. Baustellen und Sperrungen ab heute, Polizei-/Feuerwehrlagen mit Folgen, Eröffnungen und
+Das Profil ist BREIT: Nachrichten, Infos mit Zeitbezug, Kultur, Menschen, Feel-Good, Boulevard, Geschichte, Kurioses,
+Community-Fragen – alles gleichwertig. Es muss nicht kurios sein; es muss relevant oder gut sein.
+NACHRICHTEN und INFOS MIT ZEITBEZUG: Zählt, ob man es als Wuppertaler wissen muss oder will. Baustellen und Sperrungen ab heute, Polizei-/Feuerwehrlagen mit Folgen, Eröffnungen und
 Verschiebungen (z. B. Villa Amalia), Demos, Entscheidungen im Rat, Firmen aus dem Tal, Erfolge von WSV und BHC,
 große Veranstaltungen diese Woche → 7–9, auch wenn das Thema „normal“ klingt. Der Dreh ist dann: Was heißt das für mich?
+„zeitkritisch“: true (gilt heute/diese Woche: Sperrung, Ausfall, Warnung, Termin) und konkret → mindestens 7.
+BILDER: Ein Thema, das man sehen muss (Murals, Kunst, Fotos, Orte, Bauwerke), nur hoch, wenn „bilder_vorhanden“ true ist.
+NIE ein Thema der Art „Account XY hat etwas gepostet/fotografiert“ – das ist kein Inhalt. Es zählt nur die Sache selbst.
 KONKRET: Gibt das Material keine konkreten Fakten her (kein Name, kein Ort, keine Zahl, kein Datum – z. B. „Murals
 in der Stadt“ ohne ein einziges Wandbild), höchstens 4. Ein schönes Wort-Thema ohne Inhalt ist kein Post.
 Niedrig (1–4): Verwaltungsnotizen, Umbenennungen ohne Geschichte, Termine ohne Dreh, Pressemitteilungs-Themen,
