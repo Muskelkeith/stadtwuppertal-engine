@@ -205,7 +205,7 @@ eine erfahrene Redakteurin mit Augenmaß, keine Erbsenzählerin."""
 1. Ist irgendwo Text abgeschnitten, läuft aus dem Bild oder aus seinem Kasten, überlappt oder ist unlesbar?
 2. Sind Bilder kaputt, leer oder offensichtlich falsch (Text passt nicht zum Foto)?
 3. Doppeln Schilder wörtlich den Hook? Tippfehler, die im fertigen Bild auffallen?
-Text des Pakets zum Abgleich: {json.dumps({k: pkg.get(k) for k in ("hook", "slides", "reel")}, ensure_ascii=False)[:3000]}
+Text des Pakets zum Abgleich: {json.dumps({k: pkg.get(k) for k in ("hook", "slides", "reel")}, ensure_ascii=False, default=lambda o: "")[:3000]}
 Augenmaß: Unser Design setzt Text bewusst oben unter die Schiene, Freiraum darunter ist gewollt. Textkacheln ohne
 Foto sind erlaubt. Nicht jeder Post braucht eine Frage. Beanstande nur, was einen Post wirklich schlecht macht –
 nicht Geschmacksfragen oder Kleinigkeiten, die niemand beim Scrollen bemerkt.

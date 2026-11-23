@@ -159,11 +159,11 @@ class GraphClient:
             return self.token, int(r.get("expires_in", 0))
         return None
 
-    def conversations(self, limit=25) -> list[dict]:
+    def conversations(self, limit=8) -> list[dict]:
         pid, ptok = self._page()
         r = self.http.get(f"{self.base}/{pid}/conversations", timeout=60, params={
             "platform": "instagram", "access_token": ptok, "limit": limit,
-            "fields": "updated_time,participants,messages.limit(6){id,from,message,created_time,attachments}"})
+            "fields": "updated_time,participants,messages.limit(3){id,from,message,created_time,attachments}"})
         data = r.json()
         if "error" in data:
             raise GraphError(f"conversations: {data['error']}")
