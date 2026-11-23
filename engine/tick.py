@@ -521,8 +521,15 @@ class Engine:
             top = sorted(self.st["entdeckt"].items(), key=lambda x: -x[1].get("followers", 0))[:20]
             srcs = srcs + [{"name": a.get("name") or h, "type": "instagram", "handle": h, "limit": 6} for h, a in top]
         items, errs = sources.collect(srcs, self.cfg["news"], self.graph, self.http, now=self.now())
+        if sorted(errs) != sorted(self.st["done"].get("source_errors") or []):
+            for e in errs:
+                self.log(f"quelle nicht erreichbar: {e[:160]}")
+        self.st["done"]["source_errors"] = errs[-20:]
         if errs:
-            self.st["done"]["source_errors"] = errs[-20:]
+            k = f"{self.today()}:quellfehler"
+            names = set(self.st["done"].get(k) or [])
+            names |= {e.split(":")[0].strip() for e in errs}
+            self.st["done"][k] = sorted(names)
         self.step("markierungen", self.scout_tags)
         new = [i for i in items if i["id"] not in self.st["seen"]]
         for i in new:
@@ -1047,7 +1054,7 @@ class Engine:
             q["status"] = "dropped"
             return
         # Abstand zu Vorbildern: reine Talzeit-Themen erst nach 36 h, immer eigenständig erzählt
-        models = [h.lower() for h in self.cfg.get("vorbilder", [])]
+        models = [h.lower() for h in self.cfg.get("abstand", ["talzeit.wuppertal"])]
         vb_items = []
         if isinstance(mat, dict) and mat.get("meldungen"):
             ms = mat["meldungen"]
@@ -1694,6 +1701,8 @@ class Engine:
             if iid in self.st["items"]:
                 continue
             cap = m["caption"].strip()
+            if h.lower() in {x.lower() for x in self.cfg.get("sprachvorbilder", [])}:
+                continue
             if not (WTAL.search(cap) or WTAL.search(h)):
                 continue
             img = m.get("media_url") if m.get("media_type") in ("IMAGE", "CAROUSEL_ALBUM") else None
@@ -2157,7 +2166,9 @@ class Engine:
             self.step("regelheft", self.consolidate, True)
         if self.graph is not None and not getattr(self.graph, "ig_login", False) and now.hour >= 6 and self.once("radar"):
             extra = [h for h, _ in sorted(self.st["entdeckt"].items(), key=lambda x: -x[1].get("followers", 0))[:15]]
-            hits, accounts, errs = radar.scan(self.graph, list(self.cfg["radar"]) + extra)
+            nie = {h.lower() for h in self.cfg.get("sprachvorbilder", [])}
+            handles = [h for h in list(self.cfg["radar"]) + extra if h.lower() not in nie]
+            hits, accounts, errs = radar.scan(self.graph, handles)
             self.st["radar"], self.st["accounts"] = hits, accounts
         if self.graph is not None and now.hour >= 22 and self.once("insights"):
             self.insights()
@@ -2190,16 +2201,24 @@ class Engine:
             s = self.st["stats"].get(p["ig"], {})
             lines.append(f"• {p.get('rubric') or p['mode']} ({p['kind']}): {' '.join(p['hook'])[:40]}"
                          + (f" – {s.get('total_interactions')} Interaktionen" if s else ""))
-        if self.st["radar"]:
-            lines += ["", "Darüber reden gerade andere Wuppertal-Accounts:"]
-            lines += [f"· @{h['handle']} ({h['x']}×): {h['text'][:70]}" for h in self.st["radar"][:3]]
+        nie = {x.lower() for x in self.cfg.get("sprachvorbilder", [])}
+        heiss = [h for h in self.st["radar"] if h["handle"].lower() not in nie][:4]
+        if heiss:
+            def kurz(t, n=110):
+                t = " ".join(t.split())
+                return t if len(t) <= n else t[:n].rsplit(" ", 1)[0] + " …"
+            lines += ["", "Läuft gerade gut bei anderen Wuppertal-Accounts:"]
+            lines += [f"· @{h['handle']} ({h['x']}× so gut wie sonst): {kurz(h['text'])}" for h in heiss]
         qa = self.st.get("qa", {})
         ok, neu, weg = (qa.get(f"{self.today()}:{k}", 0) for k in ("ok", "neu", "weg"))
         if ok or neu or weg:
             lines += ["", f"Bildkontrolle: {ok} direkt gut, {neu}× neu gemacht, {weg} verworfen."]
-        errs = self.st["done"].get("source_errors") or []
-        if errs:
-            lines += ["", f"{len(errs)} Nachrichtenquellen waren nicht erreichbar. Der Rest läuft normal."]
+        down = self.st["done"].get(f"{self.today()}:quellfehler") or []
+        now_down = {e.split(":")[0].strip() for e in (self.st["done"].get("source_errors") or [])}
+        if now_down:
+            lines += ["", "Gerade nicht erreichbar: " + ", ".join(sorted(now_down)) + "."]
+        elif down:
+            lines += ["", "Zeitweise nicht erreichbar, inzwischen wieder da: " + ", ".join(down) + "."]
         return "\n".join(lines)
 
     def weekly(self):

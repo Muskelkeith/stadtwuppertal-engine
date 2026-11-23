@@ -114,5 +114,8 @@ vorbilder: [talzeit.wuppertal, wuppertal.aktuell]
 # werden zu Themen-Kandidaten. Falsche Namen merkt die Engine selbst und lässt sie weg.
 resonanz: [lochlochlochlochlochloch]     # plus alle Accounts aus data/folgen.txt
 
-radar: [wuppertal.aktuell, talzeit.wuppertal, radiowuppertal, bergischeblaulichtnews, wuppertal, stadt_wuppertal,
-        1live, wdrcosmo, deutschlandfunknova]
+radar: [wuppertal.aktuell, talzeit.wuppertal, radiowuppertal, bergischeblaulichtnews, wuppertal, stadt_wuppertal]
+# Nur für Ton, Sprache und Captions (siehe data/sprache.md) – nie Themenquelle, nie im Radar
+sprachvorbilder: [1live, wdrcosmo, deutschlandfunknova]
+# Abstand halten (36 h, eigene Formulierung) gilt nur hier. Wuppertal Aktuell dürfen wir offen als Themenquelle nutzen.
+abstand: [talzeit.wuppertal]
