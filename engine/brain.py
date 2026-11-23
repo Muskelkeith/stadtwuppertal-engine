@@ -46,6 +46,10 @@ HARTE REGELN
 Antworte ausschließlich mit dem verlangten JSON."""
 
 PACKAGE = """{
+ "kern": "ERST DENKEN: Ein Satz – was ist die Geschichte und warum hält man beim Scrollen an?",
+ "bogen": ["ERST PLANEN: die Schritte in Erzählreihenfolge, z. B. 1. was passiert ist / was behauptet wurde,
+            2. wie es ablief (konkret), 3. die Auflösung: was steckte dahinter, wie ging es aus, 4. was davon bleibt /
+            was es heute oder hier bedeutet. Wer kein Vorwissen hat, muss jeden Schritt verstehen."],
  "rubric": "news|history|events|poll|warum|fact|platt|quiz|kurios|spotlight",
  "hook": ["zeile 1", "zeile 2"],
  "schild": "kurz oder leer",
@@ -54,13 +58,16 @@ PACKAGE = """{
                           // „wat kommt auf den pappteller?“ und options ["reibekuchen", "bratwurst"]).
                           // Auch das Schild sagt nie, was der Hook schon sagt – es ergänzt oder fehlt.
  "slides": [{"head": "kurze unterzeile (eine Frage oder ein Versprechen)", "body": "2–5 Sätze, die genau das einlösen: konkret, mit Mehrwert, normale Groß-/Kleinschreibung"}],  // 0–5
+          // Slides folgen dem bogen: eine Slide = ein Schritt. Erst erklären, dann darauf aufbauen – nichts voraussetzen
+          // („erbte den Klugen Hans“ geht nur, wenn vorher steht, was der konnte). Eine Geschichte braucht ihre
+          // Auflösung, sonst ist sie keine. Nie eine eigene Slide nur für eine Frage an die Leser.
  "reel": [{"head": "unter-hook klein", "lines": ["Satz mit Fakt", "Satz, der erklärt warum / was daraus wurde"], "gag": "Pointe oder leer"},
           {"bild": "Commons-Suchbegriff für ein großes Foto, z. B. 'Felix Hoffmann' oder 'Bayer Elberfeld 1900'", "text": "Bildunterschrift mit Info, 8–20 Wörter"}],
           // 4–6 Züge, nur wenn als Reel geeignet, sonst []. Text-Zug: head + 2–3 kurze Sätze, zusammen ~120–200 Zeichen, + optional gag.
           // Der überraschendste Fakt zuerst (Aufmacher). Einfache, kurze Sätze, kein Fachchinesisch.
           // Bild-Zug: großes Foto statt Text – bei Geschichte mindestens einer, gern zwei. Jeder Zug = ein konkreter,
           // überraschender Fakt (Name, Jahr, Ort, Zahl, Firma). Nischenwissen schlägt Allgemeinplatz.
- "caption": "Caption: erste Zeile = Gefühl des Hooks, dann 2–4 kurze Zeilen, am Ende EINE Frage zum Mitmachen. KEINE Links, keine URLs",
+ "caption": "Caption: erste Zeile = Gefühl des Hooks, dann 2–4 kurze Zeilen. Eine Frage am Ende NUR, wenn sie direkt aus dem Thema folgt und Leute wirklich etwas beizutragen haben (eigene Erinnerung, Ort, Erfahrung, Meinung zur Sache) – sonst keine. Nie konstruierte Transfer-Fragen ins Beliebige (‚welchem Tier in eurer Straße traut ihr das zu?‘). KEINE Links, keine URLs",
  "hashtags": ["3–4 ohne #"],
  "sources": [{"name": "…", "url": "…"}],
  "photo_query": "Suchbegriff für ein freies Wikimedia-Foto (z. B. 'Schwebebahn Vohwinkel') oder leer",
@@ -193,6 +200,13 @@ bei Nachrichten). Tests, die nicht passen, bekommen in tests den Wert null. Gehe
 10. NAMEN (immer): Heißt alles so, wie man es in Wuppertal sagt? Keine offiziellen Langnamen, kein Zusatz
    „Wuppertal“ an lokalen Namen („der Zoo“, „das Tanztheater“), Schreibweise von Personen, Orten und Läden exakt wie
    im Material. Korrigiere selbst.
+12. GESCHICHTE (immer): Lies es wie jemand ohne Vorwissen, Slide für Slide. Ist die Reihenfolge logisch (erst die
+   Sache, dann Details)? Wird etwas vorausgesetzt, das nie erklärt wird? Springt der Text zwischen zwei Themen hin und
+   her? Fehlt die Auflösung – die Frage, die sich jeder stellt (wie ging der Trick, wie ging es aus, was ist heute)?
+   Steht sie im Material, bau sie ein; sonst die Geschichte so erzählen, dass sie ohne sie trägt. Bau selbst um (fixes:
+   hook, slides, caption komplett neu, wenn nötig).
+13. FRAGE (immer): Ist die Frage an die Leser absurd, konstruiert, beliebig oder eine Allerwelts-Frage? Streichen.
+   Eine eigene Slide nur für eine Frage → streichen. Lieber gar keine Frage als eine dumme.
 11. AKTUALITÄT (immer): Jetzt ist {jetzt or 'unbekannt'} – der Post geht in der nächsten Stunde raus. Ist er dann noch
    aktuell? Vorbei (Warnung oder Nebel vom Morgen, Termin gelaufen, Sperrung aufgehoben, Meldung von vorgestern als
    neu verkauft) → "veraltet": true. Zeitangaben im Text („heute Morgen“, „gerade“) müssen zur Uhrzeit passen.

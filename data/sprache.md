@@ -117,6 +117,9 @@ watt · dat · getz · ne? · wa? · hömma · sach ma · hasse / hasste · biss
   (siehe „NAMEN“ in der Vorbild-Studie). Schreibweise von Personen, Orten und Läden immer exakt wie in der Quelle.
 
 ## Fragen, die Kommentare holen
+- Nicht jeder Post braucht eine Frage. Eine Frage nur, wenn sie direkt aus dem Thema folgt und die Leute wirklich
+  etwas beizutragen haben. Keine Transfer-Fragen ins Beliebige („Welchem Tier in eurer Straße traut ihr das zu?“),
+  nie eine eigene Slide nur für die Frage.
 Stadtteil-Vergleich („Welcher Stadtteil hat den schönsten Weihnachtsmarkt?“) · Lieblings-Fragen
 („Euer Lieblingsstand?“) · Ritual („Was kauft ihr da jedes Jahr?“) · Erinnerung („Wer kennt das noch?“) ·
 Geständnis · Ranking · kleine Streitfrage („Elberfeld oder Barmen?“) · Ortsfrage

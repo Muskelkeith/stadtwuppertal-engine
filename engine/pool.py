@@ -11,7 +11,7 @@ UA = {"User-Agent": "stadtwuppertal-engine/1.0 (Lokaljournalismus-Bot; github.co
 API = "https://de.wikipedia.org/w/api.php"
 
 
-def wiki(title: str, chars: int = 3500) -> dict | None:
+def wiki(title: str, chars: int = 8000) -> dict | None:
     """Artikeltext (Klartext) zu einem Wikipedia-Titel, oder None, wenn es den Artikel nicht gibt."""
     try:
         r = requests.get(API, headers=UA, timeout=20, params={
@@ -37,10 +37,12 @@ def refill(brain, st, now_ts, vorbild_note: str = "", heute: str = "") -> int:
     cands = []
     for i, it in enumerate(ideas.get("themen") or []):
         src = None
-        for t in (it.get("wiki") or [])[:2]:
-            src = wiki(t)
-            if src:
-                break
+        for t in (it.get("wiki") or [])[:2]:      # beide Artikel lesen: oft steht die Auflösung erst im zweiten
+            w = wiki(t)
+            if w and not src:
+                src = w
+            elif w:
+                src = {**src, "text": src["text"] + "\n\n" + w["titel"] + ":\n" + w["text"][:5000]}
         if it.get("rubrik") == "kreativ":       # Community-Frage: braucht keine Fakten
             src = {"titel": "", "text": "", "url": ""}
         if not src:
