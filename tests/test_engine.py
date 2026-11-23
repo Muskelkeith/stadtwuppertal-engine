@@ -782,3 +782,17 @@ def test_farben_wechseln_im_raster(env):
     e.st["queue"] = []
     f = e.pick_colors({"rubric": "history", "hook": ["test"]})
     assert f[0] not in ("kirsche", "creme")
+
+
+def test_abgelaufene_warnung_wird_nicht_gepostet(env):
+    run, graph, store, feed = env
+    feed["items"] = []
+    e, errs = run(datetime(2026, 11, 23, 11, 50, tzinfo=TZ))
+    e.st["items"]["dwd:nebel"] = {"id": "dwd:nebel", "title": "Nebel", "summary": "", "kind": "warning",
+                                  "gilt_bis": "2026-11-23T10:00:00+00:00"}
+    e.st["stories"] = {"nebel": {"title": "Nebel", "score": 7, "items": ["dwd:nebel"], "first": e.ts() - 5 * 3600,
+                                 "last": e.ts(), "zeitkritisch": True, "rubric": "news", "gate": 8}}
+    assert not e.gilt_noch("nebel")
+    e.st["queue"] = [{"id": "q1", "story": "nebel", "status": "waiting", "kind": "feed", "timeout": e.ts() + 9999}]
+    e.publish_due()
+    assert e.st["queue"][0]["status"] == "dropped"

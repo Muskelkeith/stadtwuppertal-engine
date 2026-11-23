@@ -214,7 +214,9 @@ def fetch_dwd(cfg: dict, http=requests) -> list[dict]:
         if int(w.get("level", 0)) < d.get("min_level", 2):
             continue
         start = datetime.fromtimestamp(w["start"] / 1000, timezone.utc) if w.get("start") else None
+        end = datetime.fromtimestamp(w["end"] / 1000, timezone.utc) if w.get("end") else None
         out.append({"id": f"dwd:{w.get('event')}:{w.get('start')}", "source": "Deutscher Wetterdienst",
+                    "gilt_bis": end.isoformat() if end else None,
                     "kind": "warning", "title": w.get("headline", "Wetterwarnung"),
                     "summary": f"{w.get('description', '')} {w.get('instruction', '')}".strip(),
                     "link": "https://www.dwd.de/warnungen", "published": start.isoformat() if start else None})

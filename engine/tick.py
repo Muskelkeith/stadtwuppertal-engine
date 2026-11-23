@@ -604,9 +604,13 @@ class Engine:
         st_c = sorted([(s["score"], k) for k, s in self.st["stories"].items()
                        if not s.get("queued") and now - s.get("last", now) < 26 * 3600 and s["score"] >= 4],
                       reverse=True)[:10]
+        st_c = [(sc, k) for sc, k in st_c if self.gilt_noch(k)]
         for g, k in self.gate_stories(st_c, minimum=5):
             s = self.st["stories"][k]
-            v = g + (1.5 if s.get("zeitkritisch") else 0) + (0.5 if now - s.get("first", now) < 6 * 3600 else 0)
+            age_h = (now - s.get("first", now)) / 3600
+            v = g + (0.5 if age_h < 6 else 0)
+            if s.get("zeitkritisch"):
+                v += 1.5 if age_h < 3 else max(-3.0, 1.5 - (age_h - 3))   # Aktuelles verliert jede Stunde an Wert
             out.append((v, self.KAT.get(s.get("rubric", "news"), "info"), "story", k))
         mmdd = self.now().strftime("%m-%d")
         for p in self.st.get("pool", []):
@@ -629,6 +633,20 @@ class Engine:
         if rubric == "spotlight":
             out.append((6.5, "kultur", "spotlight", None))
         return out, rubric
+
+    def gilt_noch(self, slug, puffer_min=45) -> bool:
+        """Warnungen/Sperrungen mit Ablaufzeit: nur solange sie noch mindestens `puffer_min` gelten.
+        Zeitkritisches ohne Ablaufzeit verliert nach 4 Stunden schnell an Wert (siehe candidates)."""
+        s = self.st["stories"].get(slug or "") or {}
+        ends = []
+        for i in s.get("items") or []:
+            g = (self.st["items"].get(i) or {}).get("gilt_bis")
+            if g:
+                try:
+                    ends.append(datetime.fromisoformat(g).timestamp())
+                except ValueError:
+                    pass
+        return not ends or max(ends) > self.ts() + puffer_min * 60
 
     def plan_best(self, name):
         """Ein Sendeplatz bekommt das beste, was da ist – mit Blick auf den Mix der letzten Posts."""
@@ -985,7 +1003,12 @@ class Engine:
             pkg, rev = q.pop("keep_pkg"), {"ok": True, "note": ""}
         else:
             pkg = self.brain.write(q["mode"], text_mat, note=note, recent_hooks=recent)
-            rev = self.brain.review(pkg, text_mat)
+            rev = self.brain.review(pkg, text_mat, jetzt=self.now().strftime("%A %d.%m.%Y, %H:%M Uhr"))
+            if rev.get("veraltet"):
+                q["status"] = "dropped"
+                q["qa_note"] = "Nicht mehr aktuell: " + (rev.get("note") or "")
+                self.log(f"veraltet: {q['id']} – {rev.get('note', '')[:100]}")
+                return
         q["draft"] = {k: pkg.get(k) for k in ("hook", "caption", "slides", "reel")}
         q["draft_note"] = rev.get("note", "")
         pkg.update(rev.get("fixes") or {})
@@ -1914,6 +1937,11 @@ class Engine:
     # ── 4. Posten ───────────────────────────────────────────
     def publish_due(self):
         now = self.ts()
+        for q in [x for x in self.st["queue"] if x["status"] in ("waiting", "ready", "new") and x.get("story")]:
+            if not self.gilt_noch(q["story"], puffer_min=20):
+                q["status"] = "dropped"
+                self.tg.mark(q.get("tg"), "Nicht mehr aktuell, nicht gepostet")
+                self.log(f"abgelaufen: {q['id']} gilt nicht mehr")
         for q in [x for x in self.st["queue"] if x["status"] == "waiting"]:
             if now >= q.get("timeout", now + 1):
                 if q.get("on_timeout") == "post":

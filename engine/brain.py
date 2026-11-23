@@ -167,7 +167,7 @@ Liefere genau ein Paket als JSON:
         return self.llm.ask(mode, self.system, prompt, tier="write")
 
     # ── 3. Prüfen ───────────────────────────────────────────
-    def review(self, pkg: dict, material) -> dict:
+    def review(self, pkg: dict, material, jetzt: str = "") -> dict:
         system = self.system + """
 
 Du bist jetzt NICHT die Autorin, sondern die strenge Schlussredaktion. Du prüfst jeden Punkt der
@@ -193,9 +193,12 @@ bei Nachrichten). Tests, die nicht passen, bekommen in tests den Wert null. Gehe
 10. NAMEN (immer): Heißt alles so, wie man es in Wuppertal sagt? Keine offiziellen Langnamen, kein Zusatz
    „Wuppertal“ an lokalen Namen („der Zoo“, „das Tanztheater“), Schreibweise von Personen, Orten und Läden exakt wie
    im Material. Korrigiere selbst.
+11. AKTUALITÄT (immer): Jetzt ist {jetzt or 'unbekannt'} – der Post geht in der nächsten Stunde raus. Ist er dann noch
+   aktuell? Vorbei (Warnung oder Nebel vom Morgen, Termin gelaufen, Sperrung aufgehoben, Meldung von vorgestern als
+   neu verkauft) → "veraltet": true. Zeitangaben im Text („heute Morgen“, „gerade“) müssen zur Uhrzeit passen.
 Material: {json.dumps(material, ensure_ascii=False)[:7000]}
 Paket: {json.dumps(pkg, ensure_ascii=False)}
-JSON: {{"ok": bool (false NUR bei rechtlichen Problemen oder wenn das Material nichts hergibt), "fixes": {{geänderte Paket-Felder}},
+JSON: {{"veraltet": bool, "ok": bool (false NUR bei rechtlichen Problemen oder wenn das Material nichts hergibt), "fixes": {{geänderte Paket-Felder}},
 "langweilig": bool, "warum_langweilig": "kurz oder leer", "risk": "gruen|gelb|rot", "public_interest": bool, "tests": {{"mehrwert": 1-5|null, "sprache": 1-5|null, "gag": 1-5|null, "futter": 1-5|null, "auge": 1-5|null}},
 "note": "ein Satz, was du geändert hast"}}"""
         return self.llm.ask("review", system, prompt, tier="write")
