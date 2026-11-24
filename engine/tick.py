@@ -523,9 +523,25 @@ class Engine:
         if self.graph is not None and not getattr(self.graph, "ig_login", False):
             top = sorted(self.st["entdeckt"].items(), key=lambda x: -x[1].get("followers", 0))[:20]
             srcs = srcs + [{"name": a.get("name") or h, "type": "instagram", "handle": h, "limit": 6} for h, a in top]
-        items, errs = sources.collect(srcs, self.cfg["news"], self.graph, self.http, now=self.now())
-        if sorted(errs) != sorted(self.st["done"].get("source_errors") or []):
-            for e in errs:
+        pz = self.st.setdefault("quellen_pause", {})          # Name → bis wann pausiert
+        paused = {n for n, until in pz.items() if until > self.ts()}
+        items, errs = sources.collect(srcs, self.cfg["news"], self.graph, self.http, now=self.now(), paused=paused)
+        # Instagram-Accounts, die es nicht (mehr) als Business-/Creator-Account gibt: 7 Tage Pause, einmal melden
+        fails = self.st.setdefault("quellen_fails", {})
+        names_now = {e.split(":")[0].strip() for e in errs}
+        for n in list(fails):
+            if n not in names_now:
+                fails.pop(n)
+        for e in errs:
+            n = e.split(":")[0].strip()
+            fails[n] = fails.get(n, 0) + 1
+            if "Invalid user id" in e and fails[n] >= 3:
+                pz[n] = self.ts() + 7 * 86400
+                fails.pop(n)
+                self.log(f"quelle pausiert (7 Tage): {n} – Instagram findet den Account nicht als Business-/Creator-Account")
+        before = {e.split(":")[0].strip() for e in (self.st["done"].get("source_errors") or [])}
+        for e in errs:
+            if e.split(":")[0].strip() not in before:
                 self.log(f"quelle nicht erreichbar: {e[:160]}")
         self.st["done"]["source_errors"] = errs[-20:]
         if errs:

@@ -170,13 +170,21 @@ class GraphClient:
 
     def conversations(self, limit=8) -> list[dict]:
         pid, ptok = self._page()
+        # Meta lehnt große Abfragen ab – erst nur die Liste, dann die Nachrichten je Unterhaltung einzeln
         r = self.http.get(f"{self.base}/{pid}/conversations", timeout=60, params={
-            "platform": "instagram", "access_token": ptok, "limit": limit,
-            "fields": "updated_time,participants,messages.limit(3){id,from,message,created_time,attachments}"})
+            "platform": "instagram", "access_token": ptok, "limit": min(limit, 5), "fields": "updated_time,participants"})
         data = r.json()
         if "error" in data:
             raise GraphError(f"conversations: {data['error']}")
-        return data.get("data", [])
+        out = []
+        for c in data.get("data", []):
+            m = self.http.get(f"{self.base}/{c['id']}", timeout=60, params={
+                "access_token": ptok, "fields": "messages.limit(3){id,from,message,created_time,attachments}"}).json()
+            if "error" in m:
+                continue
+            c["messages"] = m.get("messages", {"data": []})
+            out.append(c)
+        return out
 
     def reply(self, igsid: str, text: str):
         pid, ptok = self._page()

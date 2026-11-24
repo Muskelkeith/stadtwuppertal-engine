@@ -17,6 +17,17 @@ import feedparser
 import requests
 
 UA = {"User-Agent": "Mozilla/5.0 (stadtwuppertal-engine; +https://instagram.com/stadtwuppertal)"}
+def _get(http, url, timeout=30):
+    """Erst ehrlich als Engine, bei 403 wie ein normaler Browser."""
+    r = http.get(url, headers=UA, timeout=timeout)
+    if getattr(r, "status_code", 200) == 403:
+        r = http.get(url, headers=UA_BROWSER, timeout=timeout)
+    return r
+
+
+# manche Seiten (z. B. wuppertal.de) sperren alles, was nicht wie ein Browser aussieht
+UA_BROWSER = {"User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 14_5) AppleWebKit/605.1.15 (KHTML, like Gecko) "
+                            "Version/17.5 Safari/605.1.15", "Accept-Language": "de-DE,de;q=0.9"}
 DWD_URL = "https://www.dwd.de/DWD/warnungen/warnapp/json/warnings.json"
 
 
@@ -43,7 +54,7 @@ class _FeedLinkParser(HTMLParser):
 
 def discover_feeds(homepage: str, http=requests) -> list[str]:
     """Findet RSS/Atom-Feeds, die eine Seite im HTML-Kopf ankündigt."""
-    r = http.get(homepage, headers=UA, timeout=30)
+    r = _get(http, homepage, 30)
     r.raise_for_status()
     p = _FeedLinkParser()
     p.feed(r.text)
@@ -79,7 +90,7 @@ class _Paragraphs(HTMLParser):
 def fetch_article(url: str, http=requests, chars: int = 5000) -> str:
     """Der eigentliche Artikeltext (Absätze), damit Posts aus dem vollen Stoff entstehen statt aus dem Teaser."""
     try:
-        r = http.get(url, headers=UA, timeout=25)
+        r = _get(http, url, 25)
         r.raise_for_status()
         p = _Paragraphs()
         p.feed(r.text)
@@ -92,7 +103,7 @@ def fetch_rss(src: dict, cutoff: datetime, http=requests) -> list[dict]:
     urls = [src["url"]] if src.get("url") else discover_feeds(src["homepage"], http)
     items = []
     for url in urls[: src.get("max_feeds", 3)]:
-        r = http.get(url, headers=UA, timeout=30)
+        r = _get(http, url, 30)
         r.raise_for_status()
         parsed = feedparser.parse(r.content)
         must = src.get("title_must_contain")
@@ -231,12 +242,14 @@ def is_relevant(item: dict, keywords: list[str]) -> bool:
 
 
 def collect(sources: list[dict], cfg_news: dict, graph=None, http=requests,
-            now: datetime | None = None) -> tuple[list[dict], list[str]]:
+            now: datetime | None = None, paused: set | None = None) -> tuple[list[dict], list[str]]:
     """Sammelt alle Quellen. Gibt (items, fehlerliste) zurück; eine kaputte Quelle stoppt nichts."""
     now = now or datetime.now(timezone.utc)
     cutoff = now - timedelta(hours=cfg_news.get("lookback_hours", 24))
     items, errors = [], []
     for src in sources:
+        if paused and src.get("name") in paused:
+            continue
         try:
             cut = now - timedelta(hours=src["lookback_hours"]) if src.get("lookback_hours") else cutoff
             if src["type"] == "rss":
