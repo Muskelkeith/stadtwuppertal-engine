@@ -762,8 +762,25 @@ class Engine:
                 for p in self.st["posted"] if p.get("kind") == "feed"][-3:]
         want = self.KAT.get(rubric or "", None)
 
+        today0 = self.at("00:00").timestamp()
+        ever_today = sum(1 for p in self.st["posted"] if p.get("kind") == "feed" and p.get("ts", 0) >= today0
+                         and p.get("evergreen"))
+        ever_today += sum(1 for q in self.st["queue"] if q.get("evergreen") and q["status"] in ("waiting", "ready")
+                          and q.get("created", 0) >= today0)
+
+        def zeitlos(c):
+            if c[2] in ("pool", "vorrat", "damals", "spotlight"):
+                return not (c[2] == "pool" and c[3].get("rubrik") == "jahrestag")
+            return False
+
         def wert(c):
             v, kat = c[0], c[1]
+            # Aktuelles ist der Normalfall, Geschichte/Wikipedia-Wissen die Würze: höchstens einmal am Tag,
+            # und nur, wenn gerade nichts Aktuelles mithalten kann
+            if zeitlos(c):
+                v -= 1.0 + (4.0 if ever_today >= 1 else 0)
+            else:
+                v += 1.5
             if last and kat == last[-1] and kat != "info":
                 v -= 1.5                    # nicht zweimal hintereinander dasselbe
             elif kat not in last:
@@ -787,7 +804,8 @@ class Engine:
                 self.enqueue("rubrik", idea=idea)
                 return True
             return False
-        v, kat, art, x = max(cands, key=wert)
+        v, kat, art, x = best = max(cands, key=wert)
+        is_ever = zeitlos(best)
         if art == "idee":
             x["status"] = "geplant"
             self.st["done"][f"{self.today()}:idee"] = True
@@ -811,7 +829,7 @@ class Engine:
             if not pick:
                 return False
             qid = self.enqueue("spotlight", idea=pick)
-        self.st["queue"][-1].update(kat=kat, wert=round(v, 1))
+        self.st["queue"][-1].update(kat=kat, wert=round(v, 1), evergreen=is_ever)
         return True
 
     def cand_title(self, c):
@@ -852,7 +870,7 @@ class Engine:
 
     def activate(self, q, name):
         """Fertigen Vorrats-Post für einen Sendeplatz (oder „jetzt“) rausholen: Vorschau kommt sofort."""
-        q.update(abgerufen=True, slot=name, sofort=(name == "jetzt"), due=self.ts(), created=self.ts())
+        q.update(evergreen=True, abgerufen=True, slot=name, sofort=(name == "jetzt"), due=self.ts(), created=self.ts())
         try:
             imgs = [self.fetch_bytes(u) for u in q.get("media") or []]
         except Exception as e:      # noqa: BLE001 – Bilder weg? dann neu bauen
@@ -2173,7 +2191,8 @@ class Engine:
         self.st["posted"].append({"qid": q["id"], "ig": ig, "ts": self.ts(), "day": self.today(), "kind": q["kind"],
                                   "mode": q["mode"], "rubric": pkg.get("rubric"), "hook": pkg.get("hook", []),
                                   "reel_ok": bool(pkg.get("reel")), "label": bool(q.get("label")),
-                                  "farbe": pkg.get("farbe"), "kat": q.get("kat")})
+                                  "farbe": pkg.get("farbe"), "kat": q.get("kat"),
+                                  "evergreen": bool(q.get("evergreen"))})
         if q.get("story"):
             self.st["stories"][q["story"]]["posted"] = True
         self.log(f"gepostet {q['kind']} {q['mode']}: {' '.join(pkg.get('hook', []))}")

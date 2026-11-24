@@ -829,3 +829,18 @@ def test_aenderung_behaelt_foto_und_traegt_fotografen_ein(env, monkeypatch):
     e.revise({"text": "Fotograf ist @herbstknipser", "msg": "77"})
     assert "@herbstknipser" in q["caption"] and q.get("photo_url") and q["status"] == "waiting"
     assert "EINTRAGEN" not in q["caption"]
+
+
+def test_aktuelles_schlaegt_wikipedia_geschichte(env):
+    run, graph, store, feed = env
+    feed["items"] = []
+    e, errs = run(datetime(2026, 11, 24, 9, 0, tzinfo=TZ))
+    e.st["queue"], e.st["ideen"] = [], []
+    e.st["items"]["n1"] = {"id": "n1", "source": "Stadt Wuppertal", "title": "Weihnachtsmarkt Barmen öffnet",
+                           "summary": "Ab Donnerstag 40 Buden am Werth.", "kind": "rss"}
+    e.st["stories"] = {"wm": {"title": "Weihnachtsmarkt Barmen öffnet", "score": 6, "items": ["n1"], "gate": 6,
+                              "first": e.ts() - 3600, "last": e.ts(), "rubric": "news"}}
+    e.st["pool"] = [{"id": "p1", "titel": "Die Rechenpferde von Elberfeld", "rubrik": "history", "dreh": "x",
+                     "quelle": {"titel": "", "text": "x", "url": ""}, "score": 9}]
+    e.plan_best("vormittag")
+    assert e.st["queue"][-1]["mode"] == "meldung"

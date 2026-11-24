@@ -26,7 +26,7 @@ takt:
   reel_slot: "19:45"             # einmal am Tag: Reel aus dem besten Karussell
   report_at: "21:30"             # Tagesbericht per Telegram
   max_feed_per_day: 7            # Eilmeldungen zählen mit, dürfen die Grenze aber reißen
-  vorrat: 3                      # so viele fertige Posts liegen immer auf Halde (für „jetzt“ und leere Sendeplätze)
+  vorrat: 1                      # so viele fertige Posts liegen immer auf Halde (für „jetzt“ und leere Sendeplätze)
   min_gap_min: 90                # Mindestabstand zwischen zwei Feed-Posts (außer Eilmeldung)
   breaking_score: 8              # ab dieser Bewertung geht eine Meldung sofort raus
   followup_after_h: 0            # kein Nachdreh nach Uhr – echte Neuigkeiten kommen als Folgemeldung, sobald sie da sind
