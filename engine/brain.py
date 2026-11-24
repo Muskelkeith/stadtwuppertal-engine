@@ -50,7 +50,8 @@ PACKAGE = """{
  "bogen": ["ERST PLANEN: die Schritte in Erzählreihenfolge, z. B. 1. was passiert ist / was behauptet wurde,
             2. wie es ablief (konkret), 3. die Auflösung: was steckte dahinter, wie ging es aus, 4. was davon bleibt /
             was es heute oder hier bedeutet. Wer kein Vorwissen hat, muss jeden Schritt verstehen."],
- "rubric": "news|history|events|poll|warum|fact|platt|quiz|kurios|spotlight",
+ "historisch": "true, wenn die Geschichte überwiegend in der Vergangenheit spielt (Ereignis, Person, Ort von früher – grob vor 2000), sonst false",
+ "rubric": "news (was los: Nachricht) | history (was war: ALLES Historische) | kurios (echt jetzt: Kurioses, Absurdes, Bescheuertes, das GERADE passiert) | fact (echt jetzt: überraschendes Wissen über das Wuppertal von heute) | events (was geht: Termine) | poll (sach ma: Frage) | warum (warum so: Streitfrage) | quiz (na) | platt (wie heißt dat) | spotlight (wer macht wat: Menschen und Projekte VON HEUTE)",
  "hook": ["zeile 1", "zeile 2"],
  "schild": "kurz oder leer",
  "options": ["a", "b"]   // nur bei poll/warum/quiz: zwei Antworten statt Schild, sonst []. NIE Wörter, die schon im
@@ -146,7 +147,7 @@ JSON: {{"items": [{{"id": "…", "story": "kurzer-slug", "title": "neutraler Tit
                       "damals_query = Suchbegriff für ein historisches Foto (Ort + Jahrzehnt, z. B. 'Elberfeld Neumarkt 1910'), "
                       "heute_query = derselbe Ort heute. schild = Jahr des alten Fotos. Caption: was hat sich verändert, "
                       "eine überraschende Geschichte zum Ort, Frage („Wer kennt das noch?“).",
-            "kurios": "„kurios, wuppertal.“ Eine harmlose, absurde Meldung, bei der niemand zu Schaden kam. Hier darf der "
+            "kurios": "„echt jetzt, wuppertal?“ Eine harmlose, absurde Meldung, bei der niemand zu Schaden kam. Hier darf der "
                       "Witz tragen: locker, trocken, gern mit einem Schuss Dialekt. Fakten bleiben Fakten, keine Namen. rubric kurios.",
             "frag": "„sach ma, wuppertal?“: eine Frage zum Mitmachen, die Reaktionen auslöst – Ranking, Ortsfrage, Streitfrage "
                     "(z. B. „Wo liegt bei euch am meisten illegal abgeladener Müll?“). Darf zuspitzen und triggern, wertet aber "

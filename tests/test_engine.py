@@ -844,3 +844,16 @@ def test_aktuelles_schlaegt_wikipedia_geschichte(env):
                      "quelle": {"titel": "", "text": "x", "url": ""}, "score": 9}]
     e.plan_best("vormittag")
     assert e.st["queue"][-1]["mode"] == "meldung"
+
+
+def test_rubrik_wird_richtig_gesetzt(env):
+    run, graph, store, feed = env
+    e, errs = run(datetime(2026, 11, 24, 9, 0, tzinfo=TZ))
+    p = {"rubric": "kurios", "historisch": True}
+    e.fix_rubric({"mode": "rubrik", "idea": {"rubrik": "fact"}}, p)
+    assert p["rubric"] == "history"
+    p = {"rubric": "history", "historisch": False}
+    e.fix_rubric({"mode": "meldung"}, p)
+    assert p["rubric"] == "fact"
+    from engine.design import cd
+    assert cd.LABELS["kurios"] == "echt jetzt, wuppertal?"

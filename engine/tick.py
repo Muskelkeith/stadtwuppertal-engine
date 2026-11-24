@@ -365,6 +365,7 @@ class Engine:
         self.tg.mark(q.get("tg"), "Überarbeitet, neue Version unten ↓")
         q["pkg"], q["status"] = pkg, "new"
         photo, credit = self.pick_photo(q, pkg)
+        self.fix_rubric(q, pkg)
         imgs = render.carousel(pkg, photo, seed=q["id"] + "r")
         q["media"] = [self.store.media(f"{int(self.ts())}-{q['id']}-r{n}.jpg", render.jpeg(im)) for n, im in enumerate(imgs)]
         self._cover = getattr(self, "_cover", {})
@@ -1225,6 +1226,7 @@ class Engine:
         if q["kind"] == "reel":
             q["caption"] = self.caption(pkg, credit)
             return self.render_reel(q, photo)
+        self.fix_rubric(q, pkg)
         pkg["farbe"] = pkg.get("farbe") or self.pick_colors(pkg)
         imgs = render.carousel(pkg, photo, wagnis=wagnis, seed=seed)
         if not self.qa_gate(q, imgs, pkg):
@@ -1236,6 +1238,19 @@ class Engine:
         self._slides = getattr(self, "_slides", {})
         self._slides[q["id"]] = [render.jpeg(im, 80) for im in imgs[1:]]
         self.decide(q, pkg, credit)
+
+    HIST = {"history", "jahrestag", "damals"}
+
+    def fix_rubric(self, q, pkg):
+        """Rubrik nicht dem Zufall überlassen: Historisches ist immer „was war“, kurios/„wer macht wat“ nur für heute."""
+        idea = q.get("idea") or {}
+        quelle = idea.get("rubrik") if isinstance(idea, dict) else None
+        if q["mode"] == "damals" or quelle in ("history", "jahrestag") or pkg.get("historisch") is True:
+            pkg["rubric"] = "history"
+        elif pkg.get("rubric") == "history":
+            pkg["rubric"] = "fact"              # „was war“ nur für echte Geschichte
+        if pkg.get("rubric") not in render.cd.LABELS:
+            pkg["rubric"] = "news"
 
     def pick_colors(self, pkg):
         """Das Raster soll bunt sein: Farbpaar und Hintergrund dürfen in den letzten drei Posts (und in wartenden
