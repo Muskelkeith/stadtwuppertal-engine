@@ -595,7 +595,7 @@ class Engine:
             fresh = now - s.get("first", now) < 6 * 3600
             if s.get("breaking") and s.get("score", 0) >= self.k["breaking_score"] and fresh and not s.get("queued"):
                 self.enqueue("meldung", story=slug, priority=True)
-                if s["score"] >= 7:
+                if s["score"] >= 7 and self.k.get("followup_after_h"):
                     s["followup"] = now + self.k["followup_after_h"] * 3600
         # Nachdreh fällig
         for slug, s in stories.items():
@@ -2132,7 +2132,13 @@ class Engine:
     def _publish_pass(self, now):
         ready = sorted([x for x in self.st["queue"] if x["status"] == "ready" and x["due"] <= now],
                        key=lambda x: (not x.get("priority"), x["due"]))
+        slots = sorted(self.k["slots"])
         for q in ready:
+            if q["kind"] in ("feed", "reel") and not q.get("priority") and not q.get("sofort") \
+                    and self.now() < self.at(slots[0]) and len(slots) > 1:
+                # über Nacht Liegengebliebenes nicht um 6 Uhr raushauen – der Morgen gehört dem schönen Einstieg
+                q["due"] = self.at(slots[1]).timestamp()
+                continue
             if q["kind"] in ("feed", "reel") and not q.get("priority"):
                 today = self.feed_today()
                 if len(today) >= self.k["max_feed_per_day"]:
