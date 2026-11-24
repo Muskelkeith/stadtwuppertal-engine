@@ -91,7 +91,7 @@ def test_stopp_pausiert(env):
 def test_rubrik_slot_ohne_nachrichten(env):
     run, graph, store, feed = env
     feed.pop("items", None)
-    t = datetime(2026, 11, 24, 12, 35, tzinfo=TZ)     # Dienstag mittag → fact
+    t = datetime(2026, 11, 24, 13, 5, tzinfo=TZ)     # Dienstag mittag → fact
     e, errs = run(t)
     assert not errs, errs
     assert any(q["mode"] == "rubrik" for q in e.st["queue"])
@@ -113,7 +113,7 @@ def test_reel_abends_aus_dem_karussell(env, monkeypatch):
     (store.root).mkdir(parents=True, exist_ok=True)
     (store.root / "x.mp4").write_bytes(b"mp4")
     feed.pop("items", None)
-    run(datetime(2026, 11, 24, 12, 35, tzinfo=TZ))              # Rubrik-Karussell mit Reel-Zügen
+    run(datetime(2026, 11, 24, 13, 5, tzinfo=TZ))              # Rubrik-Karussell mit Reel-Zügen
     (store.root / "x.mp4").write_bytes(b"mp4")
     e, errs = run(datetime(2026, 11, 24, 19, 50, tzinfo=TZ))
     assert not errs, errs
@@ -175,7 +175,7 @@ def test_damals_heute(env, monkeypatch):
     monkeypatch.setattr(c, "historical", lambda used, http=None: {"title": "Elberfeld 1910", "description": "Neumarkt",
                         "date": "1910", "page": "https://commons/x", "url": "u", "artist": "Unbekannt", "license": "Public domain"})
     monkeypatch.setattr(c, "fetch", lambda hit, http=None: Image.new("RGB", (1200, 900), (120, 100, 80)))
-    e, errs = run(datetime(2026, 11, 25, 12, 35, tzinfo=TZ))      # Mittwoch mittag → damals
+    e, errs = run(datetime(2026, 11, 25, 13, 5, tzinfo=TZ))      # Mittwoch mittag → damals
     assert not errs, errs
     q = next(q for q in e.st["queue"] if q["mode"] == "damals")
     assert q["status"] == "waiting" and "Public domain" in q["caption"]
@@ -322,7 +322,7 @@ def test_nutzer_token_wird_zum_seiten_token():
 def test_idee_per_telegram_landet_im_slot(env):
     run, graph, store, feed = env
     feed["items"] = []
-    t = datetime(2026, 11, 24, 12, 35, tzinfo=TZ)      # Dienstag Mittag
+    t = datetime(2026, 11, 24, 13, 5, tzinfo=TZ)      # Dienstag Mittag
     e, errs = run(t, inbox=[{"type": "idea", "text": "Wo liegt am meisten illegal abgeladener Müll?"}])
     assert not errs, errs
     assert any(q["mode"] == "idee" for q in e.st["queue"]), [q["mode"] for q in e.st["queue"]]
@@ -332,7 +332,7 @@ def test_idee_per_telegram_landet_im_slot(env):
 def test_frag_slot(env):
     run, graph, store, feed = env
     feed["items"] = []
-    t = datetime(2026, 11, 26, 12, 35, tzinfo=TZ)      # Donnerstag Mittag → frag
+    t = datetime(2026, 11, 26, 13, 5, tzinfo=TZ)      # Donnerstag Mittag → frag
     e, errs = run(t - timedelta(hours=3))
     e.st["pool"] = [{"id": "p1", "titel": "Welche Treppe ist eure liebste?", "rubrik": "kreativ", "dreh": "Treppen-Stadt",
                      "quelle": {"titel": "", "text": "", "url": ""}, "score": 8}]

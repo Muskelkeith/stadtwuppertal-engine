@@ -70,6 +70,9 @@ def dhash(raw: bytes) -> int:
     return v
 
 
+BLAU = re.compile(r"festnahm|festgenommen|polizei|brand|feuer|unfall|raub|messer|tot\b|leiche|überfall|einbruch|"
+                  r"ermittl|verletz|schüss|staatsanwalt|tatverdächt|gewalt|razzia", re.I)
+
 WTAL = re.compile(r"wupper|elberfeld|barmen|vohwinkel|cronenberg|ronsdorf|beyenburg|langerfeld|oberbarmen|"
                   r"schwebebahn|nordbahntrasse|döppersberg|ölberg|uellendahl|heckinghausen|sonnborn|katernberg|"
                   r"talzeit|\btal\b|wsw|bergische uni", re.I)
@@ -548,6 +551,17 @@ class Engine:
                 if r.get("id") not in self.st["items"]:
                     continue
                 slug = re.sub(r"[^a-z0-9-]", "", str(r.get("story", "x")).lower())[:40] or "x"
+                old = self.st["stories"].get(slug)
+                if old and old.get("queued") and r.get("folgemeldung"):
+                    # Neue Entwicklung zu einer Geschichte, die wir schon gebracht haben (Festnahme, Ergebnis …)
+                    base, n = slug, 2
+                    while f"{base}-folge{n}" in self.st["stories"] and self.st["stories"][f"{base}-folge{n}"].get("queued"):
+                        n += 1
+                    slug = f"{base}-folge{n}"
+                    self.st["stories"].setdefault(slug, {"title": r.get("title", ""), "score": 0, "items": [],
+                                                         "first": self.ts(), "posted": False, "followup": None,
+                                                         "breaking": False, "risk": "gruen", "rubric": "news",
+                                                         "folge_von": base, "zeitkritisch": True, "herkunft": "akut"})
                 s = self.st["stories"].setdefault(slug, {"title": r.get("title", ""), "score": 0, "items": [],
                                                          "first": self.ts(), "posted": False, "followup": None,
                                                          "breaking": False, "risk": "gruen", "rubric": "news"})
@@ -742,6 +756,8 @@ class Engine:
                                    and self.ts() - q.get("created", 0) < 2 * 3600 for q in self.st["queue"]):
             return False                    # eine Eilmeldung füllt den Slot
         cands, rubric = self.candidates(name)
+        last_titles = [" ".join(p.get("hook") or []) for p in self.st["posted"] if p.get("kind") == "feed"][-1:]
+        last_blau = bool(last_titles and BLAU.search(last_titles[0]))
         last = [self.KAT.get(p.get("kat") or p.get("rubric") or "", p.get("kat") or "info")
                 for p in self.st["posted"] if p.get("kind") == "feed"][-3:]
         want = self.KAT.get(rubric or "", None)
@@ -754,6 +770,15 @@ class Engine:
                 v += 1.0                    # Abwechslung
             if want and kat == want:
                 v += 0.5                    # Wochenplan als sanfter Hinweis, kein Zwang
+            blau = BLAU.search(self.cand_title(c)) is not None
+            eilig = c[2] == "story" and self.st["stories"].get(c[3], {}).get("zeitkritisch")
+            if name == "morgen":            # der Tag fängt schön an: Wissen, Geschichte, Kultur, Community, Fotos
+                if blau and not eilig:
+                    v -= 2.5
+                if kat in ("geschichte", "wissen", "community", "kultur", "foto"):
+                    v += 1.0
+            if blau and last_blau and not eilig:
+                v -= 1.5                    # nicht Blaulicht auf Blaulicht
             return v
         cands = [c for c in cands if c[0] >= 5]
         if not cands:
@@ -788,6 +813,18 @@ class Engine:
             qid = self.enqueue("spotlight", idea=pick)
         self.st["queue"][-1].update(kat=kat, wert=round(v, 1))
         return True
+
+    def cand_title(self, c):
+        art, x = c[2], c[3]
+        if art == "story":
+            return self.st["stories"].get(x, {}).get("title", "")
+        if art == "pool":
+            return x.get("titel", "")
+        if art == "vorrat":
+            return " ".join((x.get("pkg") or {}).get("hook") or [])
+        if art == "idee":
+            return x.get("text", "")
+        return ""
 
     # ── Vorrat: fertige Posts auf Halde, damit nie ein Sendeplatz leer bleibt ──
     def fill_vorrat(self):

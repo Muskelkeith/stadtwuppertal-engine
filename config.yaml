@@ -14,17 +14,19 @@ takt:
   active_hours: [6, 23]          # nur in dieser Zeit wird gepostet
   collect_every_min: 10          # so oft werden alle Quellen abgeklappert (jeder Takt)
   slots:                         # feste Sendeplätze (wenn nichts Eiliges anliegt)
-    "07:30": morgen
-    "12:30": mittag
-    "18:30": abend
+    "07:30": morgen              # schöner Einstieg in den Tag – kein Blaulicht, außer es ist akut
+    "10:30": vormittag
+    "13:00": mittag
+    "16:30": nachmittag
+    "19:00": abend
   rotation:                      # was im Slot läuft, wenn keine starke Nachricht da ist
-    morgen: news
+    morgen: {}
     mittag: {mo: warum, di: kurios, mi: damals, do: frag, fr: spotlight, sa: platt, so: history}
     abend:  {mo: spotlight, di: warum, mi: fact, do: events, fr: events, sa: damals, so: frag}
   reel_slot: "19:45"             # einmal am Tag: Reel aus dem besten Karussell
   report_at: "21:30"             # Tagesbericht per Telegram
-  max_feed_per_day: 5            # Eilmeldungen zählen mit, dürfen die Grenze aber reißen
-  vorrat: 2                      # so viele fertige Posts liegen immer auf Halde (für „jetzt“ und leere Sendeplätze)
+  max_feed_per_day: 7            # Eilmeldungen zählen mit, dürfen die Grenze aber reißen
+  vorrat: 3                      # so viele fertige Posts liegen immer auf Halde (für „jetzt“ und leere Sendeplätze)
   min_gap_min: 90                # Mindestabstand zwischen zwei Feed-Posts (außer Eilmeldung)
   breaking_score: 8              # ab dieser Bewertung geht eine Meldung sofort raus
   followup_after_h: 4            # Nachdreh (Einordnung, Quiz, Frage) so viele Stunden nach der Meldung
