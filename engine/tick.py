@@ -1100,7 +1100,16 @@ class Engine:
             its = [self.st["items"][i] for i in s["items"] if i in self.st["items"]]
             for it in its[:3]:              # ganze Meldung holen, nicht nur den Anrisstext aus dem Feed
                 if it.get("kind") == "rss" and it.get("link") and "volltext" not in it:
+                    sources.fetch_article.last_html = ""
                     it["volltext"] = sources.fetch_article(it["link"], self.http)
+                    img, cr = sources.article_photo(getattr(sources.fetch_article, "last_html", "") or "",
+                                                    it.get("source", ""))
+                    if cr == "AGENTUR":
+                        it["image_ok"] = None    # Agenturfoto: nicht übernehmen
+                    elif img and not it.get("image"):
+                        it["image"], it["image_ok"] = img, cr
+                    elif it.get("image") and cr:
+                        it["image_ok"] = cr      # Fotograf aus der Bildunterschrift statt nur Medienname
             return {"geschichte": s["title"], "meldungen": its}
         return q.get("idea") or {}
 

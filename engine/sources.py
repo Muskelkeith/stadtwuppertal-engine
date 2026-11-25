@@ -87,6 +87,22 @@ class _Paragraphs(HTMLParser):
             self.cur.append(data)
 
 
+def article_photo(html: str, medium: str) -> tuple[str | None, str | None]:
+    """Aufmacherbild eines Artikels (og:image) und wer es gemacht hat (Bildunterschrift „Foto: …“/„©“).
+    Agenturbilder (dpa, Getty, imago …) bleiben draußen. Ohne Fotografen gilt das Medium als Credit."""
+    m = re.search(r'<meta[^>]+property=["\']og:image["\'][^>]+content=["\']([^"\']+)', html) or \
+        re.search(r'<meta[^>]+content=["\']([^"\']+)["\'][^>]+property=["\']og:image', html)
+    if not m:
+        return None, None
+    text = re.sub(r"<[^>]+>", " ", html)
+    c = re.search(r"(?:Foto|Fotos|Bild|Bildquelle|Credit)\s*:\s*([^\n|]{2,80})|©\s*([^\n|]{2,80})", text)
+    who = " ".join((c.group(1) or c.group(2)).split())[:70] if c else ""
+    if AGENTUR.search(who) or AGENTUR.search(m.group(1)):
+        return None, "AGENTUR"
+    who = re.split(r"\s{2,}|\.\s", who)[0].strip(" ,;") if who else ""
+    return m.group(1), f"foto: {who} / {medium}" if who and medium.lower() not in who.lower() else f"foto: {who or medium}"
+
+
 def fetch_article(url: str, http=requests, chars: int = 5000) -> str:
     """Der eigentliche Artikeltext (Absätze), damit Posts aus dem vollen Stoff entstehen statt aus dem Teaser."""
     try:
@@ -94,6 +110,7 @@ def fetch_article(url: str, http=requests, chars: int = 5000) -> str:
         r.raise_for_status()
         p = _Paragraphs()
         p.feed(r.text)
+        fetch_article.last_html = r.text
         return "\n".join(p.out)[:chars]
     except Exception:      # noqa: BLE001
         return ""
@@ -124,7 +141,7 @@ def fetch_rss(src: dict, cutoff: datetime, http=requests) -> list[dict]:
             items.append({"id": link or _id(src["name"], title), "source": src["name"], "kind": "rss",
                           "title": title, "summary": _clean(e.get("summary", ""))[:1500], "link": link,
                           "published": when.isoformat() if when else None, "image": img,
-                          "image_ok": _image_credit(src) if img else None})
+                          "image_ok": (_image_credit(src) or f"foto: {src['name']}") if img else None})
     return items
 
 
@@ -134,15 +151,16 @@ MEDIEN = {"talzeit.wuppertal", "wuppertal.aktuell", "radiowuppertal", "wuppertal
           "wuppertal_live", "wuppertallive", "rponline", "bild", "express"}
 
 
+AGENTUR = re.compile(r"\bdpa\b|reuters|\bAP\b|associated press|getty|imago|picture.?alliance|\bAFP\b|shutterstock|"
+                     r"istock|adobe ?stock|depositphotos|123rf|alamy|epd-bild|\bKNA\b|\bddp\b|action press", re.I)
+
+
 def photo_credit(handle: str, src: dict | None = None) -> str | None:
-    """Fotos von Instagram-Accounts (Künstler, Fotografen, Initiativen, Stadt, WSW …) dürfen mit @-Nennung übernommen
-    werden – außer von Medienhäusern."""
+    """Fotos von Instagram-Accounts (auch Medien) dürfen mit @-Nennung übernommen werden."""
     if src is not None and _image_credit(src):
         return _image_credit(src)
     h = (handle or "").lower().lstrip("@")
-    if not h or h in MEDIEN or (src or {}).get("medium"):
-        return None
-    return f"foto: @{h}"
+    return f"foto: @{h}" if h else None
 
 
 def fetch_instagram(src: dict, cutoff: datetime, graph) -> list[dict]:
