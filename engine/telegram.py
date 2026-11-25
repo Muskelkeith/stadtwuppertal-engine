@@ -64,6 +64,17 @@ class Telegram:
         res = self._call("sendMediaGroup", chat_id=self.chat, media=json.dumps(media), files=files)
         return [str(m.get("message_id")) for m in (res or []) if isinstance(m, dict)]
 
+    def video(self, data: bytes, caption: str = ""):
+        if not self.live or not self.chat:
+            self.outbox.append(("video", caption))
+            return None
+        try:
+            r = self._call("sendVideo", chat_id=self.chat, caption=caption[:1024],
+                           files={"video": ("cover.mp4", data, "video/mp4")})
+            return str((r or {}).get("message_id", ""))
+        except Exception:      # noqa: BLE001
+            return None
+
     def handover(self, urls: list[str], kind: str, caption: str):
         """Übergabe-Modus (Instagram noch nicht verbunden): fertiger Post zum selbst Hochladen.
         Erst die Datei(en) zum Speichern, dann der Text als eigene Nachricht zum Kopieren."""

@@ -1,8 +1,8 @@
 # Fertige Posts, die die Redaktion (JD / Claude im Chat) direkt einspeist.
 # Die Engine baut sie beim nächsten Durchlauf ohne eigene Themenwahl/Neuschreiben, rendert sie und schickt dir die
 # Vorschau. Jeder Eintrag läuft genau einmal (an der id erkannt).
-- id: orange-day-2026-c
-  ersetzt: orange-day-2026-b
+- id: orange-day-2026-d
+  ersetzt: orange-day-2026-c
   gueltig_bis: "2026-11-26T12:00:00+01:00"
   foto: false
   pkg:

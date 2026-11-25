@@ -376,6 +376,8 @@ class Engine:
         # nach deiner Kritik immer erst wieder zeigen, nicht allein posten
         q["caption"] = self.caption(pkg, credit)
         q.update(status="waiting", on_timeout="drop", timeout=self.ts() + 6 * 3600)
+        if getattr(self, "_video", {}).get(q["id"]):
+            self.tg.video(self._video[q["id"]], "Erste Kachel als Animation")
         q["tg"] = self.tg.preview(self._cover[q["id"]], f"neue fassung nach deiner kritik:\n\n{q['caption'][:800]}", q["id"])
         if self.tg.live and self.tg.chat and len(imgs) > 1:
             try:
@@ -427,6 +429,8 @@ class Engine:
         q["caption"] = self.caption(pkg, credit)
         q.update(status="waiting", on_timeout="drop", timeout=self.ts() + 6 * 3600)
         what = r.get("was_geaendert") or "geändert"
+        if getattr(self, "_video", {}).get(q["id"]):
+            self.tg.video(self._video[q["id"]], "Erste Kachel als Animation")
         q["tg"] = self.tg.preview(self._cover[q["id"]], f"{what}:\n\n{q['caption'][:800]}", q["id"])
         if self.tg.live and self.tg.chat and len(imgs) > 1:
             try:
@@ -1326,11 +1330,22 @@ class Engine:
         self.fix_rubric(q, pkg)
         pkg["farbe"] = pkg.get("farbe") or self.pick_colors(pkg)
         imgs = render.carousel(pkg, photo, seed=q["id"])
+        video = None
         if pkg.get("illustration") == "signal_for_help":
-            imgs[0] = render.with_illustration(imgs[0], pkg, "signal_for_help")
+            from .design import illus, reel as reelmod
+            _, ink = render.palette(pkg.get("rubric", "news"), False, None, pkg.get("farbe"))
+            base = imgs[0]
+            imgs[0] = illus.signal_static(base, ink)            # Standbild für Vorschau und Kontrolle
+            path = f"/tmp/{q['id']}-cover.mp4"
+            illus.write_video(illus.signal_frames(base, ink), path, ffmpeg=reelmod.ffmpeg_exe())
+            video = Path(path).read_bytes()
         if not self.qa_gate(q, imgs, pkg):
             return
         q["media"] = [self.store.media(f"{int(self.ts())}-{q['id']}-{n}.jpg", render.jpeg(im)) for n, im in enumerate(imgs)]
+        if video:
+            q["media"][0] = self.store.media(f"{int(self.ts())}-{q['id']}-0.mp4", video)   # animierte erste Kachel
+            self._video = getattr(self, "_video", {})
+            self._video[q["id"]] = video
         self._cover = getattr(self, "_cover", {})
         self._cover[q["id"]] = render.jpeg(imgs[0], 85)
         self._slides = getattr(self, "_slides", {})
@@ -2142,6 +2157,8 @@ class Engine:
         q["caption"] = self.caption(pkg, credit)
         # Bildauswahl braucht ein Auge: Vorschau, ohne Antwort geht es nach 2 Stunden raus
         q.update(status="waiting", on_timeout="post", timeout=self.ts() + 2 * 3600)
+        if getattr(self, "_video", {}).get(q["id"]):
+            self.tg.video(self._video[q["id"]], "Erste Kachel als Animation")
         q["tg"] = self.tg.preview(self._cover[q["id"]], "damals/heute – passen die bilder zusammen?\n\n"
                                   + q["caption"][:700], q["id"])
 
@@ -2238,6 +2255,8 @@ class Engine:
         strong = bool(auto) and rating.get("score", 0) >= auto
         q.update(status="waiting", timeout=self.ts() + 3 * 3600, on_timeout="post" if strong else "drop")
         note = (f"bildredaktion: {rating.get('score')}/10 – {rating.get('why', '')}\n" if rating else "")
+        if getattr(self, "_video", {}).get(q["id"]):
+            self.tg.video(self._video[q["id"]], "Erste Kachel als Animation")
         q["tg"] = self.tg.preview(self._cover[q["id"]], f"community-foto – posten?\n{note}"
                                   f"{'ohne antwort geht es in 3 h raus.' if strong else 'ohne antwort wird es nicht gepostet.'}"
                                   f"\n\n{q['caption'][:600]}", q["id"])
@@ -2272,6 +2291,8 @@ class Engine:
             return
         src = "\n".join(f"· {x.get('name')}: {x.get('url', '')}" if isinstance(x, dict) else f"· {x}"
                         for x in pkg.get("sources", [])[:4])
+        if getattr(self, "_video", {}).get(q["id"]):
+            self.tg.video(self._video[q["id"]], "Erste Kachel als Animation")
         q["tg"] = self.tg.preview(self._cover[q["id"]], f"{head}\n\n{q['caption'][:600]}\n\nQuellen:\n{src}\n\n"
                                   f"Was ändern? Antworte einfach auf diese Nachricht.", q["id"])
         rest = getattr(self, "_slides", {}).get(q["id"])

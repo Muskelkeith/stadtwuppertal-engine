@@ -227,7 +227,9 @@ class GraphClient:
         self._req("DELETE", media_id)
 
     def carousel(self, urls: list[str], caption: str) -> str:
-        kids = [self._req("POST", f"{self.ig}/media", image_url=u, is_carousel_item="true")["id"] for u in urls[:10]]
+        kids = [self._req("POST", f"{self.ig}/media", media_type="VIDEO", video_url=u, is_carousel_item="true")["id"]
+                if u.lower().endswith(".mp4") else
+                self._req("POST", f"{self.ig}/media", image_url=u, is_carousel_item="true")["id"] for u in urls[:10]]
         for k in kids:
             self._wait(k)
         c = self._req("POST", f"{self.ig}/media", media_type="CAROUSEL", children=",".join(kids), caption=caption)
