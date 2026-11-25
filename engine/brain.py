@@ -71,7 +71,9 @@ PACKAGE = """{
  "caption": "Caption: erste Zeile = Gefühl des Hooks, dann 2–4 kurze Zeilen. Eine Frage am Ende NUR, wenn sie direkt aus dem Thema folgt und Leute wirklich etwas beizutragen haben (eigene Erinnerung, Ort, Erfahrung, Meinung zur Sache) – sonst keine. Nie konstruierte Transfer-Fragen ins Beliebige (‚welchem Tier in eurer Straße traut ihr das zu?‘). KEINE Links, keine URLs",
  "hashtags": ["3–4 ohne #"],
  "sources": [{"name": "…", "url": "…"}],
- "photo_query": "Suchbegriff für ein freies Wikimedia-Foto (z. B. 'Schwebebahn Vohwinkel') oder leer",
+ "photo_queries": ["IMMER 3 Suchbegriffe für ein Hintergrundfoto der Kachel, vom Konkreten zum Allgemeinen – was man SIEHT, nicht das Thema:
+                    z. B. Fahrrad-Post → 'Fahrräder Wuppertal', 'Fahrradständer viele Fahrräder', 'bicycles parked'.
+                    Erst mit Ort, dann ohne, der letzte auf Englisch"],
  "visual": "foto|damals_heute|typo",   // was fürs Auge: Foto, damals/heute-Vergleich oder reine Typo
  "damals_query": "nur bei damals/heute", "heute_query": "nur bei damals/heute",
  "public_interest": true,   // informiert über eine Angelegenheit von öffentlichem Interesse (Nachrichten, Politik, Verkehr, Sicherheit)?
@@ -166,7 +168,7 @@ JSON: {{"items": [{{"id": "…", "story": "kurzer-slug", "title": "neutraler Tit
         }
         prompt = f"""Auftrag: {modes[mode]}
 FORMAT NACH STOFF: Nicht alles ist ein Karussell. Kleine Sachen (Wetter, kurze Info, Termin, Boulevard, eine starke
-Zahl, ein schönes Foto) = EIN Post ohne Folgeslides, mit photo_query für ein passendes echtes Foto. Karussell nur, wenn
+Zahl, ein schönes Foto) = EIN Post ohne Folgeslides, mit passenden photo_queries für ein echtes Foto. Karussell nur, wenn
 es Stoff für mehrere wirklich gute Slides gibt. Lieber ein knackiger Einzelpost als drei dünne Slides.
 STOFF: Steht in einer Meldung „volltext“, ist das der ganze Artikel – nutze die konkreten Details daraus (Namen, Orte,
 Zahlen, Zeiten), nicht nur den Anriss.
@@ -243,6 +245,16 @@ JSON: {{"veraltet": bool, "ok": bool (false NUR bei rechtlichen Problemen oder w
 
 
     # ── 3b. Bildkontrolle (fertige Bilder ansehen) ──────────
+    def choose_photo(self, sheet_jpeg: bytes, pkg: dict, n: int) -> dict:
+        """Bildredaktion: welches der n Fotos (links→rechts nummeriert 1…n) passt als Hintergrund der Titelkachel?"""
+        prompt = f"""Titelkachel: «{' '.join(pkg.get('hook') or [])}» – {pkg.get('kern') or pkg.get('schild') or ''}
+Du siehst {n} Kandidaten für das Hintergrundfoto, nummeriert 1 bis {n} von links nach rechts.
+Nimm das Foto, das das Thema auf einen Blick zeigt und gut aussieht (wird eingefärbt, Schrift liegt oben drauf).
+Nicht nehmen: erkennbar eine andere Stadt (fremde Schilder, fremde Wahrzeichen), Menschen im Mittelpunkt, Unfälle,
+Gedenkstellen, Werbung, Logos, Text im Bild, leer oder langweilig. Passt keins wirklich: 0.
+JSON: {{"nr": 0-{n}, "warum": "kurz"}}"""
+        return self.llm.ask_image("bildwahl", self.system, prompt, sheet_jpeg, tier="write", side=1600)
+
     def visual_check(self, sheet_jpeg: bytes, pkg: dict, kind: str) -> dict:
         system = self.system + """
 
@@ -449,6 +461,8 @@ def stub(task: str, prompt: str):
         return {"items": [{"id": i, "story": f"story-{n % 3}", "title": f"Geschichte {n % 3}",
                            "score": 8.5 if n == 0 else 5, "breaking": n == 0, "rubric": "news",
                            "risk": "gruen"} for n, i in enumerate(ids)]}
+    if task == "bildwahl":
+        return {"nr": 1, "warum": "test"}
     if task == "aendern":
         return {"aenderungen": {}, "credit_handle": "", "neues_foto": False, "photo_query": "", "frage": "",
                 "was_geaendert": "Fotograf ergänzt"}

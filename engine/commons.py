@@ -59,17 +59,83 @@ def credit(hit: dict) -> str:
     return f"foto: {hit['artist']} / Wikimedia Commons, {hit['license']}"
 
 
-def find_photo(query: str, used: set, http=requests):
-    """Erstes passendes, noch nicht benutztes Foto: (Image, Credit) oder (None, None)."""
-    if not query:
-        return None, None, None
-    try:
-        for hit in search(query, http=http):
-            if hit["page"] in used:
-                continue
-            return fetch(hit, http), credit(hit), hit["page"]
-    except Exception:
-        pass
+OPENVERSE = "https://api.openverse.org/v1/images/"
+
+
+def openverse(query: str, n=8, http=requests) -> list[dict]:
+    """Freie Fotos (Creative Commons, Bearbeitung erlaubt) aus Flickr, Wikimedia & Co. über Openverse – ohne Schlüssel."""
+    r = http.get(OPENVERSE, params={"q": query, "license_type": "commercial,modification", "page_size": 20,
+                                    "mature": "false"}, headers=UA, timeout=30)
+    r.raise_for_status()
+    out = []
+    for x in r.json().get("results", []):
+        if (x.get("width") or 0) < 1000 or not x.get("url"):
+            continue
+        lic = (x.get("license") or "").lower()
+        lic_txt = "CC0" if lic in ("cc0", "pdm") else f"CC {lic.upper()} {x.get('license_version') or ''}".strip()
+        out.append({"url": x["url"], "page": x.get("foreign_landing_url") or x["url"],
+                    "artist": (x.get("creator") or "Unbekannt")[:60], "license": lic_txt,
+                    "source": (x.get("source") or x.get("provider") or "Openverse").capitalize(),
+                    "title": x.get("title") or ""})
+        if len(out) >= n:
+            break
+    return out
+
+
+ORTE = re.compile(r"wuppertal|elberfeld|barmen|vohwinkel|cronenberg|ronsdorf|beyenburg|langerfeld|oberbarmen|"
+                  r"nrw|bergisch|deutschland|germany", re.I)
+
+
+def passt(hit: dict, query: str) -> bool:
+    """Zeigt das Foto wirklich das Motiv? Mindestens ein Motiv-Wort (ohne Ortsnamen) muss in Titel/Beschreibung stehen –
+    sonst liefert „Fahrräder Wuppertal“ irgendein Straßenfoto aus Wuppertal."""
+    words = [w.lower()[:5] for w in re.findall(r"[A-Za-zÄÖÜäöüß]{4,}", ORTE.sub(" ", query))]
+    if not words:
+        return True
+    text = hit.get('title', '').lower()        # Titel, nicht Beschreibung: sonst passt jedes Foto, das das Wort nebenbei erwähnt
+    return any(w in text for w in words)
+
+
+def candidates(query, used: set, http=requests, n=4) -> list[dict]:
+    """Bis zu n passende Kandidaten aus Commons und Openverse (Titel enthält das Motiv)."""
+    queries = [q for q in ([query] if isinstance(query, str) else list(query or [])) if q]
+    out, seen = [], set(used)
+    for src in (search, openverse):
+        for q in queries:
+            try:
+                for hit in src(q, http=http):
+                    if hit["page"] in seen or not passt(hit, q):
+                        continue
+                    seen.add(hit["page"])
+                    hit["credit"] = credit(hit) if src is search else \
+                        f"foto: {hit['artist']} / {hit['source']}, {hit['license']}"
+                    out.append(hit)
+                    if len(out) >= n:
+                        return out
+            except Exception:
+                pass
+    return out
+
+
+def find_photo(query, used: set, http=requests):
+    """Erstes passendes, noch nicht benutztes Foto: (Image, Credit, Seite) oder (None, None, None).
+    `query` darf ein Begriff oder eine Liste sein (erst konkret mit Wuppertal, dann allgemein).
+    Erst Wikimedia Commons, dann Openverse (Flickr & Co., nur Lizenzen, die Bearbeitung erlauben)."""
+    queries = [q for q in ([query] if isinstance(query, str) else list(query or [])) if q]
+    for q in queries:
+        try:
+            for hit in search(q, http=http):
+                if hit["page"] not in used and passt(hit, q):
+                    return fetch(hit, http), credit(hit), hit["page"]
+        except Exception:
+            pass
+    for q in queries:
+        try:
+            for hit in openverse(q, http=http):
+                if hit["page"] not in used and passt(hit, q):
+                    return fetch(hit, http), f"foto: {hit['artist']} / {hit['source']}, {hit['license']}", hit["page"]
+        except Exception:
+            pass
     return None, None, None
 
 

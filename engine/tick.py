@@ -404,7 +404,7 @@ class Engine:
             credit, q["tag_user"] = f"foto: @{h}", h
         photo = None
         if r.get("neues_foto") and r.get("photo_query"):
-            pkg["photo_query"] = r["photo_query"]
+            pkg["photo_queries"] = [r["photo_query"]]
             photo, c = self.pick_photo(q, pkg)
             if photo is not None:
                 credit = c or credit
@@ -1413,11 +1413,30 @@ class Engine:
                                      "title": story.get("title", ""), "rating": r}, it, story.get("title", ""))
                         asked = True
                         break
-        if pkg.get("photo_query"):
-            photo, credit, page = commons.find_photo(pkg["photo_query"], set(self.st["used_photos"]), self.http)
-            if page:
-                self.st["used_photos"].append(page)
-                return photo, credit
+        queries = list(pkg.get("photo_queries") or []) + ([pkg["photo_query"]] if pkg.get("photo_query") else [])
+        if queries:
+            # Bildredaktion: mehrere Kandidaten holen, Claude wählt das passende (oder keins)
+            cands = commons.candidates(queries, set(self.st["used_photos"]), self.http)
+            ims = []
+            for h in cands:
+                try:
+                    ims.append((h, commons.fetch(h, self.http)))
+                except Exception:      # noqa: BLE001
+                    pass
+            if ims:
+                try:
+                    sheet = self.contact_sheet([im for _, im in ims], tile=500, cols=len(ims))
+                    pick = int((self.brain.choose_photo(sheet, pkg, len(ims)) or {}).get("nr") or 0)
+                except Exception as e:      # noqa: BLE001
+                    self.log(f"bildwahl: {str(e)[:80]}")
+                    pick = 1
+                if 1 <= pick <= len(ims):
+                    h, im = ims[pick - 1]
+                    self.st["used_photos"].append(h["page"])
+                    return im, h["credit"]
+                self.log(f"foto: {len(ims)} Kandidaten, keiner passt ({queries[:2]})")
+            else:
+                self.log(f"foto: nichts gefunden für {queries[:3]}")
         return None, None
 
     # ── Bildredaktion & Anfragen ────────────────────────────
@@ -1975,8 +1994,8 @@ class Engine:
     def render_reel(self, q, photo=None):
         from .design.reel import render_reel
         photos = [photo] if photo else []
-        if not photos and q.get("pkg", {}).get("photo_query"):
-            p, _, page = commons.find_photo(q["pkg"]["photo_query"], set(), self.http)
+        if not photos and (q.get("pkg", {}).get("photo_queries") or q.get("pkg", {}).get("photo_query")):
+            p, _, page = commons.find_photo(q["pkg"].get("photo_queries") or q["pkg"]["photo_query"], set(), self.http)
             photos = [p] if p else []
         pkg = dict(q["pkg"])
         trains, credits = [], []
