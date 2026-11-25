@@ -871,3 +871,18 @@ def test_fotopool_liefert_kandidat_mit_credit(env, monkeypatch):
     e.st["wm_cache"] = {"ts": e.ts(), "hashes": []}
     c = e.tagpool_candidates(["Fahrräder Wuppertal"])
     assert c and c[0]["credit"] == "foto: @radlerin_wtal"
+
+
+def test_eingespeister_fertiger_post(env):
+    run, graph, store, feed = env
+    import yaml
+    from pathlib import Path
+    e, errs = run(datetime(2026, 11, 25, 19, 40, tzinfo=TZ))
+    entry = yaml.safe_load(Path(e.cfg["_root"], "data", "sofort.yaml").read_text())[0]
+    e.st["queue"] = []
+    e.enqueue("fertig", idea={"pkg": entry["pkg"], "foto": False})
+    q = e.st["queue"][-1]
+    e._redo = False
+    e.produce_one(q)
+    assert q["status"] in ("ready", "waiting"), q.get("qa_note")
+    assert "Hilfetelefon" in q["caption"] and q.get("media")

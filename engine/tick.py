@@ -520,6 +520,14 @@ class Engine:
             return
         self.st["done"]["collect_ts"] = self.ts()
         srcs = self.cfg["sources"] + self.cfg.get("event_sources", [])
+        # Instagram nur alle 30 Minuten abfragen (Meta-Limit ~200 Abfragen/Stunde), Websites alle 10 Minuten
+        ig_due = self.ts() - self.st["done"].get("ig_collect", 0) >= self.cfg["news"].get("ig_every_min", 30) * 60
+        if self.st["done"].get("ig_limit_until", 0) > self.ts():
+            ig_due = False
+        if ig_due:
+            self.st["done"]["ig_collect"] = self.ts()
+        else:
+            srcs = [x for x in srcs if x["type"] != "instagram"]
         if self.graph is not None and getattr(self.graph, "ig_login", False):
             srcs = [x for x in srcs if x["type"] != "instagram"]   # Account-Beobachtung erst mit Facebook-Weg
         if self.graph is not None and not getattr(self.graph, "ig_login", False):
@@ -541,6 +549,9 @@ class Engine:
                 pz[n] = self.ts() + 7 * 86400
                 fails.pop(n)
                 self.log(f"quelle pausiert (7 Tage): {n} – Instagram findet den Account nicht als Business-/Creator-Account")
+        if any("request limit reached" in e for e in errs):
+            self.st["done"]["ig_limit_until"] = self.ts() + 3600
+            self.log("instagram: Meta-Abfragelimit erreicht – 1 Stunde Pause für Instagram-Quellen")
         before = {e.split(":")[0].strip() for e in (self.st["done"].get("source_errors") or [])}
         for e in errs:
             if e.split(":")[0].strip() not in before:
@@ -1303,6 +1314,10 @@ class Engine:
         """Fertig geschriebener Post: nicht neu schreiben, nur Foto (falls gewünscht), Layout, Kontrolle, Vorschau."""
         pkg = dict(q["idea"]["pkg"])
         pkg.setdefault("slides", [])
+        pkg["sources"] = [x if isinstance(x, dict) else {"name": str(x), "url": ""} for x in pkg.get("sources") or []]
+        pkg["hashtags"] = [str(h).lstrip("#") for h in pkg.get("hashtags") or []]
+        pkg.setdefault("caption", "")
+        pkg.setdefault("reel", [])
         photo, credit = (self.pick_photo(q, pkg) if q["idea"].get("foto", True) else (None, None))
         self.fix_rubric(q, pkg)
         pkg["farbe"] = pkg.get("farbe") or self.pick_colors(pkg)
@@ -2249,7 +2264,8 @@ class Engine:
         else:
             q["status"] = "ready"
             return
-        src = "\n".join(f"· {x.get('name')}: {x.get('url', '')}" for x in pkg.get("sources", [])[:4])
+        src = "\n".join(f"· {x.get('name')}: {x.get('url', '')}" if isinstance(x, dict) else f"· {x}"
+                        for x in pkg.get("sources", [])[:4])
         q["tg"] = self.tg.preview(self._cover[q["id"]], f"{head}\n\n{q['caption'][:600]}\n\nQuellen:\n{src}\n\n"
                                   f"Was ändern? Antworte einfach auf diese Nachricht.", q["id"])
         rest = getattr(self, "_slides", {}).get(q["id"])
@@ -2266,7 +2282,8 @@ class Engine:
         body = "\n".join(l for l in body.split("\n")
                          if not re.search(r"EINTRAGEN|PLATZHALTER|\bTODO\b|^\s*(bild)?quelle:|^\s*foto:", l, re.I))
         parts = [body.strip()]
-        via = [s["name"] for s in pkg.get("sources", []) if s.get("name")]
+        via = [s["name"] if isinstance(s, dict) else str(s) for s in pkg.get("sources", [])
+               if (s.get("name") if isinstance(s, dict) else s)]
         if via:
             parts.append("quelle: " + ", ".join(dict.fromkeys(via)))
         if credit:
@@ -2508,24 +2525,27 @@ class Engine:
             self.st["done"]["rolled"] = sha
             self.tg.say("↩️ Die letzte Werkstatt-Reparatur hat Fehler gemacht. Ich springe auf den alten Stand zurück.")
 
+    TRANSIENT = re.compile(r"request limit|rate limit|timed? ?out|timeout|429|50[0234]|temporar|connection|"
+                           r"Max retries|reduce the amount of data", re.I)
+
     def alarm(self):
-        if not self.errors:
-            return
-        key = f"{self.now():%Y-%m-%d %H}"
-        if self.st["alerts"].get(key):
-            return
-        self.st["alerts"] = {key: True}
-        msgs = []
-        for e in self.errors[:5]:
-            name = e.split(":", 1)[0]
-            day = f"{self.today()}:{name}"
-            if self.st["done"].get(f"alarm:{day}"):
-                continue                       # denselben Fehler nur einmal am Tag melden
-            self.st["done"][f"alarm:{day}"] = 1
-            msgs.append(f"• {name}: Das hat gerade nicht geklappt. Ich versuche es automatisch weiter, "
-                        f"du musst nichts tun.\n  (technisch: {e.split(':', 1)[-1].strip()[:120]})")
-        if msgs:
-            self.tg.say("⚠️ Kleine Störung, der Rest läuft normal:\n" + "\n".join(msgs))
+        """Der Bot bleibt still: Nur wenn etwas über eine Stunde lang immer wieder scheitert (und nicht bloß ein
+        vorübergehendes Limit/Netzproblem ist), bekommst du eine Nachricht. Alles andere steht im Protokoll."""
+        streak = self.st.setdefault("fehler_serie", {})
+        now_names = set()
+        for e in self.errors:
+            name = re.sub(r"\s\d{6,}.*$", "", e.split(":", 1)[0]).strip()   # „produktion 1795…“ → „produktion“
+            now_names.add(name)
+            if self.TRANSIENT.search(e):
+                continue
+            streak[name] = streak.get(name, 0) + 1
+            if streak[name] == 6 and not self.st["done"].get(f"alarm:{self.today()}:{name}"):
+                self.st["done"][f"alarm:{self.today()}:{name}"] = 1
+                self.tg.say(f"⚠️ „{name}“ klappt seit über einer Stunde nicht. Der Rest läuft normal, ich bin dran.\n"
+                            f"(technisch: {e.split(':', 1)[-1].strip()[:120]})")
+        for n in list(streak):
+            if n not in now_names:
+                streak.pop(n)
 
     def fix_mistaken_ideas(self):
         if not self.st["done"].get("regate_news_2"):
