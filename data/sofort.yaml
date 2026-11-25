@@ -1,31 +1,81 @@
 # Fertige Posts, die die Redaktion (JD / Claude im Chat) direkt einspeist.
 # Die Engine baut sie beim nächsten Durchlauf ohne eigene Themenwahl/Neuschreiben, rendert sie und schickt dir die
 # Vorschau. Jeder Eintrag läuft genau einmal (an der id erkannt).
-- id: orange-day-2026-d
-  ersetzt: orange-day-2026-c
-  gueltig_bis: "2026-11-26T12:00:00+01:00"
+- id: orange-day-2026-e
+  ersetzt: orange-day-2026-d
+  gueltig_bis: '2026-11-26T12:00:00+01:00'
   foto: false
+  kacheln:
+  - assets/orange-day/kachel_1.jpg
+  - assets/orange-day/kachel_2.jpg
   pkg:
     rubric: news
-    illustration: signal_for_help
-    hook: ["dieses zeichen", "heißt: hilfe."]
-    schild: "orange day"
+    farbe: [creme, kirsche]
+    hook:
+    - dieses zeichen
+    - 'heißt: hilfe.'
+    schild: orange day
     slides:
-      - head: "so geht's"
-        body: "1. Handfläche zeigen. 2. Daumen in die Handfläche klappen. 3. Die Finger über den Daumen schließen. Das „Signal for Help“ hat die Canadian Women's Foundation 2020 entwickelt, damit Frauen in Videoanrufen still um Hilfe bitten können. Es funktioniert genauso im Bus, im Laden oder auf der Straße."
-      - head: "und wenn ich es sehe?"
-        body: "Ruhig bleiben, nicht auffällig reagieren. Bei akuter Gefahr sofort 110 wählen. Wer unsicher ist, was zu tun ist, kann sich beim Hilfetelefon beraten lassen – das geht ausdrücklich auch für Freundinnen, Familie, Nachbarn und Kolleg:innen."
-      - head: "warum heute?"
-        body: "Seit 1981 ist der 25. November Gedenktag gegen Gewalt an Frauen, seit 1999 von den Vereinten Nationen anerkannt. Bis zum 10. Dezember läuft die Kampagne „Orange the World“. Jede dritte Frau in Deutschland erlebt mindestens einmal im Leben körperliche oder sexualisierte Gewalt."
-      - head: "sofort hilfe?"
-        body: "Akute Gefahr: 110. Hilfetelefon „Gewalt gegen Frauen“: 116 016 – rund um die Uhr, kostenlos, anonym, mit Dolmetscherinnen in 18 Sprachen. Auf hilfetelefon.de gibt es außerdem einen Chat (Sofort-Chat täglich 12 bis 20 Uhr) und Infos in Leichter Sprache. Gehörlose und schwerhörige Frauen erreichen das Hilfetelefon in Gebärdensprache über den Tess-Relay-Dienst."
-      - head: "hier im tal"
-        body: "Frauenhaus Wuppertal (Frauen helfen Frauen): 0202 71 14 26, Tag und Nacht. Beratungsstelle Frauen helfen Frauen: 0202 31 88 55 – bei häuslicher Gewalt und Stalking. FrauenBeratung + Selbsthilfe, Laurentiusstraße 12 in Elberfeld: 0202 30 60 07 – auch bei sexualisierter Gewalt und Belästigung am Arbeitsplatz."
-    caption: "Heute ist Orange Day, der internationale Tag gegen Gewalt an Frauen.\nDieses Handzeichen sollten alle kennen: Handfläche zeigen, Daumen einklappen, Finger darüber schließen. Wer es sieht, weiß: Diese Person braucht Hilfe.\nAlle Nummern für Wuppertal stehen in den Slides. Speichern und weiterschicken – man weiß nie, wer sie gerade braucht."
-    hashtags: ["wuppertal", "orangeday", "orangetheworld", "signalforhelp", "gewaltgegenfrauen"]
-    sources:
-      - {name: "Hilfetelefon Gewalt gegen Frauen", url: "https://www.hilfetelefon.de"}
-      - {name: "Frauen helfen Frauen e.V. Wuppertal", url: "https://www.frauenhaus-wuppertal.de"}
-      - {name: "FrauenBeratung + Selbsthilfe e.V.", url: "https://www.frauenberatungwuppertal.de"}
+    - head: so geht's
+      body: 1. Handfläche zeigen. 2. Daumen in die Handfläche klappen. 3. Die Finger über den Daumen schließen. Das „Signal for Help“ hat die Canadian Women's Foundation 2020 entwickelt, damit Frauen in
+        Videoanrufen still um Hilfe bitten können. Es funktioniert genauso im Bus, im Laden oder auf der Straße.
+    - head: und wenn ich es sehe?
+      body: Ruhig bleiben, nicht auffällig reagieren. Bei akuter Gefahr sofort 110 wählen. Wer unsicher ist, was zu tun ist, kann sich beim Hilfetelefon beraten lassen – das geht ausdrücklich auch für Freundinnen,
+        Familie, Nachbarn und Kolleg:innen.
+    - head: warum heute?
+      body: Seit 1981 ist der 25. November Gedenktag gegen Gewalt an Frauen, seit 1999 von den Vereinten Nationen anerkannt. Bis zum 10. Dezember läuft die Kampagne „Orange the World“. Jede dritte Frau
+        in Deutschland erlebt mindestens einmal im Leben körperliche oder sexualisierte Gewalt.
+    - head: sofort hilfe?
+      body: 'Akute Gefahr: 110. Hilfetelefon „Gewalt gegen Frauen“: 116 016 – rund um die Uhr, kostenlos, anonym, mit Dolmetscherinnen in 18 Sprachen. Auf hilfetelefon.de gibt es außerdem einen Chat (Sofort-Chat
+        täglich 12 bis 20 Uhr) und Infos in Leichter Sprache. Gehörlose und schwerhörige Frauen erreichen das Hilfetelefon in Gebärdensprache über den Tess-Relay-Dienst.'
+    - head: hier im tal
+      body: 'Frauenhaus Wuppertal (Frauen helfen Frauen): 0202 71 14 26, Tag und Nacht. Beratungsstelle Frauen helfen Frauen: 0202 31 88 55 – bei häuslicher Gewalt und Stalking. FrauenBeratung + Selbsthilfe,
+        Laurentiusstraße 12 in Elberfeld: 0202 30 60 07 – auch bei sexualisierter Gewalt und Belästigung am Arbeitsplatz.'
+    caption: 'Heute ist Orange Day, der internationale Tag gegen Gewalt an Frauen.
+
+      Dieses Handzeichen sollten alle kennen: Handfläche zeigen, Daumen einklappen, Finger darüber schließen. Wer es sieht, weiß: Diese Person braucht Hilfe.
+
+      Alle Nummern für Wuppertal stehen in den Slides. Speichern und weiterschicken – man weiß nie, wer sie gerade braucht.
+
+
+      Bilder: GemoWiki / Wikimedia Commons (CC BY 4.0)'
+    hashtags: &id001
+    - wuppertal
+    - orangeday
+    - orangetheworld
+    - signalforhelp
+    - gewaltgegenfrauen
+    sources: &id002
+    - name: Hilfetelefon Gewalt gegen Frauen
+      url: https://www.hilfetelefon.de
+    - name: Frauen helfen Frauen e.V. Wuppertal
+      url: https://www.frauenhaus-wuppertal.de
+    - name: FrauenBeratung + Selbsthilfe e.V.
+      url: https://www.frauenberatungwuppertal.de
+    public_interest: true
+    risk: gruen
+- id: orange-day-2026-reel
+  kind: reel
+  gueltig_bis: '2026-11-26T12:00:00+01:00'
+  foto: false
+  video: assets/orange-day/reel.mp4
+  cover: assets/orange-day/reel_cover.jpg
+  pkg:
+    rubric: news
+    hook:
+    - dieses zeichen
+    - 'heißt: hilfe.'
+    caption: 'Dieses Zeichen heißt: Hilfe.
+
+      Heute ist Orange Day, der internationale Tag gegen Gewalt an Frauen. So geht das Handzeichen: Handfläche zeigen, Daumen einklappen, Finger darüber schließen.
+
+      Wer es sieht: ruhig bleiben, bei akuter Gefahr 110 wählen. Hilfetelefon „Gewalt gegen Frauen“: 116 016, rund um die Uhr, kostenlos und anonym. Frauenhaus Wuppertal: 0202 71 14 26.
+
+      Alle Anlaufstellen im Tal stehen in unserem Karussell-Post. Speichern und weiterschicken.
+
+
+      Video: GemoWiki / Wikimedia Commons (CC BY 4.0)'
+    hashtags: *id001
+    sources: *id002
     public_interest: true
     risk: gruen

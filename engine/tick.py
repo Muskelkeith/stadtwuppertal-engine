@@ -377,7 +377,7 @@ class Engine:
         q["caption"] = self.caption(pkg, credit)
         q.update(status="waiting", on_timeout="drop", timeout=self.ts() + 6 * 3600)
         if getattr(self, "_video", {}).get(q["id"]):
-            self.tg.video(self._video[q["id"]], "Erste Kachel als Animation")
+            self.tg.video(self._video[q["id"]], "Reel" if q.get("kind") == "reel" else "Erste Kachel als Animation")
         q["tg"] = self.tg.preview(self._cover[q["id"]], f"neue fassung nach deiner kritik:\n\n{q['caption'][:800]}", q["id"])
         if self.tg.live and self.tg.chat and len(imgs) > 1:
             try:
@@ -430,7 +430,7 @@ class Engine:
         q.update(status="waiting", on_timeout="drop", timeout=self.ts() + 6 * 3600)
         what = r.get("was_geaendert") or "geändert"
         if getattr(self, "_video", {}).get(q["id"]):
-            self.tg.video(self._video[q["id"]], "Erste Kachel als Animation")
+            self.tg.video(self._video[q["id"]], "Reel" if q.get("kind") == "reel" else "Erste Kachel als Animation")
         q["tg"] = self.tg.preview(self._cover[q["id"]], f"{what}:\n\n{q['caption'][:800]}", q["id"])
         if self.tg.live and self.tg.chat and len(imgs) > 1:
             try:
@@ -1314,7 +1314,9 @@ class Engine:
                 if e.get("ersetzt") and old.get("eingespeist") == e["ersetzt"] and old["status"] in ("new", "waiting", "ready"):
                     old["status"] = "dropped"
                     self.tg.mark(old.get("tg"), "Ersetzt durch neue Fassung ↓")
-            self.enqueue("fertig", idea={"pkg": e["pkg"], "foto": e.get("foto", True)})
+            self.enqueue("fertig", kind=e.get("kind", "feed"),
+                         idea={"pkg": e["pkg"], "foto": e.get("foto", True), "kacheln": e.get("kacheln") or [],
+                               "video": e.get("video"), "cover": e.get("cover")})
             self.st["queue"][-1].update(priority=True, sofort=True, kat="info", eingespeist=e["id"])
             self.log(f"eingespeist: {e['id']}")
 
@@ -1326,10 +1328,26 @@ class Engine:
         pkg["hashtags"] = [str(h).lstrip("#") for h in pkg.get("hashtags") or []]
         pkg.setdefault("caption", "")
         pkg.setdefault("reel", [])
-        photo, credit = (self.pick_photo(q, pkg) if q["idea"].get("foto", True) else (None, None))
+        idea = q["idea"]
+        if idea.get("video"):                     # fertig gerendertes Reel aus dem Repo (von der Redaktion abgenommen)
+            video = (self.root / idea["video"]).read_bytes()
+            cover = Image.open(self.root / idea["cover"]).convert("RGB")
+            stamp = int(self.ts())
+            q["media"] = [self.store.media(f"{stamp}-{q['id']}.mp4", video)]
+            q["cover"] = self.store.media(f"{stamp}-{q['id']}-cover.jpg", render.jpeg(cover))
+            self._cover = getattr(self, "_cover", {})
+            self._cover[q["id"]] = render.jpeg(cover, 85)
+            self._video = getattr(self, "_video", {})
+            self._video[q["id"]] = video
+            self.decide(q, pkg, None)
+            return
+        photo, credit = (self.pick_photo(q, pkg) if idea.get("foto", True) else (None, None))
         self.fix_rubric(q, pkg)
         pkg["farbe"] = pkg.get("farbe") or self.pick_colors(pkg)
         imgs = render.carousel(pkg, photo, seed=q["id"])
+        if idea.get("kacheln"):                   # fertige Fotokacheln ersetzen das gerenderte Cover
+            fertig = [Image.open(self.root / k).convert("RGB") for k in idea["kacheln"]]
+            imgs = fertig + imgs[1:]
         video = None
         if pkg.get("illustration") == "signal_for_help":
             from .design import illus, reel as reelmod
@@ -2158,7 +2176,7 @@ class Engine:
         # Bildauswahl braucht ein Auge: Vorschau, ohne Antwort geht es nach 2 Stunden raus
         q.update(status="waiting", on_timeout="post", timeout=self.ts() + 2 * 3600)
         if getattr(self, "_video", {}).get(q["id"]):
-            self.tg.video(self._video[q["id"]], "Erste Kachel als Animation")
+            self.tg.video(self._video[q["id"]], "Reel" if q.get("kind") == "reel" else "Erste Kachel als Animation")
         q["tg"] = self.tg.preview(self._cover[q["id"]], "damals/heute – passen die bilder zusammen?\n\n"
                                   + q["caption"][:700], q["id"])
 
@@ -2256,7 +2274,7 @@ class Engine:
         q.update(status="waiting", timeout=self.ts() + 3 * 3600, on_timeout="post" if strong else "drop")
         note = (f"bildredaktion: {rating.get('score')}/10 – {rating.get('why', '')}\n" if rating else "")
         if getattr(self, "_video", {}).get(q["id"]):
-            self.tg.video(self._video[q["id"]], "Erste Kachel als Animation")
+            self.tg.video(self._video[q["id"]], "Reel" if q.get("kind") == "reel" else "Erste Kachel als Animation")
         q["tg"] = self.tg.preview(self._cover[q["id"]], f"community-foto – posten?\n{note}"
                                   f"{'ohne antwort geht es in 3 h raus.' if strong else 'ohne antwort wird es nicht gepostet.'}"
                                   f"\n\n{q['caption'][:600]}", q["id"])
@@ -2292,7 +2310,7 @@ class Engine:
         src = "\n".join(f"· {x.get('name')}: {x.get('url', '')}" if isinstance(x, dict) else f"· {x}"
                         for x in pkg.get("sources", [])[:4])
         if getattr(self, "_video", {}).get(q["id"]):
-            self.tg.video(self._video[q["id"]], "Erste Kachel als Animation")
+            self.tg.video(self._video[q["id"]], "Reel" if q.get("kind") == "reel" else "Erste Kachel als Animation")
         q["tg"] = self.tg.preview(self._cover[q["id"]], f"{head}\n\n{q['caption'][:600]}\n\nQuellen:\n{src}\n\n"
                                   f"Was ändern? Antworte einfach auf diese Nachricht.", q["id"])
         rest = getattr(self, "_slides", {}).get(q["id"])
