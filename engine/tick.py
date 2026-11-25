@@ -1306,6 +1306,10 @@ class Engine:
                 self.st["done"][key] = "abgelaufen"
                 continue
             self.st["done"][key] = 1
+            for old in self.st["queue"]:                      # ältere Fassung zurückziehen
+                if e.get("ersetzt") and old.get("eingespeist") == e["ersetzt"] and old["status"] in ("new", "waiting", "ready"):
+                    old["status"] = "dropped"
+                    self.tg.mark(old.get("tg"), "Ersetzt durch neue Fassung ↓")
             self.enqueue("fertig", idea={"pkg": e["pkg"], "foto": e.get("foto", True)})
             self.st["queue"][-1].update(priority=True, sofort=True, kat="info", eingespeist=e["id"])
             self.log(f"eingespeist: {e['id']}")
@@ -1322,6 +1326,8 @@ class Engine:
         self.fix_rubric(q, pkg)
         pkg["farbe"] = pkg.get("farbe") or self.pick_colors(pkg)
         imgs = render.carousel(pkg, photo, seed=q["id"])
+        if pkg.get("illustration") == "signal_for_help":
+            imgs[0] = render.with_illustration(imgs[0], pkg, "signal_for_help")
         if not self.qa_gate(q, imgs, pkg):
             return
         q["media"] = [self.store.media(f"{int(self.ts())}-{q['id']}-{n}.jpg", render.jpeg(im)) for n, im in enumerate(imgs)]

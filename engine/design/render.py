@@ -235,3 +235,15 @@ def jpeg(img: Image.Image, q=92) -> bytes:
     buf = io.BytesIO()
     img.convert("RGB").save(buf, "JPEG", quality=q, optimize=True)
     return buf.getvalue()
+
+
+def with_illustration(cover, pkg, name):
+    """Piktogramm unten auf die Titelkachel setzen (Platz unter Hook und Schild)."""
+    from . import illus
+    bg, ink = palette(pkg.get("rubric", "news"), False, None, pkg.get("farbe"))
+    ill = {"signal_for_help": illus.signal_for_help}[name](ink, bg, width=820)
+    im = cover.convert("RGBA")
+    x = (im.width - ill.width) // 2
+    y = im.height - ill.height - 150
+    im.alpha_composite(ill, (x, y))
+    return im.convert("RGB")
