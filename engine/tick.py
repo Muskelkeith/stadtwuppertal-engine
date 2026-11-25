@@ -620,6 +620,7 @@ class Engine:
             if s.get("posted") and s.get("followup") and now >= s["followup"] and not s.get("followed"):
                 s["followed"] = True
                 self.enqueue("nachdreh", story=slug)
+        self.load_sofort()
         # Nachrichten, sobald sie da sind – nicht erst im nächsten Sendeplatz
         self.plan_news_now()
         # feste Slots
@@ -734,6 +735,9 @@ class Engine:
         for q in self.st["queue"]:
             if q["status"] == "vorrat":
                 out.append((q.get("wert", 7) + 0.5, q.get("kat", "wissen"), "vorrat", q))
+        tag = self.aktionstag()
+        if tag and not self.st["done"].get(f"{self.today()}:aktionstag"):
+            out.append((9.5, "info", "aktionstag", tag))
         plan = self.k["rotation"].get(name, {}) if name in self.k["rotation"] else {}
         weekday = ["mo", "di", "mi", "do", "fr", "sa", "so"][self.now().weekday()]
         rubric = plan.get(weekday) if isinstance(plan, dict) else plan
@@ -753,6 +757,29 @@ class Engine:
             return True
         name = f"{item.get('source', '')} {item.get('handle', '')}".lower()
         return any(p.lower() in name for p in self.cfg.get("primaerquellen", []))
+
+    def aktionstag(self):
+        """Ist heute ein wichtiger Gedenk-/Aktionstag (data/aktionstage.yaml)? Dann Stoff dafür zusammenstellen."""
+        import yaml
+        if self.st["done"].get(f"{self.today()}:aktionstag") or not getattr(self.tg, "live", False):
+            return None
+        path = Path(self.cfg["_root"], "data", "aktionstage.yaml")
+        if not path.exists():
+            return None
+        tag = (yaml.safe_load(path.read_text()) or {}).get(self.now().strftime("%m-%d"))
+        if not tag:
+            return None
+        rx = re.compile(tag.get("stichwort") or tag["name"], re.I)
+        news = [f"{i.get('source', '')}: {i.get('title', '')} – {(i.get('volltext') or i.get('summary') or '')[:800]}"
+                for i in self.st["items"].values() if rx.search(f"{i.get('title', '')} {i.get('summary', '')}")][-6:]
+        w = ideenpool.wiki(tag["wiki"]) if tag.get("wiki") else None
+        return {"_gepr": True, "thema": f"Heute: {tag['name']}", "rubrik": "aktionstag",
+                "dreh": "Was heißt der Tag für Wuppertal? Konkret und nützlich: Wuppertal-Bezug, Aktionen hier, "
+                        "Anlaufstellen – aber NUR, was im Material steht. Ernster, klarer Ton, keine Witze, "
+                        "keine Frage an die Leser, wenn das Thema schwer ist.",
+                "fakten": ((w or {}).get("text", "")[:4000] + "\n\nAKTUELLE MELDUNGEN:\n" + "\n".join(news)).strip(),
+                "quelle": "Wikipedia" + (" und lokale Meldungen" if news else ""),
+                "hinweis": "Nur Fakten aus 'fakten' verwenden. Keine Telefonnummern erfinden."}
 
     def gilt_noch(self, slug, puffer_min=45) -> bool:
         """Warnungen/Sperrungen mit Ablaufzeit: nur solange sie noch mindestens `puffer_min` gelten.
@@ -838,6 +865,9 @@ class Engine:
             qid = self.enqueue_pool(x)
         elif art == "vorrat":
             return self.activate(x, name)
+        elif art == "aktionstag":
+            self.st["done"][f"{self.today()}:aktionstag"] = True
+            qid = self.enqueue("rubrik", idea=x)
         elif art == "events":
             qid = self.enqueue("events", idea={"events": x})
         elif art == "damals":
@@ -1140,6 +1170,8 @@ class Engine:
             return self.render_reel(q)
         if q["mode"] == "foto":
             return self.produce_submission(q)
+        if q["mode"] == "fertig":
+            return self.produce_ready(q)
         mat = self.material(q)
         if q["mode"] == "damals" and not mat:
             q["status"] = "dropped"
@@ -1243,6 +1275,41 @@ class Engine:
             return
         q["media"] = [self.store.media(f"{int(self.ts())}-{q['id']}-{n}.jpg", render.jpeg(im)) for n, im in enumerate(imgs)]
         q["cover_jpeg"] = None
+        self._cover = getattr(self, "_cover", {})
+        self._cover[q["id"]] = render.jpeg(imgs[0], 85)
+        self._slides = getattr(self, "_slides", {})
+        self._slides[q["id"]] = [render.jpeg(im, 80) for im in imgs[1:]]
+        self.decide(q, pkg, credit)
+
+    def load_sofort(self):
+        """Fertige Posts aus data/sofort.yaml (von der Redaktion eingespeist) einmalig einreihen."""
+        import yaml
+        path = Path(self.cfg["_root"], "data", "sofort.yaml")
+        if not path.exists() or not getattr(self.tg, "live", False):
+            return
+        for e in yaml.safe_load(path.read_text()) or []:
+            key = f"sofort:{e.get('id')}"
+            if not e.get("pkg") or self.st["done"].get(key):
+                continue
+            if e.get("gueltig_bis") and datetime.fromisoformat(e["gueltig_bis"]).timestamp() < self.ts():
+                self.st["done"][key] = "abgelaufen"
+                continue
+            self.st["done"][key] = 1
+            self.enqueue("fertig", idea={"pkg": e["pkg"], "foto": e.get("foto", True)})
+            self.st["queue"][-1].update(priority=True, sofort=True, kat="info", eingespeist=e["id"])
+            self.log(f"eingespeist: {e['id']}")
+
+    def produce_ready(self, q):
+        """Fertig geschriebener Post: nicht neu schreiben, nur Foto (falls gewünscht), Layout, Kontrolle, Vorschau."""
+        pkg = dict(q["idea"]["pkg"])
+        pkg.setdefault("slides", [])
+        photo, credit = (self.pick_photo(q, pkg) if q["idea"].get("foto", True) else (None, None))
+        self.fix_rubric(q, pkg)
+        pkg["farbe"] = pkg.get("farbe") or self.pick_colors(pkg)
+        imgs = render.carousel(pkg, photo, seed=q["id"])
+        if not self.qa_gate(q, imgs, pkg):
+            return
+        q["media"] = [self.store.media(f"{int(self.ts())}-{q['id']}-{n}.jpg", render.jpeg(im)) for n, im in enumerate(imgs)]
         self._cover = getattr(self, "_cover", {})
         self._cover[q["id"]] = render.jpeg(imgs[0], 85)
         self._slides = getattr(self, "_slides", {})

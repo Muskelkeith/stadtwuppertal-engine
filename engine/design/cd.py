@@ -5,6 +5,7 @@
 - Themen-Posts sind Karussells, Cover mit kleinem Wisch-Hinweis unten rechts
 - Foto-Cover mit Duoton-Filter in Palettenfarben, Credits klein
 """
+import re
 import math
 import os
 from PIL import Image, ImageDraw, ImageFont, ImageChops, ImageOps
@@ -259,7 +260,7 @@ def swipe_hint(img, bg, plate=None, size=52, ink=None):
 def wrap(text, font, width, track=0.0):
     """Gieriger Umbruch auf volle Satzbreite, keine Trennung."""
     lines, cur = [], ""
-    for word in text.split():
+    for word in [w for w in re.split(r"[ \t\n]+", text) if w]:   # geschütztes Leerzeichen hält Telefonnummern zusammen
         t = (cur + " " + word).strip()
         if tracked_len(t, font, track) <= width or not cur:
             cur = t

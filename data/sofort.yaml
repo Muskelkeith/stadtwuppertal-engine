@@ -1,0 +1,24 @@
+# Fertige Posts, die die Redaktion (JD / Claude im Chat) direkt einspeist.
+# Die Engine baut sie beim nächsten Durchlauf ohne eigene Themenwahl/Neuschreiben, rendert sie und schickt dir die
+# Vorschau. Jeder Eintrag läuft genau einmal (an der id erkannt).
+- id: orange-day-2026
+  gueltig_bis: "2026-11-26T12:00:00+01:00"
+  foto: false            # bei dem Thema bewusst kein Symbolfoto
+  pkg:
+    rubric: news
+    hook: ["heute ist", "orange day."]
+    schild: "hilfe im tal"
+    slides:
+      - head: "worum geht's?"
+        body: "Seit 1981 ist der 25. November Gedenktag gegen Gewalt an Frauen, seit 1999 von den Vereinten Nationen anerkannt. Bis zum 10. Dezember läuft die Kampagne „Orange the World“. Jede dritte Frau in Deutschland erlebt mindestens einmal im Leben körperliche oder sexualisierte Gewalt."
+      - head: "sofort hilfe?"
+        body: "Akute Gefahr: 110. Das Hilfetelefon „Gewalt gegen Frauen“ ist unter 116 016 rund um die Uhr erreichbar – kostenlos, anonym, in 18 Sprachen und in Gebärdensprache. Anrufen dürfen auch Freundinnen, Familie und Nachbarn."
+      - head: "hier im tal"
+        body: "Frauenhaus Wuppertal (Frauen helfen Frauen): 0202 71 14 26, Tag und Nacht. Beratungsstelle Frauen helfen Frauen: 0202 31 88 55 – bei häuslicher Gewalt und Stalking. FrauenBeratung + Selbsthilfe, Laurentiusstraße 12 in Elberfeld: 0202 30 60 07 – auch bei sexualisierter Gewalt und Belästigung am Arbeitsplatz."
+      - head: "und wir alle?"
+        body: "Hinsehen, nachfragen, nicht weghören. Wer etwas mitbekommt, kann sich beim Hilfetelefon auch für andere beraten lassen. Speicher dir die Nummern – und schick den Post weiter."
+    caption: "Heute ist Orange Day, der internationale Tag gegen Gewalt an Frauen.\nGewalt passiert nicht irgendwo, sondern auch hier im Tal – in Wohnungen, auf der Arbeit, im Netz.\nAlle Nummern stehen in den Slides. Speichern und weiterschicken: Man weiß nie, wer sie gerade braucht."
+    hashtags: ["#wuppertal", "#orangeday", "#orangetheworld", "#gewaltgegenfrauen"]
+    sources: ["Hilfetelefon Gewalt gegen Frauen", "Frauen helfen Frauen e.V. Wuppertal", "FrauenBeratung + Selbsthilfe e.V."]
+    public_interest: true
+    risk: gruen
