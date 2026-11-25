@@ -126,6 +126,10 @@ sprachvorbilder: [1live, wdrcosmo, deutschlandfunknova]
 #   alles andere (deren eigener Beitrag: Boulevard, Fundstück, Reportage): nach 24 Stunden
 # Immer gilt: eigene Worte, eigener Aufbau, nie abschreiben.
 abstand_stunden: {akut: 0, redaktionell: 24, zeitlos: 24}
+# Von diesen Quellen nie Fotos übernehmen (nur inhaltliche Inspiration)
+keine_fotos: [talzeit.wuppertal, Talzeit]
+# Fotopool für Wuppertal-Motive: öffentliche Posts unter diesen Hashtags (mit @-Credit, nur wenn Fotograf bekannt)
+foto_hashtags: [wuppertal, meinwuppertal]
 # Primärquellen: deren Infos sind offizielle Mitteilungen – sofort nutzbar
 primaerquellen: [Polizei Wuppertal, Feuerwehr Wuppertal, Stadt Wuppertal, Oberbürgermeisterin, scherffmiriam, WSW,
                  Autobahn GmbH, Deutscher Wetterdienst, Uni Wuppertal, Pina Bausch, Tanztheater, Utopiastadt,

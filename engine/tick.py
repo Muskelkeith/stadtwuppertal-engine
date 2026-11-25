@@ -172,6 +172,7 @@ class Engine:
             self.step("hashtags", self.scout_hashtags)
             self.step("produzieren", self.produce)
             self.step("vorrat", self.fill_vorrat)
+            self.step("fotopool", self.refresh_tagpool)
             self.step("posten", self.publish_due)
         self.step("tagesaufgaben", self.daily)
         self.step("werkstatt-wache", self.werkstatt_wache)
@@ -1398,8 +1399,12 @@ class Engine:
         Hat ein Account ein passendes Bild ohne Freigabe, kommt eine Foto-Anfrage an dich."""
         import io
         items = self.material(q).get("meldungen", []) if q.get("story") else []
+        nie = [x.lower() for x in self.cfg.get("keine_fotos", [])]
         for it in items:
             ok = it.get("image_ok") or (f"bildquelle: @{it['handle']}" if it.get("handle") in self.st["bildfreigaben"] else None)
+            wer = f"{it.get('source', '')} {it.get('handle', '')}".lower()
+            if any(n in wer for n in nie):
+                continue
             if it.get("image") and ok:
                 try:
                     r = self.http.get(it["image"], timeout=60)
@@ -1425,7 +1430,8 @@ class Engine:
         queries = list(pkg.get("photo_queries") or []) + ([pkg["photo_query"]] if pkg.get("photo_query") else [])
         if queries:
             # Bildredaktion: mehrere Kandidaten holen, Claude wählt das passende (oder keins)
-            cands = commons.candidates(queries, set(self.st["used_photos"]), self.http)
+            cands = self.tagpool_candidates(queries) + commons.candidates(queries, set(self.st["used_photos"]), self.http)
+            cands = cands[:5]
             ims = []
             for h in cands:
                 try:
@@ -1442,11 +1448,62 @@ class Engine:
                 if 1 <= pick <= len(ims):
                     h, im = ims[pick - 1]
                     self.st["used_photos"].append(h["page"])
+                    if h.get("tag_user"):
+                        q["tag_user"] = h["tag_user"]
                     return im, h["credit"]
                 self.log(f"foto: {len(ims)} Kandidaten, keiner passt ({queries[:2]})")
             else:
                 self.log(f"foto: nichts gefunden für {queries[:3]}")
         return None, None
+
+    def refresh_tagpool(self):
+        """Alle 6 Stunden: öffentliche Fotos unter #wuppertal/#meinwuppertal merken – Fundus für Wuppertal-Motive."""
+        tp = self.st.setdefault("tagpool", {"ts": 0, "items": []})
+        if self.graph is None or self.ts() - tp["ts"] < 6 * 3600:
+            return
+        tp["ts"] = self.ts()
+        seen = {x["id"] for x in tp["items"]}
+        for tag in self.cfg.get("foto_hashtags", ["wuppertal"]):
+            try:
+                for m in self.graph.hashtag_media(tag, "top_media", 50):
+                    if m.get("media_type") in ("IMAGE", "CAROUSEL_ALBUM") and m.get("media_url") and m["id"] not in seen:
+                        seen.add(m["id"])
+                        tp["items"].append({"id": m["id"], "url": m["media_url"], "caption": (m.get("caption") or "")[:400],
+                                            "permalink": m.get("permalink", ""), "likes": m.get("like_count") or 0,
+                                            "ts": self.ts()})
+            except Exception as e:      # noqa: BLE001
+                self.log(f"fotopool #{tag}: {str(e)[:80]}")
+        tp["items"] = [x for x in tp["items"] if self.ts() - x["ts"] < 6 * 86400][-300:]
+
+    def tagpool_candidates(self, queries, n=2):
+        """Passende Fotos aus dem Hashtag-Fundus (Motiv-Wort in der Caption), nur mit ermittelbarem Fotografen und nicht
+        schon bei @wuppertal gelaufen."""
+        if self.graph is None:
+            return []
+        words = set()
+        for qy in queries:
+            words |= {w.lower()[:6] for w in re.findall(r"[A-Za-zÄÖÜäöüß]{4,}", commons.ORTE.sub(" ", qy))}
+        if not words:
+            return []
+        used = set(self.st["used_photos"])
+        pool = [x for x in self.st.get("tagpool", {}).get("items", []) if x["permalink"] not in used]
+        scored = sorted(((sum(w in x["caption"].lower() for w in words), x["likes"], x) for x in pool),
+                        key=lambda t: (-t[0], -t[1]))
+        out, wm = [], self.marketing_hashes()
+        for hits, _, x in scored:
+            if hits == 0 or len(out) >= n:
+                break
+            h = sources.username_from_permalink(x["permalink"], self.http) or self.graph.oembed_author(x["permalink"])
+            if not h:
+                continue
+            try:
+                if any(bin(dhash(self.fetch_bytes(x["url"])) ^ y).count("1") <= 10 for y in wm):
+                    continue
+            except Exception:      # noqa: BLE001
+                continue
+            out.append({"url": x["url"], "page": x["permalink"], "credit": f"foto: @{h}", "tag_user": h,
+                        "title": x["caption"][:80]})
+        return out
 
     # ── Bildredaktion & Anfragen ────────────────────────────
     def fetch_bytes(self, url):

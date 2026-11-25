@@ -857,3 +857,17 @@ def test_rubrik_wird_richtig_gesetzt(env):
     assert p["rubric"] == "fact"
     from engine.design import cd
     assert cd.LABELS["kurios"] == "echt jetzt, wuppertal?"
+
+
+def test_fotopool_liefert_kandidat_mit_credit(env, monkeypatch):
+    run, graph, store, feed = env
+    _img_get(monkeypatch)
+    import engine.sources as src
+    monkeypatch.setattr(src, "username_from_permalink", lambda link, http=None: "radlerin_wtal")
+    e, errs = run(datetime(2026, 11, 25, 10, 0, tzinfo=TZ))
+    e.st["tagpool"] = {"ts": e.ts(), "items": [
+        {"id": "1", "url": "x", "caption": "Fahrräder an der Trasse #wuppertal", "permalink": "https://ig/p/1",
+         "likes": 300, "ts": e.ts()}]}
+    e.st["wm_cache"] = {"ts": e.ts(), "hashes": []}
+    c = e.tagpool_candidates(["Fahrräder Wuppertal"])
+    assert c and c[0]["credit"] == "foto: @radlerin_wtal"
