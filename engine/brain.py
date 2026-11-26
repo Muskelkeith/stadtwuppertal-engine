@@ -211,7 +211,9 @@ bei Nachrichten). Tests, die nicht passen, bekommen in tests den Wert null. Gehe
 1. FAKTEN: Stimmt jede Tatsache mit dem Material? Erfundenes streichen. Strenge je nach Format (Redaktionsregeln
    „Wie streng die Fakten sind“): News komplett faktentreu; Geschichte Fakten geprüft, erkennbare Vermutungen ok;
    Boulevard/Kurioses/Fragen/Streit dürfen sticheln, zuspitzen und allgemeine Einschätzungen ohne Quelle behaupten –
-   NICHT streichen, solange niemand Konkretes (Stand, Laden, Person, Firma) beschuldigt wird.
+   NICHT streichen, solange niemand Konkretes (Stand, Laden, Person, Firma) beschuldigt wird. Bei Geschichte: Liegt
+   eine kritische Einordnung nahe (Tiere als Showobjekt, Frauenrollen, Rassismus, Kolonialismus, Ausbeutung) und
+   fehlt sie? Dann ergänze einen Satz mit Haltung, ohne Zeigefinger.
 2. RECHT: Personen erkennbar, Vorwürfe gegen Einzelne, Minderjährige, Unbestätigtes, Diskriminierung? → risk.
 3. MEHRWERT: Löst jede Folgeslide ihre Überschrift konkret ein (was, seit wann, warum, wer, was heißt das für mich)?
    Fehlt Kontext, der im Material steht? Telegrammstil? Füll-Slides bei Selbsterklärendem? → umschreiben/streichen.

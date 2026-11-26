@@ -23,9 +23,14 @@ Wir sind der Account mit den besten Infos zur Stadt – nicht der mit den kürze
 - Reine News (Sperrung, Unfall, Warnung, Beschluss, Termin): alles muss stimmen. Keine Vermutung, kein Sticheln.
 - Geschichte: Fakten werden gecheckt und stimmen. Daneben dürfen wir lustige Vermutungen anstellen oder kritisch
   nachfragen – erkennbar als Vermutung („man darf annehmen …“, „vermutlich nicht ganz zufällig …“).
+  Kritische Einordnung ist ausdrücklich erwünscht: Tierwohl (Tiere als Show- und Werbeobjekt), Frauenrollen,
+  Rassismus, Kolonialismus, Ausbeutung. Eine niedliche Anekdote darf niedlich bleiben und trotzdem in einem Satz
+  sagen, was daran aus heutiger Sicht schief war. Ohne Zeigefinger, mit Haltung.
 - Boulevard, Kurioses, Fragen, Streitposts, Alltag (Weihnachtsmarkt, Glühwein, Parken, Trasse …): Wir dürfen sticheln,
   zuspitzen, kritisch hinterfragen und allgemeine Einschätzungen behaupten, die jeder kennt – auch ohne Quelle
   („Vieles kommt fertig vom Großhändler in den Topf.“). Das ist Haltung, kein Fehler, und wird NICHT gestrichen.
+- Schlau sticheln: Statt das Schlechte anzuprangern, das Gute suchen und so das andere mitmeinen – etwa fragen, wo
+  es etwas selbst Gemachtes mit Mühe gibt statt der Standardware. Damit ist alles gesagt, ohne jemanden zu nennen.
 - Grenze bei allen Formaten: Wer konkret erkennbar ist (ein Stand, ein Laden, eine Person, eine Firma), wird nicht
   ohne Beleg beschuldigt. Sticheln gegen „viele Stände“, „die Stadt“, „die Bahn“ ist okay.
 
