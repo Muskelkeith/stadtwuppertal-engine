@@ -2313,7 +2313,7 @@ class Engine:
                                   f"\n\n{q['caption'][:600]}", q["id"])
 
     def decide(self, q, pkg, credit):
-        """Freigabe-Logik: rot → nur mit deinem Tipp. Nachrichten → Vorschau, nach Ablauf mit KI-Hinweis.
+        """Freigabe-Logik: rot → nur mit deinem Tipp. Nachrichten → Vorschau, nach Ablauf automatisch.
         Alles andere → läuft allein."""
         q["caption"] = self.caption(pkg, credit)
         if q.get("vorrat") and not q.get("abgerufen"):
@@ -2335,7 +2335,7 @@ class Engine:
             head = "Neuer Post. „Passt“ = geht raus, „Weg damit“ = verworfen, oder antworte mit Änderungen."
         elif news_like:
             q.update(status="waiting", on_timeout="post", timeout=self.ts() + self.k["approval_timeout_min"] * 60)
-            head = (f"Neue Meldung. Ohne Antwort geht sie in {self.k['approval_timeout_min']} Minuten mit KI-Hinweis raus. "
+            head = (f"Neue Meldung. Ohne Antwort geht sie in {self.k['approval_timeout_min']} Minuten raus. "
                     f"„Weg damit“ stoppt sie, eine Antwort mit Änderungen baut sie neu.")
         else:
             q["status"] = "ready"
@@ -2418,7 +2418,7 @@ class Engine:
             if now >= q.get("timeout", now + 1):
                 if q.get("on_timeout") == "post":
                     q.update(status="ready", label=True)
-                    self.tg.mark(q.get("tg"), "Ohne Antwort von dir mit KI-Hinweis gepostet")
+                    self.tg.mark(q.get("tg"), "Ohne Antwort von dir gepostet")
                 else:
                     q["status"] = "dropped"
                     self.tg.mark(q.get("tg"), "Abgelaufen, nicht gepostet")
@@ -2444,13 +2444,10 @@ class Engine:
             self.step(f"veröffentlichen {q['id']}", self.publish_one, q)
 
     def publish_one(self, q):
-        caption = q["caption"]
-        if q.get("label"):
-            caption = caption.replace("\n\nquelle:", "\n\ntext mit ki erstellt · quelle:", 1) \
-                if "\n\nquelle:" in caption else caption + "\n\ntext mit ki erstellt"
+        caption = q["caption"]          # nie einen „mit KI erstellt“-Zusatz anhängen
         if hasattr(self.store, "flush_media"):
             self.store.flush_media()          # Dateien müssen öffentlich sein, bevor Instagram/Telegram sie abholt
-        if self.graph is None:                # Übergabe-Modus: du postest selbst, also prüft ein Mensch → kein KI-Hinweis
+        if self.graph is None:                # Übergabe-Modus: du postest selbst
             self.tg.handover(q["media"], q["kind"], q["caption"])
             ig = None
         elif q["kind"] == "story":

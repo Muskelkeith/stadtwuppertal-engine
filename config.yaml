@@ -31,7 +31,7 @@ takt:
   breaking_score: 8              # ab dieser Bewertung geht eine Meldung sofort raus
   followup_after_h: 0            # kein Nachdreh nach Uhr – echte Neuigkeiten kommen als Folgemeldung, sobald sie da sind
   freigabe_tage: 4               # Probephase: so viele Tage braucht jeder Post dein „Passt“ (0 = aus)
-  approval_timeout_min: 60       # Nachrichten ohne deinen Tipp gehen danach mit KI-Hinweis raus
+  approval_timeout_min: 60       # Nachrichten ohne deinen Tipp gehen danach raus
   learn_after_days: 5            # alle 5 Tage Auswertung (Formate, Uhrzeiten) → Kurs für die nächsten Tage
 
 wagnis_rate: 0.12

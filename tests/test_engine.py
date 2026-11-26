@@ -57,11 +57,11 @@ def test_eilmeldung_mit_vorschau_und_timeout(env):
     assert waiting, "Meldung sollte zur Prüfung an Telegram gehen"
     assert any(x[0] == "preview" for x in e.tg.outbox)
     assert graph.done == []
-    # 61 Minuten ohne Antwort → geht mit KI-Hinweis raus
+    # 61 Minuten ohne Antwort → geht raus, ohne KI-Zusatz
     e, errs = run(t0 + timedelta(minutes=61))
     feed_posts = [d for d in graph.done if d[0] in ("carousel", "image")]
     assert feed_posts, graph.done
-    assert "text mit ki erstellt" in feed_posts[0][2][-1]
+    assert "ki erstellt" not in feed_posts[0][2][-1]
     assert not any(d[0] == "story" for d in graph.done), "keine losen Story-Bilder mehr"
 
 
