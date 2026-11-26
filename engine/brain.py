@@ -125,6 +125,8 @@ folgemeldung = die Meldung gehört zu einer bekannten Geschichte (gleiche story-
 wesentliche neue Entwicklung: Festnahme, Ergebnis, Urteil, Ursache geklärt, Aufhebung, neue Zahlen.
 zeitkritisch = gilt heute oder in den nächsten Tagen und betrifft Leute direkt (Sperrung, Baustelle ab heute, Ausfall
 Schwebebahn/Bus, Warnung, Störung, wichtiger Termin, Frist) – solche Infos übernehmen wir schnell.
+Sport: Spielankündigungen, Vorberichte, normale Ergebnisse → score ≤ 3, nicht zeitkritisch, nicht breaking. Nur Aufstieg,
+Abstieg, Titel, Pokalsensation, Vereinskrise zählen.
 rubric kurios = harmlose, absurde Meldung, bei der niemand zu Schaden kam (kurioser Diebstahl, tierischer Einsatz).
 JSON: {{"items": [{{"id": "…", "story": "kurzer-slug", "title": "neutraler Titel der Geschichte",
 "score": 0-10, "breaking": bool, "zeitkritisch": bool, "folgemeldung": bool, "herkunft": "akut|redaktionell|zeitlos", "rubric": "news|events|history|fact|warum|kurios", "risk": "gruen|gelb|rot"}}]}}"""
@@ -322,8 +324,12 @@ ist ein starkes Signal – dann aber mit eigenem Dreh.
 Das Profil ist BREIT: Nachrichten, Infos mit Zeitbezug, Kultur, Menschen, Feel-Good, Boulevard, Geschichte, Kurioses,
 Community-Fragen – alles gleichwertig. Es muss nicht kurios sein; es muss relevant oder gut sein.
 NACHRICHTEN und INFOS MIT ZEITBEZUG: Zählt, ob man es als Wuppertaler wissen muss oder will. Baustellen und Sperrungen ab heute, Polizei-/Feuerwehrlagen mit Folgen, Eröffnungen und
-Verschiebungen (z. B. Villa Amalia), Demos, Entscheidungen im Rat, Firmen aus dem Tal, Erfolge von WSV und BHC,
-große Veranstaltungen diese Woche → 7–9, auch wenn das Thema „normal“ klingt. Der Dreh ist dann: Was heißt das für mich?
+Verschiebungen (z. B. Villa Amalia), Demos, Entscheidungen im Rat, Firmen aus dem Tal,
+große Veranstaltungen diese Woche → 7–9, auch wenn das Thema „normal“ klingt.
+SPORT: Spielankündigungen, Vorberichte, „ausverkauft“, normale Spielergebnisse und Tabellenstände (WSV, BHC, Basketball …)
+sind KEIN Thema für uns → höchstens 3, nie zeitkritisch. Nur echte Ereignisse zählen: Aufstieg, Abstieg, Titel,
+Pokalsensation, Vereinskrise/Insolvenz, Stadion- oder Hallenstreit. Ein Großspiel nur, wenn es Verkehr oder Sperrungen
+auslöst – dann als Verkehrsinfo, nicht als Sportmeldung. Der Dreh ist dann: Was heißt das für mich?
 „zeitkritisch“: true (gilt heute/diese Woche: Sperrung, Ausfall, Warnung, Termin) und konkret → mindestens 7.
 BILDER: Ein Thema, das man sehen muss (Murals, Kunst, Fotos, Orte, Bauwerke), nur hoch, wenn „bilder_vorhanden“ true ist.
 NIE ein Thema der Art „Account XY hat etwas gepostet/fotografiert“ – das ist kein Inhalt. Es zählt nur die Sache selbst.
