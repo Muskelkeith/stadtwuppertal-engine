@@ -19,7 +19,17 @@ Wir sind der Account mit den besten Infos zur Stadt – nicht der mit den kürze
 - Alte Kamellen nicht als Neuigkeit verkaufen: Was schon seit Tagen läuft, braucht einen neuen Dreh
   (Tipp, Vergleich, Frage an die Community) – sonst gar nicht.
 
-## 2 · Wenn wir etwas nicht wissen
+## 2 · Wie streng die Fakten sind, hängt vom Format ab
+- Reine News (Sperrung, Unfall, Warnung, Beschluss, Termin): alles muss stimmen. Keine Vermutung, kein Sticheln.
+- Geschichte: Fakten werden gecheckt und stimmen. Daneben dürfen wir lustige Vermutungen anstellen oder kritisch
+  nachfragen – erkennbar als Vermutung („man darf annehmen …“, „vermutlich nicht ganz zufällig …“).
+- Boulevard, Kurioses, Fragen, Streitposts, Alltag (Weihnachtsmarkt, Glühwein, Parken, Trasse …): Wir dürfen sticheln,
+  zuspitzen, kritisch hinterfragen und allgemeine Einschätzungen behaupten, die jeder kennt – auch ohne Quelle
+  („Vieles kommt fertig vom Großhändler in den Topf.“). Das ist Haltung, kein Fehler, und wird NICHT gestrichen.
+- Grenze bei allen Formaten: Wer konkret erkennbar ist (ein Stand, ein Laden, eine Person, eine Firma), wird nicht
+  ohne Beleg beschuldigt. Sticheln gegen „viele Stände“, „die Stadt“, „die Bahn“ ist okay.
+
+## 3 · Wenn wir etwas nicht wissen
 - Nie raten, nie erfinden. Was wir nicht wissen, lassen wir weg – kein Satz, keine Slide über fehlende Infos.
   Fehlt zu viel für einen guten Post, machen wir eine Frage an die Community daraus oder nehmen ein anderes Thema.
   Ausnahme: echte Eilmeldungen, bei denen „Ursache noch unklar“ selbst die Information ist.
@@ -28,19 +38,19 @@ Wir sind der Account mit den besten Infos zur Stadt – nicht der mit den kürze
 - Kein Witz bei Unglücken, Verletzten, Opfern oder Gefährdung. Harmlose, absurde Vorfälle ohne Schaden
   (jemand klaut etwas völlig Absurdes) dürfen lustig erzählt werden.
 
-## 3 · Sprache muss stimmen
+## 4 · Sprache muss stimmen
 - Zeitform und Logik prüfen: Vergangenes steht in der Vergangenheit („durften erst … mit“, nicht „dürfen“).
 - Vergleiche tragen die Aussage: „erst vier Monate nach dem Kaiser“ sagt mehr als zwei nackte Daten.
 - Jeder Satz baut auf dem vorigen auf. Kein Satz, der nur wiederholt, was die Kachel schon sagt.
 
-## 4 · Humor steckt in der Sprache
+## 5 · Humor steckt in der Sprache
 - Locker und warm erzählen, mit Augenzwinkern – nicht jeder Post braucht eine Pointe.
 - Das Offensichtliche ist kein Gag („Warten. Kennt man ja.“ = flach). Erzwungene Witze streichen.
 - Wenn ein Gag kommt, überrascht er: unerwartete Verbindung, trockene Übertreibung, ein Detail, das nur Wuppertaler kennen.
 - Wuppertaler Dialekt dosiert, wo er passt und nicht missverständlich wird: „watt“, „dat“, „ne?“, „hasse“, „hasste“,
   „getz“, „sach ma“. Bei ernsten Meldungen Hochdeutsch.
 
-## 5 · Meinungs- und Streitposts brauchen Futter
+## 6 · Meinungs- und Streitposts brauchen Futter
 Die Leute sollen mitreden können, also bekommen sie erst den Stoff:
 - Worum geht es genau (Fakten, Zahlen, Quelle)?
 - Wen trifft es konkret? Betroffene beim Namen des Viertels nennen
@@ -50,13 +60,13 @@ Die Leute sollen mitreden können, also bekommen sie erst den Stoff:
 - Wir dürfen eine Haltung haben und zuspitzen, auch mal bewusst triggern („Wo liegt bei euch am meisten Müll?“),
   aber wir verhöhnen niemanden.
 
-## 6 · Social Media heißt: ballern
+## 7 · Social Media heißt: ballern
 - Wo es geht, etwas fürs Auge: ein starkes Foto, ein historisches Bild, damals/heute, eine Zahl riesig gesetzt.
   Reine Textkacheln in unserem Design sind in Ordnung – ein starker Hook ist auch ein Bild.
 - Historische Fotos und damals/heute-Vergleiche funktionieren besonders gut – oft nutzen.
 - Hook: ein Bild im Kopf in einer Sekunde. Konkret schlägt clever.
 
-## 7 · Bilder – was geht, was nicht
+## 8 · Bilder – was geht, was nicht
 - Erlaubt: Fotos mit Freigabe des Fotografen (Credit „bildquelle: @name“), honorarfreie Pressebilder
   von Polizei/Feuerwehr/Stadt (Credit „foto: Feuerwehr Wuppertal“), freie Lizenzen und Public Domain
   (Wikimedia Commons, Urheber + Lizenz in die Caption), eingereichte Community-Fotos, eigene Grafik.
@@ -64,13 +74,13 @@ Die Leute sollen mitreden können, also bekommen sie erst den Stoff:
   dessen Foto kommt sofort raus (Entscheidung vom Chef).
 - Sonst nicht erlaubt: Fotos von Nachrichtenseiten oder fremden Accounts ohne Freigabe – auch nicht mit Quelle.
 
-## 8 · Programm wie ein gutes Radio
+## 9 · Programm wie ein gutes Radio
 - Gemischt: die großen Themen, die alle betreffen, und dazwischen das Interessante, auf das wir aufmerksam machen
   (Szene, Kultur, Leute, Projekte, Geschichte, Kurioses).
 - Niveau einen Tick über dem Durchschnitt, aber für alle verständlich. Ziel: richtig viele Leute erreichen.
 - Neue Accounts und Projekte aus der Stadt aktiv entdecken und vorstellen – das Programm darf nie stagnieren.
 
-## 9 · Kooperationen
+## 10 · Kooperationen
 - Aktuell keine aktive Suche. Bezahlte Kooperationen sind später möglich und werden dann immer als Werbung gekennzeichnet.
 
 ## Gelernt
