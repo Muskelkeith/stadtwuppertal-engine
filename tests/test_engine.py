@@ -886,3 +886,44 @@ def test_eingespeister_fertiger_post(env):
     e.produce_one(q)
     assert q["status"] in ("ready", "waiting"), q.get("qa_note")
     assert "Hilfetelefon" in q["caption"] and q.get("media")
+
+
+def _wartender_post(e):
+    q = {"id": "gw1", "mode": "fertig", "kind": "feed", "status": "waiting", "tg": "88", "idea": {}, "credit": None,
+         "pkg": {"rubric": "poll", "hook": ["wo gibt's", "den besten", "glühwein?"], "slides": [], "caption": "Test.",
+                 "hashtags": ["wuppertal"], "photo_queries": ["Weihnachtsmarkt Wuppertal Glühwein"]}}
+    e.st["queue"].append(q)
+    return q
+
+
+def test_bildsuche_ohne_treffer_sagt_es_ehrlich(env, monkeypatch):
+    run, graph, store, feed = env
+    e, errs = run(datetime(2026, 11, 26, 11, 0, tzinfo=TZ))
+    q = _wartender_post(e)
+    monkeypatch.setattr(e, "pick_photo", lambda q, pkg: (None, None))
+    n = len(e.tg.outbox)
+    e.revise({"text": "Finde ein Bild für den Hintergrund", "msg": "88"})
+    said = " ".join(str(x) for x in e.tg.outbox[n:])
+    assert "kein passendes Foto" in said and q["tg"] == "88" and not q.get("photo_url")
+
+
+def test_bildsuche_breitet_suche_aus():
+    from engine.commons import variants
+    v = variants("Weihnachtsmarkt Wuppertal Glühwein")
+    assert "Weihnachtsmarkt Wuppertal" in v and "Glühwein" in v
+
+
+def test_foto_als_antwort_wird_mit_fotograf_eingebaut(env, monkeypatch):
+    run, graph, store, feed = env
+    _img_get(monkeypatch)
+    e, errs = run(datetime(2026, 11, 26, 11, 0, tzinfo=TZ))
+    q = _wartender_post(e)
+    import io
+    from PIL import Image
+    b = io.BytesIO(); Image.new("RGB", (1200, 1500), (200, 120, 40)).save(b, "JPEG")
+    monkeypatch.setattr(e.tg, "download", lambda fid: b.getvalue())
+    monkeypatch.setattr(e, "fetch_bytes", lambda url: b.getvalue())
+    e.revise({"text": "", "msg": "88", "photo_id": "f1"})
+    assert q.get("foto_wartet") and not q.get("photo_url")             # erst Rückfrage nach dem Fotografen
+    e.revise({"text": "@gluehweinknipser", "msg": "88"})
+    assert q.get("photo_url") and "@gluehweinknipser" in q["caption"]

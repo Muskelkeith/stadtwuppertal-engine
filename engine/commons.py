@@ -96,9 +96,26 @@ def passt(hit: dict, query: str) -> bool:
     return any(w in text for w in words)
 
 
+ERRORS: list[str] = []
+
+
+def variants(query: str) -> list[str]:
+    """Commons findet nur Dateien mit ALLEN Wörtern. Darum vom Genauen zum Groben: ganze Suche, Motiv + Ort, Motiv allein.
+    „Weihnachtsmarkt Wuppertal Glühwein“ → … „Weihnachtsmarkt Wuppertal“, „Glühwein Wuppertal“, „Weihnachtsmarkt“, „Glühwein“."""
+    words = query.split()
+    orte = [w for w in words if ORTE.search(w)]
+    motive = [w for w in words if not ORTE.search(w) and (len(w) >= 4 or re.search(r"\d", w))]
+    out = [query]
+    for m in motive:
+        out += [f"{m} {o}" for o in orte[:1]]
+    out += motive
+    return list(dict.fromkeys(x for x in out if x.strip()))
+
+
 def candidates(query, used: set, http=requests, n=4) -> list[dict]:
     """Bis zu n passende Kandidaten aus Commons und Openverse (Titel enthält das Motiv)."""
-    queries = [q for q in ([query] if isinstance(query, str) else list(query or [])) if q]
+    base = [q for q in ([query] if isinstance(query, str) else list(query or [])) if q]
+    queries = list(dict.fromkeys(v for q in base for v in variants(q)))
     out, seen = [], set(used)
     for src in (search, openverse):
         for q in queries:
@@ -112,8 +129,9 @@ def candidates(query, used: set, http=requests, n=4) -> list[dict]:
                     out.append(hit)
                     if len(out) >= n:
                         return out
-            except Exception:
-                pass
+            except Exception as e:      # noqa: BLE001
+                ERRORS.append(f"{src.__name__} „{q}“: {str(e)[:80]}")
+                del ERRORS[:-10]
     return out
 
 

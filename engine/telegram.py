@@ -167,6 +167,11 @@ class Telegram:
                 continue
             voice = m.get("voice") or m.get("audio")
             reply = (m.get("reply_to_message") or {}).get("message_id")
+            pic = (m.get("photo") or [None])[-1] or (m.get("document") if str((m.get("document") or {}).get("mime_type", "")).startswith("image/") else None)
+            if reply and pic:            # Foto als Antwort auf eine Vorschau = dieses Bild nehmen
+                out.append({"type": "revise", "msg": str(reply), "text": (m.get("caption") or "").strip(),
+                            "photo_id": pic["file_id"], "file_id": None})
+                continue
             if reply and (raw or voice):
                 out.append({"type": "revise", "msg": str(reply), "text": raw,
                             "file_id": voice["file_id"] if voice else None})

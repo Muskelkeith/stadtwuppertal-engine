@@ -349,6 +349,8 @@ class Engine:
             self.tg.say("Der Post ist schon raus oder verworfen. Ich mache ihn mit deiner Kritik neu, er kommt in einem der nächsten Sendeplätze. "
                         "Soll das für alle Posts gelten, schreib „regel:“ davor.")
             return
+        if ev.get("photo_id"):
+            return self.photo_reply(q, text, self.tg.download(ev["photo_id"]))
         if not re.search(r"neu aufbauen|komplett neu|ganz neu|neu schreiben|von vorn", text, re.I):
             return self.edit_post(q, text)
         old = q["pkg"]
@@ -385,6 +387,15 @@ class Engine:
             except Exception:
                 pass
 
+    def photo_reply(self, q, text, data):
+        """Du schickst ein Foto als Antwort auf die Vorschau: genau dieses Bild kommt in den Hintergrund.
+        Fotograf: @name in der Bildunterschrift, sonst Rückfrage. „eigenes foto“ = ohne Nachweis."""
+        q["foto_wartet"] = self.store.media(f"{int(self.ts())}-{q['id']}-eingang.jpg", data)
+        if re.search(r"@[A-Za-z0-9._]{2,30}", text) or re.search(r"eigene?s? foto|ohne (credit|nachweis)", text, re.I):
+            return self.edit_post(q, text or "Dieses Foto als Hintergrund nehmen.")
+        self.tg.say("Foto ist angekommen. Von wem ist es? Antworte auf die Vorschau mit dem @Instagram-Namen "
+                    "(oder „eigenes foto“, dann ohne Nachweis). Erst dann baue ich es ein.")
+
     def edit_post(self, q, text):
         """Deine Änderung genau umsetzen – Rest, Foto und Farben bleiben. „neu aufbauen“ schreibt ihn komplett neu."""
         import io
@@ -406,12 +417,34 @@ class Engine:
         if h:
             credit, q["tag_user"] = f"foto: @{h}", h
         photo = None
-        if r.get("neues_foto") and r.get("photo_query"):
-            pkg["photo_queries"] = [r["photo_query"]]
-            photo, c = self.pick_photo(q, pkg)
-            if photo is not None:
-                credit = c or credit
+        eigen = re.search(r"eigene?s? foto|ohne (credit|nachweis)", text, re.I)
+        if q.get("foto_wartet") and (h or eigen):          # dein geschicktes Foto, jetzt mit Fotograf
+            try:
+                photo = Image.open(io.BytesIO(self.fetch_bytes(q.pop("foto_wartet")))).convert("RGB")
                 q["photo_url"] = self.store.media(f"{int(self.ts())}-{q['id']}-foto.jpg", render.jpeg(photo))
+                if eigen and not h:
+                    credit, q["tag_user"] = None, ""
+            except Exception as e:      # noqa: BLE001
+                self.log(f"änderung {q['id']}: geschicktes foto nicht lesbar ({str(e)[:60]})")
+        elif r.get("neues_foto") or re.search(r"\b(hintergrund)?(bild|foto)\b", text, re.I) and \
+                re.search(r"such|find|ander|neu|hintergrund|besser", text, re.I):
+            wish = [r["photo_query"]] if r.get("photo_query") else []
+            pkg["photo_queries"] = list(dict.fromkeys(wish + list(old.get("photo_queries") or [])))
+            commons.ERRORS.clear()
+            photo, c = self.pick_photo(q, pkg)
+            if photo is None:
+                # ehrlich sagen statt eine unveränderte Fassung als „gesucht“ zu verkaufen
+                err = "; ".join(commons.ERRORS[-2:])
+                self.tg.say("Ich habe kein passendes Foto mit Fotografen-Nachweis gefunden (gesucht: "
+                            f"{', '.join(pkg['photo_queries'][:3]) or 'nichts Konkretes'}). "
+                            + (f"Technisch hakte es: {err}. " if err else "")
+                            + "Schick mir ein Foto als Antwort auf die Vorschau (am besten mit @Fotograf), "
+                              "oder sag mir, wonach ich suchen soll. Der Post bleibt so lange liegen.")
+                return
+            credit = c or credit
+            q["photo_url"] = self.store.media(f"{int(self.ts())}-{q['id']}-foto.jpg", render.jpeg(photo))
+            if not any(r.get("aenderungen") or {}):
+                r["was_geaendert"] = f"Hintergrundbild eingebaut ({(c or '').replace('foto: ', '')})"
         elif q.get("photo_url"):
             try:
                 photo = Image.open(io.BytesIO(self.fetch_bytes(q["photo_url"]))).convert("RGB")

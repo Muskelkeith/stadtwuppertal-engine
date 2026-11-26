@@ -178,7 +178,24 @@ def _boxed_size(head):
     return f
 
 
+GLYPHEN = {"→": "–", "⇒": "–", "➜": "–", "➔": "–", "←": "–", "↔": "–", "•": "·", "✓": "", "✔": "", "★": ""}
+
+
+def _glyphen(x):
+    """Zeichen, die die Hausschrift nicht hat (sonst leere Kästchen auf der Kachel), durch passende ersetzen."""
+    if isinstance(x, str):
+        for a, b in GLYPHEN.items():
+            x = x.replace(a, b)
+        return x
+    if isinstance(x, list):
+        return [_glyphen(v) for v in x]
+    if isinstance(x, dict):
+        return {k: (_glyphen(v) if k not in ("caption", "sources", "hashtags") else v) for k, v in x.items()}
+    return x
+
+
 def carousel(pkg: dict, photo=None, wagnis=False, seed=None) -> list[Image.Image]:
+    pkg = _glyphen(pkg)
     rnd = random.Random(seed)
     slides = [s for s in (pkg.get("slides") or []) if (s.get("body") or s.get("head"))][:6]
     out = [cover(pkg, photo, more=bool(slides), wagnis=wagnis, rnd=random.Random(seed))]
